@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>카드뉴스 변환기 v2 (TTS)</title>
+<title>카드뉴스 변환기</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -16,252 +16,115 @@
     flex-direction: column;
     align-items: center;
     padding: 48px 24px;
-    gap: 24px;
+    gap: 20px;
   }
-  h1 {
-    font-size: 30px;
-    font-weight: 900;
-    background: linear-gradient(90deg, #FF4B6E, #ff8c42);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  h1 { font-size: 30px; font-weight: 900; background: linear-gradient(90deg, #FF4B6E, #ff8c42); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .sub { font-size: 14px; color: #555; }
+  .section { width: 100%; max-width: 660px; background: #1a1a1a; border-radius: 20px; padding: 24px 28px; }
+  .section-title { font-size: 15px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .label { font-size: 13px; color: #888; width: 90px; flex-shrink: 0; }
+  input[type=text], input[type=password], input[type=number], select {
+    flex: 1; background: #111; border: 1.5px solid #2a2a2a; border-radius: 10px;
+    padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s;
   }
-  .sub { font-size: 15px; color: #666; }
-
-  .section {
-    width: 100%;
-    max-width: 660px;
-    background: #1a1a1a;
-    border-radius: 20px;
-    padding: 28px 32px;
-  }
-  .section-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #FF4B6E;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* API 키 입력 */
-  .api-row {
-    display: flex;
-    gap: 10px;
-  }
-  .api-input {
-    flex: 1;
-    background: #111;
-    border: 1.5px solid #333;
-    border-radius: 10px;
-    padding: 12px 16px;
-    color: #fff;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .api-input:focus { border-color: #FF4B6E; }
-  .api-input::placeholder { color: #555; }
-  .btn-sm {
-    background: #FF4B6E;
-    border: none;
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.2s;
-  }
+  input:focus, select:focus { border-color: #FF4B6E; }
+  input::placeholder { color: #444; }
+  .btn-sm { background: #FF4B6E; border: none; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
   .btn-sm:hover { opacity: 0.85; }
-  .btn-sm.gray { background: #333; color: #aaa; }
-  .api-status { margin-top: 10px; font-size: 13px; color: #666; }
+  .api-status { font-size: 12px; color: #555; margin-top: 6px; }
   .api-status.ok { color: #00B894; }
-  .api-status.fail { color: #FF4B6E; }
+  .hint { font-size: 12px; color: #444; margin-top: 4px; }
 
-  /* TTS 설정 */
-  .setting-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .setting-label { font-size: 14px; color: #aaa; width: 80px; flex-shrink: 0; }
-  select, .speed-input {
-    background: #111;
-    border: 1.5px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    padding: 10px 14px;
-    font-size: 14px;
-    outline: none;
-    flex: 1;
-    cursor: pointer;
-  }
-  select:focus, .speed-input:focus { border-color: #FF4B6E; }
-
-  /* 업로드 */
-  .upload-zone {
-    width: 100%;
-    max-width: 660px;
-    border: 2px dashed #2a2a2a;
-    border-radius: 20px;
-    padding: 48px 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: #141414;
-  }
+  .upload-zone { width: 100%; max-width: 660px; border: 2px dashed #252525; border-radius: 20px; padding: 44px; text-align: center; cursor: pointer; transition: all 0.2s; background: #141414; }
   .upload-zone:hover, .upload-zone.drag { border-color: #FF4B6E; background: #1a1010; }
-  .upload-icon { font-size: 48px; margin-bottom: 12px; }
-  .upload-text { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .upload-sub { font-size: 13px; color: #555; }
+  .upload-icon { font-size: 44px; margin-bottom: 10px; }
+  .upload-text { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .upload-sub { font-size: 13px; color: #444; }
   #file-input { display: none; }
 
-  /* 진행 상태 */
-  .status-box {
-    width: 100%;
-    max-width: 660px;
-    background: #1a1a1a;
-    border-radius: 16px;
-    padding: 24px 28px;
-    display: none;
-  }
+  .status-box { width: 100%; max-width: 660px; background: #1a1a1a; border-radius: 16px; padding: 22px 26px; display: none; }
   .status-box.show { display: block; }
-  .status-title { font-size: 16px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; }
-  .progress-bar { width: 100%; height: 6px; background: #2a2a2a; border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+  .status-title { font-size: 15px; font-weight: 700; color: #FF4B6E; margin-bottom: 12px; }
+  .progress-bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, #FF4B6E, #ff8c42); border-radius: 3px; transition: width 0.4s; width: 0%; }
-  .status-log { font-size: 13px; color: #666; line-height: 1.8; max-height: 100px; overflow-y: auto; }
+  .status-log { font-size: 12px; color: #555; line-height: 1.9; max-height: 110px; overflow-y: auto; }
 
-  /* 슬라이드 썸네일 */
-  .thumbs-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-top: 16px;
-  }
-  .thumb {
-    aspect-ratio: 4/5;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #222;
-    position: relative;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border-color 0.2s;
-  }
+  .preview-section { width: 100%; max-width: 660px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; display: none; }
+  .preview-section.show { display: block; }
+  .slide-count-badge { display: inline-block; background: #FF4B6E; color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-left: 10px; }
+  .thumbs-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  .thumb { aspect-ratio: 4/5; border-radius: 8px; overflow: hidden; background: #222; position: relative; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
   .thumb:hover { border-color: #FF4B6E; }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .thumb-badge {
-    position: absolute; bottom: 5px; right: 5px;
-    background: rgba(0,0,0,0.75);
-    color: #fff; font-size: 10px; font-weight: 700;
-    padding: 2px 6px; border-radius: 4px;
-  }
-  .thumb-audio {
-    position: absolute; bottom: 5px; left: 5px;
-    font-size: 14px;
-  }
+  .thumb-badge { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+  .thumb-audio { position: absolute; bottom: 4px; left: 4px; font-size: 12px; }
 
-  /* 플레이어 */
-  .player-wrap {
-    width: 100%;
-    max-width: 660px;
-    background: #1a1a1a;
-    border-radius: 20px;
-    padding: 24px;
-    display: none;
-  }
+  .player-wrap { width: 100%; max-width: 660px; background: #1a1a1a; border-radius: 20px; padding: 22px; display: none; }
   .player-wrap.show { display: block; }
-  .player-screen {
-    width: 100%;
-    aspect-ratio: 4/5;
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 14px;
-  }
+  .player-screen { width: 100%; aspect-ratio: 4/5; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
   .player-screen img { width: 100%; height: 100%; object-fit: contain; }
-  .player-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .ctrl { background: #2a2a2a; border: none; color: #fff; width: 42px; height: 42px; border-radius: 50%; font-size: 16px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+  .player-controls { display: flex; align-items: center; gap: 10px; }
+  .ctrl { background: #252525; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 15px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
   .ctrl:hover { background: #FF4B6E; }
-  .ctrl.play { background: #FF4B6E; width: 50px; height: 50px; font-size: 20px; }
-  .slide-info { flex: 1; text-align: center; font-size: 13px; color: #666; }
-  .audio-player { width: 100%; margin-top: 14px; filter: invert(1) hue-rotate(180deg); }
+  .ctrl.play { background: #FF4B6E; width: 48px; height: 48px; font-size: 18px; }
+  .slide-info { flex: 1; text-align: center; font-size: 13px; color: #555; }
+  audio { width: 100%; margin-top: 12px; filter: invert(1) hue-rotate(180deg); }
 
-  /* 다운로드 버튼 */
-  .btn-group {
-    width: 100%;
-    max-width: 660px;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-  }
+  .btn-group { width: 100%; max-width: 660px; display: none; flex-direction: column; gap: 10px; }
   .btn-group.show { display: flex; }
-  .btn {
-    width: 100%;
-    padding: 16px;
-    border-radius: 14px;
-    border: none;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: opacity 0.2s;
-  }
+  .btn { width: 100%; padding: 16px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
   .btn:hover { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .btn-png { background: #FF4B6E; color: #fff; }
   .btn-video { background: #6c5ce7; color: #fff; }
-  .btn-reset { background: #222; color: #777; font-size: 14px; padding: 12px; }
+  .btn-reset { background: #1e1e1e; color: #666; font-size: 14px; padding: 12px; }
 
   #render-area { position: fixed; left: -9999px; top: 0; width: 1080px; }
 </style>
 </head>
 <body>
 
-<h1>🃏 카드뉴스 변환기 v2</h1>
-<p class="sub">HTML → PNG 7장 + TTS 음성 + 영상 자동 생성</p>
+<h1>🃏 카드뉴스 변환기</h1>
+<p class="sub">HTML 업로드 → 슬라이드 자동 감지 → PNG + TTS 음성 + 영상 생성</p>
 
-<!-- API 키 설정 -->
+<!-- API 키 -->
 <div class="section">
   <div class="section-title">🔑 fal.ai API 키</div>
-  <div class="api-row">
-    <input class="api-input" type="password" id="api-key" placeholder="fal.ai API 키를 입력하세요 (fal_...)">
+  <div class="row">
+    <input type="password" id="api-key" placeholder="fal.ai API 키 (fal_...)">
     <button class="btn-sm" onclick="saveKey()">저장</button>
   </div>
-  <div class="api-status" id="api-status">API 키를 입력하면 TTS 기능이 활성화됩니다</div>
+  <div class="api-status" id="api-status">API 키를 입력하면 TTS 음성 기능이 활성화됩니다</div>
 </div>
 
-<!-- TTS 설정 -->
+<!-- TTS + 설정 -->
 <div class="section">
-  <div class="section-title">🎙️ TTS 설정</div>
-  <div class="setting-row">
-    <div class="setting-label">모델</div>
+  <div class="section-title">⚙️ 변환 설정</div>
+  <div class="row">
+    <div class="label">TTS 모델</div>
     <select id="tts-model">
-      <option value="fal-ai/gemini-tts">Gemini TTS (한국어 추천 ⭐)</option>
+      <option value="fal-ai/gemini-tts">Gemini TTS ⭐ (한국어 추천)</option>
       <option value="fal-ai/minimax/speech-02-hd">MiniMax HD (자연스러운 발음)</option>
       <option value="fal-ai/elevenlabs/tts/eleven-v3">ElevenLabs v3 (감정표현 최고)</option>
-      <option value="fal-ai/index-tts-2/text-to-speech">Index TTS 2.0 (저렴한 요금)</option>
+      <option value="fal-ai/index-tts-2/text-to-speech">Index TTS 2.0 (저렴)</option>
+      <option value="none">TTS 없이 (PNG만)</option>
     </select>
   </div>
-  <div class="setting-row">
-    <div class="setting-label">슬라이드 시간</div>
+  <div class="row">
+    <div class="label">슬라이드 시간</div>
     <select id="slide-duration">
-      <option value="3000">음성 끝나면 자동 넘김</option>
-      <option value="2000">2초</option>
-      <option value="3000">3초</option>
-      <option value="5000">5초</option>
+      <option value="auto">음성 끝나면 자동 넘김</option>
+      <option value="2000">2초 고정</option>
+      <option value="3000">3초 고정</option>
+      <option value="5000">5초 고정</option>
     </select>
   </div>
+  <div class="row">
+    <div class="label">장수 지정</div>
+    <input type="number" id="slide-limit" placeholder="비워두면 자동 감지 (전체)" min="1" max="50">
+  </div>
+  <div class="hint">* 장수를 입력하면 해당 장수까지만 처리합니다. 비워두면 HTML의 모든 슬라이드를 자동으로 감지합니다.</div>
 </div>
 
 <!-- 업로드 -->
@@ -280,45 +143,45 @@
 </div>
 
 <!-- 미리보기 -->
-<div class="section" id="preview-section" style="display:none">
-  <div class="section-title">📋 슬라이드 미리보기</div>
+<div class="preview-section" id="preview-section">
+  <div class="section-title">
+    📋 슬라이드 미리보기
+    <span class="slide-count-badge" id="slide-count-badge">0장</span>
+  </div>
   <div class="thumbs-grid" id="thumbs-grid"></div>
 </div>
 
 <!-- 플레이어 -->
 <div class="player-wrap" id="player-wrap">
-  <div class="player-screen">
-    <img id="player-img" src="" alt="">
-  </div>
+  <div class="player-screen"><img id="player-img" src="" alt=""></div>
   <div class="player-controls">
     <button class="ctrl" onclick="prevSlide()">◀</button>
     <button class="ctrl play" id="play-btn" onclick="togglePlay()">▶</button>
     <button class="ctrl" onclick="nextSlide()">▶▶</button>
-    <div class="slide-info" id="slide-info">1 / 7</div>
+    <div class="slide-info" id="slide-info">- / -</div>
   </div>
-  <audio id="audio-player" class="audio-player" controls></audio>
+  <audio id="audio-player" controls style="display:none"></audio>
 </div>
 
 <!-- 다운로드 -->
 <div class="btn-group" id="btn-group">
   <button class="btn btn-png" onclick="downloadZip()">📦 PNG 전체 다운로드 (ZIP)</button>
-  <button class="btn btn-video" id="btn-video" onclick="downloadVideo()">🎬 음성 포함 영상 다운로드</button>
+  <button class="btn btn-video" id="btn-video" onclick="downloadVideo()">🎬 음성 포함 영상 다운로드 (WebM)</button>
   <button class="btn btn-reset" onclick="resetAll()">🔄 다른 파일 변환하기</button>
 </div>
 
 <div id="render-area"></div>
 
 <script>
-  let slides = [];       // { dataUrl, text, audioUrl, audioDuration }
+  let slides = [];
   let currentSlide = 0;
   let isPlaying = false;
   let playTimer = null;
   let falKey = localStorage.getItem('fal_key') || '';
 
-  // 저장된 키 복원
   if (falKey) {
     document.getElementById('api-key').value = falKey;
-    document.getElementById('api-status').textContent = '✅ API 키 저장됨';
+    document.getElementById('api-status').textContent = '✅ API 키 저장됨 — TTS 활성화';
     document.getElementById('api-status').className = 'api-status ok';
   }
 
@@ -330,17 +193,12 @@
     document.getElementById('api-status').className = 'api-status ok';
   }
 
-  // 업로드
   const uploadZone = document.getElementById('upload-zone');
   const fileInput = document.getElementById('file-input');
   uploadZone.addEventListener('click', () => fileInput.click());
   uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
   uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
-  uploadZone.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadZone.classList.remove('drag');
-    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-  });
+  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
 
   function log(msg) {
@@ -348,7 +206,6 @@
     el.innerHTML += msg + '<br>';
     el.scrollTop = el.scrollHeight;
   }
-
   function setProgress(pct, title) {
     document.getElementById('progress-fill').style.width = pct + '%';
     if (title) document.getElementById('status-title').textContent = title;
@@ -358,7 +215,10 @@
     slides = [];
     document.getElementById('status-box').classList.add('show');
     document.getElementById('status-log').innerHTML = '';
-    setProgress(5, '📄 HTML 파일 읽는 중...');
+    document.getElementById('preview-section').classList.remove('show');
+    document.getElementById('player-wrap').classList.remove('show');
+    document.getElementById('btn-group').classList.remove('show');
+    setProgress(5, '📄 HTML 읽는 중...');
 
     const html = await file.text();
     const renderArea = document.getElementById('render-area');
@@ -373,32 +233,41 @@
 
     setProgress(15, '🔍 슬라이드 감지 중...');
     const iDoc = iframe.contentDocument;
-    const cards = iDoc.querySelectorAll('.card');
+    let cards = Array.from(iDoc.querySelectorAll('.card'));
 
-    if (!cards || cards.length === 0) {
-      setProgress(0, '❌ 슬라이드를 찾을 수 없어요');
-      log('class="card" 가 있는 슬라이드를 찾지 못했어요. Claude가 만든 HTML인지 확인해주세요.');
+    if (!cards.length) {
+      setProgress(0, '❌ 슬라이드를 찾지 못했어요');
+      log('class="card" 요소가 없어요. Claude가 만든 HTML인지 확인해주세요.');
       return;
     }
 
-    log(`✅ 슬라이드 ${cards.length}장 감지됨`);
+    // 장수 제한 적용
+    const limitInput = document.getElementById('slide-limit').value;
+    const limit = limitInput ? parseInt(limitInput) : cards.length;
+    cards = cards.slice(0, limit);
+
+    log(`✅ 총 ${iDoc.querySelectorAll('.card').length}장 감지 → ${cards.length}장 처리`);
+    document.getElementById('slide-count-badge').textContent = cards.length + '장';
+
+    const ttsModel = document.getElementById('tts-model').value;
     const total = cards.length;
 
-    // STEP 1: PNG 캡처
+    // PNG 캡처
     for (let i = 0; i < total; i++) {
-      setProgress(15 + Math.round((i / total) * 35), `🖼️ 슬라이드 ${i+1}/${total} 캡처 중...`);
+      setProgress(15 + Math.round((i / total) * 40), `🖼️ ${i+1}/${total}장 캡처 중...`);
       const card = cards[i];
 
-      // 텍스트 추출 (TTS용)
-      const textNodes = card.querySelectorAll('.hook, .title, .body, .fact-text, .vs-content, .tl-text, .quote-text, .cta-main, .cta-sub');
+      // 텍스트 추출
+      const selectors = ['.hook', '.title', '.body', '.fact-text', '.vs-content', '.tl-text', '.quote-text', '.cta-main', '.cta-sub'];
       let text = '';
-      textNodes.forEach(n => { text += n.innerText.trim() + ' '; });
-      if (!text.trim()) text = card.innerText.replace(/\s+/g, ' ').trim().substring(0, 300);
+      selectors.forEach(sel => {
+        card.querySelectorAll(sel).forEach(n => { text += n.innerText.trim() + ' '; });
+      });
+      if (!text.trim()) text = card.innerText.replace(/\s+/g, ' ').trim().substring(0, 400);
 
       const canvas = await html2canvas(card, {
         width: 1080, height: 1350, scale: 1,
-        useCORS: true, allowTaint: true,
-        backgroundColor: null, logging: false,
+        useCORS: true, allowTaint: true, backgroundColor: null, logging: false,
       });
 
       slides.push({
@@ -406,97 +275,73 @@
         name: `slide_${String(i+1).padStart(2,'0')}.png`,
         text: text.trim(),
         audioUrl: null,
-        audioDuration: 2
+        audioDuration: 3
       });
       log(`  📸 ${i+1}장 캡처 완료`);
     }
 
     renderArea.innerHTML = '';
 
-    // STEP 2: TTS 생성
-    if (falKey) {
-      setProgress(55, '🎙️ TTS 음성 생성 중...');
-      const model = document.getElementById('tts-model').value;
-
+    // TTS 생성
+    if (falKey && ttsModel !== 'none') {
       for (let i = 0; i < slides.length; i++) {
-        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ 슬라이드 ${i+1} 음성 생성 중...`);
-        log(`  🔊 ${i+1}장 TTS 요청 중...`);
-
+        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 음성 생성 중...`);
+        log(`  🔊 ${i+1}장 TTS 요청...`);
         try {
-          const audioUrl = await generateTTS(slides[i].text, model);
+          const audioUrl = await generateTTS(slides[i].text, ttsModel);
           slides[i].audioUrl = audioUrl;
-
-          // 오디오 길이 측정
           const dur = await getAudioDuration(audioUrl);
           slides[i].audioDuration = dur;
           log(`  ✅ ${i+1}장 음성 완료 (${dur.toFixed(1)}초)`);
         } catch(e) {
           log(`  ⚠️ ${i+1}장 음성 실패: ${e.message}`);
-          slides[i].audioDuration = 3;
         }
       }
+    } else if (ttsModel === 'none') {
+      log('TTS 없이 PNG만 생성합니다');
     } else {
-      log('⚠️ API 키 없음 — TTS 없이 진행합니다');
+      log('⚠️ API 키 없음 — PNG만 생성합니다');
     }
 
-    setProgress(95, '✨ 마무리 중...');
-    renderThumbs();
-    renderPlayer();
     setProgress(100, '🎉 완성!');
+    renderThumbs();
+    goToSlide(0);
 
     setTimeout(() => {
       document.getElementById('status-box').classList.remove('show');
-      document.getElementById('preview-section').style.display = 'block';
+      document.getElementById('preview-section').classList.add('show');
       document.getElementById('player-wrap').classList.add('show');
       document.getElementById('btn-group').classList.add('show');
-    }, 600);
+    }, 500);
   }
 
   async function generateTTS(text, model) {
-    // 텍스트 정리 (30자 이내로)
     const cleanText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500);
-
     let body = {};
-
     if (model === 'fal-ai/gemini-tts') {
-      body = {
-        prompt: cleanText,
-        voice: 'Kore',
-        language: 'Korean (South Korea)',
-        model: 'gemini-2.5-flash-tts'
-      };
-    } else if (model === 'fal-ai/minimax/speech-02-hd') {
+      body = { prompt: cleanText, voice: 'Kore', language: 'Korean (South Korea)', model: 'gemini-2.5-flash-tts' };
+    } else if (model.includes('minimax')) {
       body = { text: cleanText, voice_id: 'Korean_GirlFriend', speed: 1.0 };
     } else if (model.includes('elevenlabs')) {
       body = { text: cleanText, voice_id: 'pNInz6obpgDQGcFmaJgB', language_code: 'ko' };
     } else {
       body = { text: cleanText };
     }
-
     const resp = await fetch(`https://fal.run/${model}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Key ${falKey}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(err);
-    }
-
+    if (!resp.ok) throw new Error(await resp.text());
     const data = await resp.json();
-    // 다양한 응답 구조 처리
     return data.audio?.url || data.audio_url || data.url || data.audio;
   }
 
   function getAudioDuration(url) {
-    return new Promise((resolve) => {
-      const audio = new Audio(url);
-      audio.addEventListener('loadedmetadata', () => resolve(audio.duration));
-      audio.addEventListener('error', () => resolve(3));
+    return new Promise(resolve => {
+      const a = new Audio(url);
+      a.addEventListener('loadedmetadata', () => resolve(a.duration));
+      a.addEventListener('error', () => resolve(3));
       setTimeout(() => resolve(3), 5000);
     });
   }
@@ -507,19 +352,14 @@
     slides.forEach((s, i) => {
       const div = document.createElement('div');
       div.className = 'thumb';
-      div.innerHTML = `
-        <img src="${s.dataUrl}">
-        <span class="thumb-badge">${i+1}/${slides.length}</span>
-        ${s.audioUrl ? '<span class="thumb-audio">🔊</span>' : ''}
-      `;
+      div.innerHTML = `<img src="${s.dataUrl}"><span class="thumb-badge">${i+1}</span>${s.audioUrl ? '<span class="thumb-audio">🔊</span>' : ''}`;
       div.onclick = () => goToSlide(i);
       grid.appendChild(div);
     });
   }
 
-  function renderPlayer() { goToSlide(0); }
-
   function goToSlide(i) {
+    if (!slides.length) return;
     currentSlide = i;
     document.getElementById('player-img').src = slides[i].dataUrl;
     document.getElementById('slide-info').textContent = `${i+1} / ${slides.length}`;
@@ -541,20 +381,23 @@
     isPlaying = !isPlaying;
     document.getElementById('play-btn').textContent = isPlaying ? '⏸' : '▶';
     const audio = document.getElementById('audio-player');
-
     if (isPlaying) {
       if (slides[currentSlide].audioUrl) {
         audio.play();
         audio.onended = () => {
           if (!isPlaying) return;
+          const dur = document.getElementById('slide-duration').value;
+          const delay = dur === 'auto' ? 500 : 500;
           setTimeout(() => {
+            if (!isPlaying) return;
             if (currentSlide < slides.length - 1) nextSlide();
             else { isPlaying = false; document.getElementById('play-btn').textContent = '▶'; }
-          }, 500);
+          }, delay);
         };
       } else {
-        const dur = slides[currentSlide].audioDuration * 1000 || 3000;
-        playTimer = setTimeout(() => { if (isPlaying) nextSlide(); }, dur);
+        const dur = document.getElementById('slide-duration').value;
+        const ms = dur === 'auto' ? 3000 : parseInt(dur);
+        playTimer = setTimeout(() => { if (isPlaying) nextSlide(); }, ms);
       }
     } else {
       clearTimeout(playTimer);
@@ -562,13 +405,9 @@
     }
   }
 
-  // PNG ZIP 다운로드
   async function downloadZip() {
     const zip = new JSZip();
-    slides.forEach(s => {
-      const b64 = s.dataUrl.split(',')[1];
-      zip.file(s.name, b64, { base64: true });
-    });
+    slides.forEach(s => { zip.file(s.name, s.dataUrl.split(',')[1], { base64: true }); });
     const blob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -576,88 +415,69 @@
     a.click();
   }
 
-  // 영상 다운로드 (PNG + 오디오 합성)
   async function downloadVideo() {
     const btn = document.getElementById('btn-video');
-    btn.textContent = '⏳ 영상 생성 중... (잠시 기다려주세요)';
+    btn.textContent = '⏳ 영상 생성 중...';
     btn.disabled = true;
 
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1350;
+    canvas.width = 1080; canvas.height = 1350;
     const ctx = canvas.getContext('2d');
-
-    // AudioContext로 오디오 믹싱
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const actx = new AudioCtx();
     const dest = actx.createMediaStreamDestination();
-
     const stream = canvas.captureStream(30);
-    // 오디오 트랙 추가
     stream.addTrack(dest.stream.getAudioTracks()[0]);
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9,opus',
-      videoBitsPerSecond: 8000000
-    });
-
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 });
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'cardnews_with_voice.webm';
+      a.download = 'cardnews_video.webm';
       a.click();
-      btn.textContent = '🎬 음성 포함 영상 다운로드';
+      btn.textContent = '🎬 음성 포함 영상 다운로드 (WebM)';
       btn.disabled = false;
       actx.close();
     };
 
     recorder.start(100);
     const fps = 30;
+    const durSetting = document.getElementById('slide-duration').value;
 
     for (let s = 0; s < slides.length; s++) {
       const slide = slides[s];
-      const duration = slide.audioDuration > 0 ? slide.audioDuration * 1000 : 3000;
+      const duration = durSetting === 'auto'
+        ? (slide.audioDuration > 0 ? slide.audioDuration * 1000 + 500 : 3000)
+        : parseInt(durSetting);
 
-      // 이미지 그리기
       const img = new Image();
       img.src = slide.dataUrl;
       await new Promise(r => img.onload = r);
 
-      // 오디오 재생 (있으면)
       if (slide.audioUrl && falKey) {
         try {
-          const audioResp = await fetch(slide.audioUrl);
-          const arrayBuffer = await audioResp.arrayBuffer();
-          const audioBuffer = await actx.decodeAudioData(arrayBuffer);
-          const source = actx.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(dest);
-          source.start(actx.currentTime);
-        } catch(e) { console.warn('오디오 로드 실패:', e); }
+          const resp = await fetch(slide.audioUrl);
+          const buf = await resp.arrayBuffer();
+          const audioBuf = await actx.decodeAudioData(buf);
+          const src = actx.createBufferSource();
+          src.buffer = audioBuf;
+          src.connect(dest);
+          src.start(actx.currentTime);
+        } catch(e) { console.warn('오디오 실패:', e); }
       }
 
-      // 슬라이드 프레임 그리기
       const startTime = Date.now();
       while (Date.now() - startTime < duration) {
-        const elapsed = Date.now() - startTime;
-        const progress = elapsed / duration;
-
+        const p = (Date.now() - startTime) / duration;
         ctx.clearRect(0, 0, 1080, 1350);
-
-        // 페이드인/아웃
-        if (progress < 0.08) ctx.globalAlpha = progress / 0.08;
-        else if (progress > 0.92) ctx.globalAlpha = (1 - progress) / 0.08;
-        else ctx.globalAlpha = 1;
-
+        ctx.globalAlpha = p < 0.07 ? p / 0.07 : p > 0.93 ? (1 - p) / 0.07 : 1;
         ctx.drawImage(img, 0, 0, 1080, 1350);
         await new Promise(r => setTimeout(r, 1000 / fps));
       }
     }
-
     recorder.stop();
   }
 
@@ -668,13 +488,14 @@
     clearTimeout(playTimer);
     document.getElementById('audio-player').pause();
     document.getElementById('thumbs-grid').innerHTML = '';
-    document.getElementById('preview-section').style.display = 'none';
+    document.getElementById('preview-section').classList.remove('show');
     document.getElementById('player-wrap').classList.remove('show');
     document.getElementById('btn-group').classList.remove('show');
     document.getElementById('status-box').classList.remove('show');
     document.getElementById('file-input').value = '';
     document.getElementById('play-btn').textContent = '▶';
     document.getElementById('status-log').innerHTML = '';
+    document.getElementById('slide-limit').value = '';
   }
 </script>
 </body>
