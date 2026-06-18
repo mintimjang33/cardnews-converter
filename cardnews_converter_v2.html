@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>카드뉴스 변환기 v2 (TTS)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px;
+    gap: 24px;
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 900;
+    background: linear-gradient(90deg, #FF4B6E, #ff8c42);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { font-size: 15px; color: #666; }
+
+  .section {
+    width: 100%;
+    max-width: 660px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    padding: 28px 32px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #FF4B6E;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* API 키 입력 */
+  .api-row {
+    display: flex;
+    gap: 10px;
+  }
+  .api-input {
+    flex: 1;
+    background: #111;
+    border: 1.5px solid #333;
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-input:focus { border-color: #FF4B6E; }
+  .api-input::placeholder { color: #555; }
+  .btn-sm {
+    background: #FF4B6E;
+    border: none;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-sm:hover { opacity: 0.85; }
+  .btn-sm.gray { background: #333; color: #aaa; }
+  .api-status { margin-top: 10px; font-size: 13px; color: #666; }
+  .api-status.ok { color: #00B894; }
+  .api-status.fail { color: #FF4B6E; }
+
+  /* TTS 설정 */
+  .setting-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .setting-label { font-size: 14px; color: #aaa; width: 80px; flex-shrink: 0; }
+  select, .speed-input {
+    background: #111;
+    border: 1.5px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 14px;
+    outline: none;
+    flex: 1;
+    cursor: pointer;
+  }
+  select:focus, .speed-input:focus { border-color: #FF4B6E; }
+
+  /* 업로드 */
+  .upload-zone {
+    width: 100%;
+    max-width: 660px;
+    border: 2px dashed #2a2a2a;
+    border-radius: 20px;
+    padding: 48px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #141414;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: #FF4B6E; background: #1a1010; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-text { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .upload-sub { font-size: 13px; color: #555; }
+  #file-input { display: none; }
+
+  /* 진행 상태 */
+  .status-box {
+    width: 100%;
+    max-width: 660px;
+    background: #1a1a1a;
+    border-radius: 16px;
+    padding: 24px 28px;
+    display: none;
+  }
+  .status-box.show { display: block; }
+  .status-title { font-size: 16px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; }
+  .progress-bar { width: 100%; height: 6px; background: #2a2a2a; border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #FF4B6E, #ff8c42); border-radius: 3px; transition: width 0.4s; width: 0%; }
+  .status-log { font-size: 13px; color: #666; line-height: 1.8; max-height: 100px; overflow-y: auto; }
+
+  /* 슬라이드 썸네일 */
+  .thumbs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .thumb {
+    aspect-ratio: 4/5;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #222;
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .thumb:hover { border-color: #FF4B6E; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-badge {
+    position: absolute; bottom: 5px; right: 5px;
+    background: rgba(0,0,0,0.75);
+    color: #fff; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .thumb-audio {
+    position: absolute; bottom: 5px; left: 5px;
+    font-size: 14px;
+  }
+
+  /* 플레이어 */
+  .player-wrap {
+    width: 100%;
+    max-width: 660px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    padding: 24px;
+    display: none;
+  }
+  .player-wrap.show { display: block; }
+  .player-screen {
+    width: 100%;
+    aspect-ratio: 4/5;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .player-screen img { width: 100%; height: 100%; object-fit: contain; }
+  .player-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ctrl { background: #2a2a2a; border: none; color: #fff; width: 42px; height: 42px; border-radius: 50%; font-size: 16px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+  .ctrl:hover { background: #FF4B6E; }
+  .ctrl.play { background: #FF4B6E; width: 50px; height: 50px; font-size: 20px; }
+  .slide-info { flex: 1; text-align: center; font-size: 13px; color: #666; }
+  .audio-player { width: 100%; margin-top: 14px; filter: invert(1) hue-rotate(180deg); }
+
+  /* 다운로드 버튼 */
+  .btn-group {
+    width: 100%;
+    max-width: 660px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn-group.show { display: flex; }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-png { background: #FF4B6E; color: #fff; }
+  .btn-video { background: #6c5ce7; color: #fff; }
+  .btn-reset { background: #222; color: #777; font-size: 14px; padding: 12px; }
+
+  #render-area { position: fixed; left: -9999px; top: 0; width: 1080px; }
+</style>
+</head>
+<body>
+
+<h1>🃏 카드뉴스 변환기 v2</h1>
+<p class="sub">HTML → PNG 7장 + TTS 음성 + 영상 자동 생성</p>
+
+<!-- API 키 설정 -->
+<div class="section">
+  <div class="section-title">🔑 fal.ai API 키</div>
+  <div class="api-row">
+    <input class="api-input" type="password" id="api-key" placeholder="fal.ai API 키를 입력하세요 (fal_...)">
+    <button class="btn-sm" onclick="saveKey()">저장</button>
+  </div>
+  <div class="api-status" id="api-status">API 키를 입력하면 TTS 기능이 활성화됩니다</div>
+</div>
+
+<!-- TTS 설정 -->
+<div class="section">
+  <div class="section-title">🎙️ TTS 설정</div>
+  <div class="setting-row">
+    <div class="setting-label">모델</div>
+    <select id="tts-model">
+      <option value="fal-ai/gemini-tts">Gemini TTS (한국어 추천 ⭐)</option>
+      <option value="fal-ai/minimax/speech-02-hd">MiniMax HD (자연스러운 발음)</option>
+      <option value="fal-ai/elevenlabs/tts/eleven-v3">ElevenLabs v3 (감정표현 최고)</option>
+      <option value="fal-ai/index-tts-2/text-to-speech">Index TTS 2.0 (저렴한 요금)</option>
+    </select>
+  </div>
+  <div class="setting-row">
+    <div class="setting-label">슬라이드 시간</div>
+    <select id="slide-duration">
+      <option value="3000">음성 끝나면 자동 넘김</option>
+      <option value="2000">2초</option>
+      <option value="3000">3초</option>
+      <option value="5000">5초</option>
+    </select>
+  </div>
+</div>
+
+<!-- 업로드 -->
+<div class="upload-zone" id="upload-zone">
+  <div class="upload-icon">📂</div>
+  <div class="upload-text">HTML 파일을 드래그하거나 클릭하세요</div>
+  <div class="upload-sub">Claude가 만들어준 카드뉴스 HTML 파일</div>
+  <input type="file" id="file-input" accept=".html">
+</div>
+
+<!-- 진행 상태 -->
+<div class="status-box" id="status-box">
+  <div class="status-title" id="status-title">처리 중...</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="status-log" id="status-log"></div>
+</div>
+
+<!-- 미리보기 -->
+<div class="section" id="preview-section" style="display:none">
+  <div class="section-title">📋 슬라이드 미리보기</div>
+  <div class="thumbs-grid" id="thumbs-grid"></div>
+</div>
+
+<!-- 플레이어 -->
+<div class="player-wrap" id="player-wrap">
+  <div class="player-screen">
+    <img id="player-img" src="" alt="">
+  </div>
+  <div class="player-controls">
+    <button class="ctrl" onclick="prevSlide()">◀</button>
+    <button class="ctrl play" id="play-btn" onclick="togglePlay()">▶</button>
+    <button class="ctrl" onclick="nextSlide()">▶▶</button>
+    <div class="slide-info" id="slide-info">1 / 7</div>
+  </div>
+  <audio id="audio-player" class="audio-player" controls></audio>
+</div>
+
+<!-- 다운로드 -->
+<div class="btn-group" id="btn-group">
+  <button class="btn btn-png" onclick="downloadZip()">📦 PNG 전체 다운로드 (ZIP)</button>
+  <button class="btn btn-video" id="btn-video" onclick="downloadVideo()">🎬 음성 포함 영상 다운로드</button>
+  <button class="btn btn-reset" onclick="resetAll()">🔄 다른 파일 변환하기</button>
+</div>
+
+<div id="render-area"></div>
+
+<script>
+  let slides = [];       // { dataUrl, text, audioUrl, audioDuration }
+  let currentSlide = 0;
+  let isPlaying = false;
+  let playTimer = null;
+  let falKey = localStorage.getItem('fal_key') || '';
+
+  // 저장된 키 복원
+  if (falKey) {
+    document.getElementById('api-key').value = falKey;
+    document.getElementById('api-status').textContent = '✅ API 키 저장됨';
+    document.getElementById('api-status').className = 'api-status ok';
+  }
+
+  function saveKey() {
+    falKey = document.getElementById('api-key').value.trim();
+    if (!falKey) return;
+    localStorage.setItem('fal_key', falKey);
+    document.getElementById('api-status').textContent = '✅ API 키 저장됨 — TTS 활성화';
+    document.getElementById('api-status').className = 'api-status ok';
+  }
+
+  // 업로드
+  const uploadZone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+  uploadZone.addEventListener('click', () => fileInput.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+  function log(msg) {
+    const el = document.getElementById('status-log');
+    el.innerHTML += msg + '<br>';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setProgress(pct, title) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    if (title) document.getElementById('status-title').textContent = title;
+  }
+
+  async function processFile(file) {
+    slides = [];
+    document.getElementById('status-box').classList.add('show');
+    document.getElementById('status-log').innerHTML = '';
+    setProgress(5, '📄 HTML 파일 읽는 중...');
+
+    const html = await file.text();
+    const renderArea = document.getElementById('render-area');
+    renderArea.innerHTML = '';
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'width:1080px;height:9999px;border:none;';
+    renderArea.appendChild(iframe);
+    iframe.srcdoc = html;
+    await new Promise(r => iframe.addEventListener('load', r));
+    await new Promise(r => setTimeout(r, 2000));
+
+    setProgress(15, '🔍 슬라이드 감지 중...');
+    const iDoc = iframe.contentDocument;
+    const cards = iDoc.querySelectorAll('.card');
+
+    if (!cards || cards.length === 0) {
+      setProgress(0, '❌ 슬라이드를 찾을 수 없어요');
+      log('class="card" 가 있는 슬라이드를 찾지 못했어요. Claude가 만든 HTML인지 확인해주세요.');
+      return;
+    }
+
+    log(`✅ 슬라이드 ${cards.length}장 감지됨`);
+    const total = cards.length;
+
+    // STEP 1: PNG 캡처
+    for (let i = 0; i < total; i++) {
+      setProgress(15 + Math.round((i / total) * 35), `🖼️ 슬라이드 ${i+1}/${total} 캡처 중...`);
+      const card = cards[i];
+
+      // 텍스트 추출 (TTS용)
+      const textNodes = card.querySelectorAll('.hook, .title, .body, .fact-text, .vs-content, .tl-text, .quote-text, .cta-main, .cta-sub');
+      let text = '';
+      textNodes.forEach(n => { text += n.innerText.trim() + ' '; });
+      if (!text.trim()) text = card.innerText.replace(/\s+/g, ' ').trim().substring(0, 300);
+
+      const canvas = await html2canvas(card, {
+        width: 1080, height: 1350, scale: 1,
+        useCORS: true, allowTaint: true,
+        backgroundColor: null, logging: false,
+      });
+
+      slides.push({
+        dataUrl: canvas.toDataURL('image/png'),
+        name: `slide_${String(i+1).padStart(2,'0')}.png`,
+        text: text.trim(),
+        audioUrl: null,
+        audioDuration: 2
+      });
+      log(`  📸 ${i+1}장 캡처 완료`);
+    }
+
+    renderArea.innerHTML = '';
+
+    // STEP 2: TTS 생성
+    if (falKey) {
+      setProgress(55, '🎙️ TTS 음성 생성 중...');
+      const model = document.getElementById('tts-model').value;
+
+      for (let i = 0; i < slides.length; i++) {
+        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ 슬라이드 ${i+1} 음성 생성 중...`);
+        log(`  🔊 ${i+1}장 TTS 요청 중...`);
+
+        try {
+          const audioUrl = await generateTTS(slides[i].text, model);
+          slides[i].audioUrl = audioUrl;
+
+          // 오디오 길이 측정
+          const dur = await getAudioDuration(audioUrl);
+          slides[i].audioDuration = dur;
+          log(`  ✅ ${i+1}장 음성 완료 (${dur.toFixed(1)}초)`);
+        } catch(e) {
+          log(`  ⚠️ ${i+1}장 음성 실패: ${e.message}`);
+          slides[i].audioDuration = 3;
+        }
+      }
+    } else {
+      log('⚠️ API 키 없음 — TTS 없이 진행합니다');
+    }
+
+    setProgress(95, '✨ 마무리 중...');
+    renderThumbs();
+    renderPlayer();
+    setProgress(100, '🎉 완성!');
+
+    setTimeout(() => {
+      document.getElementById('status-box').classList.remove('show');
+      document.getElementById('preview-section').style.display = 'block';
+      document.getElementById('player-wrap').classList.add('show');
+      document.getElementById('btn-group').classList.add('show');
+    }, 600);
+  }
+
+  async function generateTTS(text, model) {
+    // 텍스트 정리 (30자 이내로)
+    const cleanText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500);
+
+    let body = {};
+
+    if (model === 'fal-ai/gemini-tts') {
+      body = {
+        prompt: cleanText,
+        voice: 'Kore',
+        language: 'Korean (South Korea)',
+        model: 'gemini-2.5-flash-tts'
+      };
+    } else if (model === 'fal-ai/minimax/speech-02-hd') {
+      body = { text: cleanText, voice_id: 'Korean_GirlFriend', speed: 1.0 };
+    } else if (model.includes('elevenlabs')) {
+      body = { text: cleanText, voice_id: 'pNInz6obpgDQGcFmaJgB', language_code: 'ko' };
+    } else {
+      body = { text: cleanText };
+    }
+
+    const resp = await fetch(`https://fal.run/${model}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${falKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(err);
+    }
+
+    const data = await resp.json();
+    // 다양한 응답 구조 처리
+    return data.audio?.url || data.audio_url || data.url || data.audio;
+  }
+
+  function getAudioDuration(url) {
+    return new Promise((resolve) => {
+      const audio = new Audio(url);
+      audio.addEventListener('loadedmetadata', () => resolve(audio.duration));
+      audio.addEventListener('error', () => resolve(3));
+      setTimeout(() => resolve(3), 5000);
+    });
+  }
+
+  function renderThumbs() {
+    const grid = document.getElementById('thumbs-grid');
+    grid.innerHTML = '';
+    slides.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      div.innerHTML = `
+        <img src="${s.dataUrl}">
+        <span class="thumb-badge">${i+1}/${slides.length}</span>
+        ${s.audioUrl ? '<span class="thumb-audio">🔊</span>' : ''}
+      `;
+      div.onclick = () => goToSlide(i);
+      grid.appendChild(div);
+    });
+  }
+
+  function renderPlayer() { goToSlide(0); }
+
+  function goToSlide(i) {
+    currentSlide = i;
+    document.getElementById('player-img').src = slides[i].dataUrl;
+    document.getElementById('slide-info').textContent = `${i+1} / ${slides.length}`;
+    const audio = document.getElementById('audio-player');
+    if (slides[i].audioUrl) {
+      audio.src = slides[i].audioUrl;
+      audio.style.display = 'block';
+      if (isPlaying) audio.play();
+    } else {
+      audio.src = '';
+      audio.style.display = 'none';
+    }
+  }
+
+  function prevSlide() { goToSlide(currentSlide > 0 ? currentSlide - 1 : slides.length - 1); }
+  function nextSlide() { goToSlide(currentSlide < slides.length - 1 ? currentSlide + 1 : 0); }
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    document.getElementById('play-btn').textContent = isPlaying ? '⏸' : '▶';
+    const audio = document.getElementById('audio-player');
+
+    if (isPlaying) {
+      if (slides[currentSlide].audioUrl) {
+        audio.play();
+        audio.onended = () => {
+          if (!isPlaying) return;
+          setTimeout(() => {
+            if (currentSlide < slides.length - 1) nextSlide();
+            else { isPlaying = false; document.getElementById('play-btn').textContent = '▶'; }
+          }, 500);
+        };
+      } else {
+        const dur = slides[currentSlide].audioDuration * 1000 || 3000;
+        playTimer = setTimeout(() => { if (isPlaying) nextSlide(); }, dur);
+      }
+    } else {
+      clearTimeout(playTimer);
+      audio.pause();
+    }
+  }
+
+  // PNG ZIP 다운로드
+  async function downloadZip() {
+    const zip = new JSZip();
+    slides.forEach(s => {
+      const b64 = s.dataUrl.split(',')[1];
+      zip.file(s.name, b64, { base64: true });
+    });
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cardnews_slides.zip';
+    a.click();
+  }
+
+  // 영상 다운로드 (PNG + 오디오 합성)
+  async function downloadVideo() {
+    const btn = document.getElementById('btn-video');
+    btn.textContent = '⏳ 영상 생성 중... (잠시 기다려주세요)';
+    btn.disabled = true;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext('2d');
+
+    // AudioContext로 오디오 믹싱
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const actx = new AudioCtx();
+    const dest = actx.createMediaStreamDestination();
+
+    const stream = canvas.captureStream(30);
+    // 오디오 트랙 추가
+    stream.addTrack(dest.stream.getAudioTracks()[0]);
+
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9,opus',
+      videoBitsPerSecond: 8000000
+    });
+
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'cardnews_with_voice.webm';
+      a.click();
+      btn.textContent = '🎬 음성 포함 영상 다운로드';
+      btn.disabled = false;
+      actx.close();
+    };
+
+    recorder.start(100);
+    const fps = 30;
+
+    for (let s = 0; s < slides.length; s++) {
+      const slide = slides[s];
+      const duration = slide.audioDuration > 0 ? slide.audioDuration * 1000 : 3000;
+
+      // 이미지 그리기
+      const img = new Image();
+      img.src = slide.dataUrl;
+      await new Promise(r => img.onload = r);
+
+      // 오디오 재생 (있으면)
+      if (slide.audioUrl && falKey) {
+        try {
+          const audioResp = await fetch(slide.audioUrl);
+          const arrayBuffer = await audioResp.arrayBuffer();
+          const audioBuffer = await actx.decodeAudioData(arrayBuffer);
+          const source = actx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(dest);
+          source.start(actx.currentTime);
+        } catch(e) { console.warn('오디오 로드 실패:', e); }
+      }
+
+      // 슬라이드 프레임 그리기
+      const startTime = Date.now();
+      while (Date.now() - startTime < duration) {
+        const elapsed = Date.now() - startTime;
+        const progress = elapsed / duration;
+
+        ctx.clearRect(0, 0, 1080, 1350);
+
+        // 페이드인/아웃
+        if (progress < 0.08) ctx.globalAlpha = progress / 0.08;
+        else if (progress > 0.92) ctx.globalAlpha = (1 - progress) / 0.08;
+        else ctx.globalAlpha = 1;
+
+        ctx.drawImage(img, 0, 0, 1080, 1350);
+        await new Promise(r => setTimeout(r, 1000 / fps));
+      }
+    }
+
+    recorder.stop();
+  }
+
+  function resetAll() {
+    slides = [];
+    currentSlide = 0;
+    isPlaying = false;
+    clearTimeout(playTimer);
+    document.getElementById('audio-player').pause();
+    document.getElementById('thumbs-grid').innerHTML = '';
+    document.getElementById('preview-section').style.display = 'none';
+    document.getElementById('player-wrap').classList.remove('show');
+    document.getElementById('btn-group').classList.remove('show');
+    document.getElementById('status-box').classList.remove('show');
+    document.getElementById('file-input').value = '';
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('status-log').innerHTML = '';
+  }
+</script>
+</body>
+</html>
