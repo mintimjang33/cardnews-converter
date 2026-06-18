@@ -95,7 +95,7 @@
     <input type="password" id="api-key" placeholder="fal.ai API 키 (fal_...)">
     <button class="btn-sm" onclick="saveKey()">저장</button>
   </div>
-  <div class="api-status" id="api-status">API 키를 입력하면 TTS 음성 기능이 활성화됩니다</div>
+  <div class="api-status" id="api-status">API 키는 브라우저 세션에만 저장됩니다 (탭 닫으면 자동 삭제)</div>
 </div>
 
 <!-- TTS + 설정 -->
@@ -177,7 +177,7 @@
   let currentSlide = 0;
   let isPlaying = false;
   let playTimer = null;
-  let falKey = localStorage.getItem('fal_key') || '';
+  let falKey = sessionStorage.getItem('fal_key') || '';
 
   if (falKey) {
     document.getElementById('api-key').value = falKey;
@@ -188,7 +188,7 @@
   function saveKey() {
     falKey = document.getElementById('api-key').value.trim();
     if (!falKey) return;
-    localStorage.setItem('fal_key', falKey);
+    sessionStorage.setItem('fal_key', falKey);
     document.getElementById('api-status').textContent = '✅ API 키 저장됨 — TTS 활성화';
     document.getElementById('api-status').className = 'api-status ok';
   }
