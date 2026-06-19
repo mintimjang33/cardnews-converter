@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import { AdSlot } from '../components/AdSlot'
+import { AdSlot, SidebarAd } from '../components/AdSlot'
 
 const TOOLS = [
   {
@@ -58,10 +58,14 @@ const I18N = {
 
 export default function Home() {
   const [lang, setLang] = useState('ko')
+  const [adsOn, setAdsOn] = useState(true)
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+    }).catch(() => {})
   }, [])
 
   const toggleLang = () => {
@@ -71,6 +75,7 @@ export default function Home() {
   }
 
   const t = I18N[lang]
+
   return (
     <>
       <Head>
@@ -84,59 +89,68 @@ export default function Home() {
 
       <Header lang={lang} onToggleLang={toggleLang} siteName="DownTools" siteHref="/" />
 
-      <div className="wrap">
-        {/* 상단 광고 */}
-        <div style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={t.adLabel} />
         </div>
+      )}
 
-        {/* 히어로 */}
-        <section className="hero">
-          <div className="hero-badge">{t.badge}</div>
-          <h1 className="hero-title">{t.heroTitle}<br /><span className="highlight">{t.heroHighlight}</span></h1>
-          <p className="hero-sub">{t.heroSub}</p>
-        </section>
+      <div className="page-layout">
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} number={2} label={t.adLabel} /></aside>}
 
-        {/* 툴 그리드 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, marginBottom: 48 }}>
-          {TOOLS.map(tool => (
-            <Link key={tool.href} href={tool.coming ? '#' : tool.href}
-              style={{ textDecoration: 'none', pointerEvents: tool.coming ? 'none' : 'auto' }}>
-              <div style={{
-                background: 'var(--surface)', border: '1.5px solid var(--border)',
-                borderRadius: 'var(--radius)', padding: 24,
-                transition: 'all 0.2s', cursor: tool.coming ? 'default' : 'pointer',
-                opacity: tool.coming ? 0.5 : 1,
-                ':hover': { borderColor: tool.color }
-              }}
-                onMouseEnter={e => { if (!tool.coming) e.currentTarget.style.borderColor = tool.color }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
-              >
+        <main className="main-content" style={{ padding: '0 20px' }}>
+          {/* 히어로 */}
+          <section className="hero">
+            <div className="hero-badge">{t.badge}</div>
+            <h1 className="hero-title">{t.heroTitle}<br /><span className="highlight">{t.heroHighlight}</span></h1>
+            <p className="hero-sub">{t.heroSub}</p>
+          </section>
+
+          {/* 툴 그리드 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 48 }}>
+            {TOOLS.map(tool => (
+              <Link key={tool.href} href={tool.coming ? '#' : tool.href}
+                style={{ textDecoration: 'none', pointerEvents: tool.coming ? 'none' : 'auto' }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 12,
-                  background: `${tool.color}22`, border: `1.5px solid ${tool.color}44`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, marginBottom: 14,
-                }}>
-                  {tool.icon}
+                  background: 'var(--surface)', border: '1.5px solid var(--border)',
+                  borderRadius: 'var(--radius)', padding: 24,
+                  transition: 'all 0.2s', cursor: tool.coming ? 'default' : 'pointer',
+                  opacity: tool.coming ? 0.5 : 1,
+                }}
+                  onMouseEnter={e => { if (!tool.coming) e.currentTarget.style.borderColor = tool.color }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12,
+                    background: `${tool.color}22`, border: `1.5px solid ${tool.color}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 24, marginBottom: 14,
+                  }}>
+                    {tool.icon}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tool.name}</span>
+                    {tool.coming && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'var(--surface3)', color: 'var(--text3)' }}>{t.coming}</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{tool.desc[lang]}</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tool.name}</span>
-                  {tool.coming && (
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'var(--surface3)', color: 'var(--text3)' }}>{t.coming}</span>
-                  )}
-                </div>
-                <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{tool.desc[lang]}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        </main>
 
-        {/* 하단 광고 */}
-        <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} number={3} label={t.adLabel} /></aside>}
       </div>
 
-      <Footer lang={lang} siteName="DownTools" />
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={5} label={t.adLabel} />
+        </div>
+      )}
+
+      <Footer lang={lang} siteName="DownTools" adsOn={adsOn} />
     </>
   )
 }
