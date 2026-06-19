@@ -46,9 +46,9 @@
   .preview-num { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 
   /* 모달 */
-  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; }
-  .modal-bg.show { display: flex; }
-  .modal-box { position: relative; width: min(380px, 80vw); }
+  .modal-bg { display: none; position: absolute; left: 0; right: 0; top: 0; background: rgba(0,0,0,0.9); z-index: 9999; }
+  .modal-bg.show { display: block; }
+  .modal-box { position: absolute; left: 50%; transform: translateX(-50%); width: min(380px, 80vw); }
   .modal-box img { width: 100%; border-radius: 14px; display: block; }
   .modal-close { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; background: #FF4B6E; border: none; color: #fff; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -391,7 +391,7 @@
 
 <!-- 모달 -->
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)modalClose()">
-  <div class="modal-box">
+  <div class="modal-box" id="modal-box">
     <button class="modal-close" onclick="modalClose()">✕</button>
     <button class="modal-nav modal-prev" onclick="modalStep(-1)">◀</button>
     <img id="modal-img" src="" alt="">
@@ -419,11 +419,33 @@
 
   // 모달
   let modalImgs = [], modalIdx = 0;
-  function openModal(imgs, idx) {
+  function openModal(imgs, idx, anchorEl) {
     modalImgs = imgs; modalIdx = idx;
     document.getElementById('modal-img').src = modalImgs[modalIdx];
     document.getElementById('modal-label').textContent = `${modalIdx+1} / ${modalImgs.length}`;
-    document.getElementById('modal-bg').classList.add('show');
+    const modalBg = document.getElementById('modal-bg');
+    const modalBox = document.getElementById('modal-box');
+
+    // 배경은 문서 전체를 덮도록 높이를 맞춤 (스크롤해도 어두운 배경이 끊기지 않게)
+    modalBg.style.height = document.documentElement.scrollHeight + 'px';
+
+    // 클릭한 썸네일의 문서상 위치(top) 바로 아래쪽에 모달 박스를 배치
+    // (이 페이지가 iframe으로 길게 통째로 삽입되는 환경에서는 window.innerHeight를
+    //  신뢰할 수 없으므로, 화면 중앙 정렬 대신 클릭 지점 기준 배치를 사용)
+    let boxTop = (window.scrollY || 0) + 40;
+    if (anchorEl && anchorEl.getBoundingClientRect) {
+      const rect = anchorEl.getBoundingClientRect();
+      boxTop = (window.scrollY || 0) + rect.top;
+    }
+    if (boxTop < 0) boxTop = 0;
+    modalBox.style.top = boxTop + 'px';
+
+    modalBg.classList.add('show');
+    // 모달 박스가 화면에 바로 보이도록 그 위치로 스크롤
+    requestAnimationFrame(() => {
+      modalBox.scrollIntoView({ block: 'start', behavior: 'auto' });
+      window.scrollBy(0, -30);
+    });
   }
   function modalClose() { document.getElementById('modal-bg').classList.remove('show'); }
   function modalStep(dir) {
@@ -657,7 +679,7 @@
     // 모달 연결
     const srcs = Array.from(scroll.querySelectorAll('.preview-thumb img')).map(el => el.src);
     scroll.querySelectorAll('.preview-thumb').forEach((el, i) => {
-      el.onclick = () => openModal(srcs, i);
+      el.onclick = () => openModal(srcs, i, el);
     });
 
     // 미리보기 이미지를 slides에 채워서 플레이어 완전 작동
@@ -679,7 +701,7 @@
       const div = document.createElement('div');
       div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
       div.innerHTML = `<img src="${src}"><span class="slide-num-badge">${i+1}/${srcs.length}</span>`;
-      div.onclick = () => openModal(srcs, i);
+      div.onclick = () => openModal(srcs, i, div);
       grid.appendChild(div);
     });
 
@@ -1173,7 +1195,7 @@
       const div = document.createElement('div');
       div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
       div.innerHTML = `<img src="${s.dataUrl}"><span class="slide-num-badge">${i+1}/${slides.length}</span>`;
-      div.onclick = () => openModal(allDataUrls, i);
+      div.onclick = () => openModal(allDataUrls, i, div);
       grid.appendChild(div);
     });
     goToSlide(0);
