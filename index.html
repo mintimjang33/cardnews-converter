@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>카드뉴스 변환기</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -158,17 +159,17 @@
 </head>
 <body>
 
-<!-- 네비게이션 -->
-<div id="nav-bar" style="width:100%;max-width:700px;display:flex;gap:8px;margin-bottom:8px;">
-  <button onclick="showPage('converter')" id="nav-converter" style="flex:1;padding:10px;border-radius:10px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">🃏 변환기</button>
-  <button onclick="showPage('blog')" id="nav-blog" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">📝 블로그</button>
-  <button onclick="showPage('admin')" id="nav-admin" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">⚙️ 관리자</button>
+<!-- 상단 네비 -->
+<div id="top-nav" style="width:100%;max-width:700px;display:flex;gap:8px;">
+  <button class="nav-btn active" onclick="showPage('converter')">🃏 변환기</button>
+  <button class="nav-btn" onclick="showPage('blog')">📝 블로그</button>
+  <button class="nav-btn" onclick="showPage('admin')">⚙️ 관리자</button>
 </div>
+<!-- 상단 광고 슬롯 -->
+<div id="ad-slot-top" style="width:100%;max-width:700px;min-height:0;"></div>
 
-<!-- 상단 광고 -->
-<div id="ad-top" style="width:100%;max-width:700px;"></div>
+<div id="page-converter" style="display:contents;">
 
-<div id="page-converter" style="display:flex;flex-direction:column;align-items:center;width:100%;gap:16px;">
 <h1>🃏 카드뉴스 변환기</h1>
 <p class="sub">HTML → PNG + TTS 음성 + 영상 자동 생성 · 🔒 API 키 세션 저장</p>
 
@@ -413,6 +414,7 @@
 </div>
 
 <div id="render-area"></div>
+</div><!-- /#page-converter -->
 
 <script>
   // 섹션 접기/펼치기
@@ -1496,420 +1498,741 @@
   }
 </script>
 
-<!-- 중간 광고 -->
-<div id="ad-middle" style="width:100%;max-width:700px;margin:8px 0;"></div>
+<!-- 중간 광고 슬롯 -->
+<div id="ad-slot-middle" style="width:100%;max-width:700px;min-height:0;display:none;"></div>
 
-</div><!-- /#page-converter -->
+<!-- ===== 블로그 페이지 ===== -->
+<div id="page-blog" style="display:none;width:100%;max-width:700px;flex-direction:column;gap:16px;">
 
-<!-- ==================== 블로그 페이지 ==================== -->
-<div id="page-blog" style="display:none;width:100%;max-width:700px;">
-  <div id="blog-list-view">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <h2 style="font-size:20px;font-weight:800;background:linear-gradient(90deg,#FF4B6E,#ff8c42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">📝 블로그</h2>
-      <button onclick="blogShowWrite()" id="btn-new-post" style="display:none;padding:8px 16px;border-radius:9px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">+ 글쓰기</button>
-    </div>
-    <div id="blog-posts-list" style="display:flex;flex-direction:column;gap:12px;">
-      <div style="text-align:center;padding:40px;color:#444;">불러오는 중...</div>
-    </div>
-    <!-- 하단 광고 -->
-    <div id="ad-bottom" style="margin-top:16px;"></div>
-  </div>
-
-  <!-- 글 상세 -->
-  <div id="blog-detail-view" style="display:none;">
-    <button onclick="blogShowList()" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;margin-bottom:16px;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">← 목록으로</button>
-    <div id="blog-detail-content"></div>
-  </div>
-
-  <!-- 글쓰기/수정 -->
-  <div id="blog-write-view" style="display:none;">
-    <button onclick="blogShowList()" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;margin-bottom:16px;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">← 목록으로</button>
-    <h3 id="blog-write-title-label" style="font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;">📝 글 작성</h3>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <input id="bw-title" placeholder="제목" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <input id="bw-category" placeholder="카테고리 (예: 카드뉴스 팁)" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <input id="bw-tags" placeholder="태그 (쉼표 구분, 예: 카드뉴스,인스타,SNS)" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <input id="bw-cover" placeholder="커버 이미지 URL (선택)" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <textarea id="bw-summary" placeholder="요약 (검색엔진 description, 1~2줄)" rows="2" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;"></textarea>
-      <div>
-        <div style="font-size:11px;color:#555;margin-bottom:4px;">본문 (마크다운 지원)</div>
-        <textarea id="bw-content" placeholder="## 소제목&#10;&#10;본문 내용을 마크다운으로 작성하세요.&#10;&#10;- 항목 1&#10;- 항목 2&#10;&#10;**굵게** *기울임*" rows="16" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#ccc;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:monospace;line-height:1.7;"></textarea>
+  <!-- 블로그 글 목록 -->
+  <div id="blog-view-list">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <h2 style="font-size:22px;font-weight:800;background:linear-gradient(90deg,#FF4B6E,#ff8c42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">📝 블로그</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div id="blog-filter-tags" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <button id="btn-blog-new" onclick="blogStartNew()" style="display:none;padding:8px 16px;border-radius:9px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">+ 글쓰기</button>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="blogSave('draft')" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">💾 임시저장</button>
-        <button onclick="blogSave('published')" style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,#FF4B6E,#ff8c42);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">🚀 발행</button>
+    </div>
+    <div id="blog-posts-container" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="text-align:center;padding:48px;color:#444;">불러오는 중...</div>
+    </div>
+    <div id="ad-slot-bottom" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- 블로그 글 상세 -->
+  <div id="blog-view-detail" style="display:none;">
+    <button onclick="blogGoList()" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;margin-bottom:16px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:0;">← 목록으로</button>
+    <div id="blog-detail-body"></div>
+  </div>
+
+  <!-- 블로그 글쓰기/수정 (BlogAdmin 스타일 그대로) -->
+  <div id="blog-view-write" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <button onclick="blogGoList()" style="background:none;border:none;cursor:pointer;color:#888;font-size:14px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:0;">← 목록</button>
+      <h2 id="write-view-title" style="font-size:18px;font-weight:700;color:#fff;flex:1;">📝 글 작성</h2>
+      <button onclick="blogTogglePreview()" id="btn-preview-toggle" style="padding:7px 14px;border-radius:8px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">👁 미리보기</button>
+      <button onclick="blogSave('draft')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">💾 임시저장</button>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1.5px solid #1e3a5f;border-radius:8px;padding:4px 10px;">
+        <input type="datetime-local" id="scheduled-at-input" style="border:none;background:transparent;font-size:12px;color:#60a5fa;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;outline:none;cursor:pointer;">
+        <button onclick="blogSave('scheduled')" style="padding:5px 10px;border-radius:6px;border:none;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;white-space:nowrap;">⏰ 예약발행</button>
+      </div>
+      <button onclick="blogSave('published')" style="padding:7px 18px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF4B6E,#ff8c42);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">🚀 발행</button>
+    </div>
+
+    <div id="write-layout" style="display:grid;grid-template-columns:1fr;gap:20px;">
+      <!-- 에디터 컬럼 -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="write-title" placeholder="제목을 입력하세요" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:17px;font-weight:700;outline:none;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div>
+            <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">URL 슬러그</div>
+            <input id="write-slug" placeholder="url-slug" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+          </div>
+          <div>
+            <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">카테고리</div>
+            <select id="write-category" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+              <option value="">카테고리 선택</option>
+              <option>카드뉴스 제작</option>
+              <option>SNS 마케팅</option>
+              <option>인스타그램</option>
+              <option>TTS 활용</option>
+              <option>업데이트</option>
+              <option>공지사항</option>
+              <option>기타</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">태그 (쉼표 구분)</div>
+            <input id="write-tags" placeholder="카드뉴스, 인스타, SNS" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">요약 (SEO description)</div>
+          <textarea id="write-summary" rows="2" placeholder="검색엔진에 표시될 요약 문구 (160자 이내)" maxlength="200" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;"></textarea>
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">커버 이미지 URL</div>
+          <input id="write-cover" placeholder="https://..." style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">본문 (마크다운)</div>
+          <textarea id="write-content" rows="22" placeholder="# 제목&#10;&#10;본문을 마크다운으로 작성하세요.&#10;&#10;## 소제목&#10;&#10;- 항목 1&#10;- 항목 2&#10;&#10;**굵게** *기울임* `코드`" style="width:100%;padding:12px 14px;border-radius:8px;border:1.5px solid #2a2a2a;background:#111;color:#ccc;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:monospace;line-height:1.7;" oninput="blogUpdatePreview()"></textarea>
+        </div>
+      </div>
+
+      <!-- 미리보기 컬럼 (토글) -->
+      <div id="preview-col" style="display:none;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;padding:24px;overflow-y:auto;max-height:85vh;">
+        <div style="font-size:11px;font-weight:700;color:#9ca3af;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">미리보기</div>
+        <h1 id="preview-title" style="font-size:20px;font-weight:800;color:#111827;margin-bottom:12px;"></h1>
+        <div id="preview-body" class="md-preview"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ==================== 관리자 페이지 ==================== -->
-<div id="page-admin" style="display:none;width:100%;max-width:700px;">
+<!-- ===== 관리자 페이지 ===== -->
+<div id="page-admin" style="display:none;width:100%;max-width:700px;flex-direction:column;gap:16px;">
+
   <!-- 로그인 전 -->
-  <div id="admin-login-view">
-    <div style="background:#1a1a1a;border-radius:20px;padding:32px;text-align:center;">
-      <div style="font-size:36px;margin-bottom:12px;">🔐</div>
-      <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;">관리자 로그인</div>
-      <div style="font-size:13px;color:#555;margin-bottom:20px;">블로그 글쓰기 및 광고 관리</div>
-      <input id="admin-pw" type="password" placeholder="관리자 비밀번호" style="width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:12px;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;" onkeydown="if(event.key==='Enter')adminLogin()">
-      <button onclick="adminLogin()" style="width:100%;padding:13px;border-radius:10px;border:none;background:#FF4B6E;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">로그인</button>
-      <div id="admin-login-err" style="color:#FF4B6E;font-size:12px;margin-top:8px;"></div>
+  <div id="admin-view-login">
+    <div style="background:#1a1a1a;border-radius:20px;padding:36px;text-align:center;max-width:380px;margin:0 auto;">
+      <div style="font-size:40px;margin-bottom:12px;">🔐</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">관리자 로그인</div>
+      <div style="font-size:13px;color:#555;margin-bottom:24px;">블로그 글쓰기 · 광고 관리</div>
+      <input id="admin-pw-input" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key==='Enter')adminDoLogin()"
+        style="width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:12px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+      <button onclick="adminDoLogin()" style="width:100%;padding:13px;border-radius:10px;border:none;background:#FF4B6E;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">로그인</button>
+      <div id="admin-login-err" style="color:#FF4B6E;font-size:12px;margin-top:10px;"></div>
     </div>
   </div>
 
-  <!-- 로그인 후 -->
-  <div id="admin-panel-view" style="display:none;">
+  <!-- 관리자 패널 -->
+  <div id="admin-view-panel" style="display:none;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <h2 style="font-size:20px;font-weight:800;color:#fff;">⚙️ 관리자</h2>
-      <button onclick="adminLogout()" style="padding:7px 14px;border-radius:8px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:12px;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">로그아웃</button>
+      <h2 style="font-size:20px;font-weight:800;color:#fff;">⚙️ 관리자 패널</h2>
+      <button onclick="adminDoLogout()" style="padding:7px 14px;border-radius:8px;border:1.5px solid #2a2a2a;background:#1a1a1a;color:#888;font-size:12px;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">로그아웃</button>
     </div>
 
-    <!-- 광고 관리 -->
-    <div style="background:#1a1a1a;border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;color:#FF4B6E;margin-bottom:4px;">📢 애드센스 광고 코드</div>
-      <div style="font-size:12px;color:#555;margin-bottom:14px;">광고 단위 코드를 입력하고 활성화하세요</div>
-      <div id="ad-slots-admin" style="display:flex;flex-direction:column;gap:12px;"></div>
+    <!-- 관리 탭 -->
+    <div style="display:flex;gap:0;border-bottom:2px solid #2a2a2a;margin-bottom:20px;">
+      <button class="admin-tab active" onclick="adminShowTab('posts')" id="atab-posts">📝 글 관리</button>
+      <button class="admin-tab" onclick="adminShowTab('ads')" id="atab-ads">📢 광고 관리</button>
+      <button class="admin-tab" onclick="adminShowTab('seo')" id="atab-seo">🔧 SEO 체크리스트</button>
+      <button class="admin-tab" onclick="adminShowTab('settings')" id="atab-settings">🔑 설정</button>
     </div>
 
-    <!-- 관리자 비밀번호 변경 -->
-    <div style="background:#1a1a1a;border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;color:#ff8c42;margin-bottom:14px;">🔑 비밀번호 변경</div>
-      <input id="pw-new1" type="password" placeholder="새 비밀번호" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:8px;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <input id="pw-new2" type="password" placeholder="새 비밀번호 확인" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:10px;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">
-      <button onclick="changePw()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#ff8c42;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">변경</button>
-      <div id="pw-msg" style="font-size:12px;margin-top:6px;text-align:center;"></div>
+    <!-- 글 관리 탭 -->
+    <div id="admin-tab-posts">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button onclick="blogStartNew()" style="padding:9px 18px;border-radius:9px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">+ 새 글 작성</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="filter-btn active" onclick="adminFilterPosts('all')" id="filter-all">전체</button>
+        <button class="filter-btn" onclick="adminFilterPosts('published')" id="filter-published">✅ 발행</button>
+        <button class="filter-btn" onclick="adminFilterPosts('scheduled')" id="filter-scheduled">⏰ 예약</button>
+        <button class="filter-btn" onclick="adminFilterPosts('draft')" id="filter-draft">📝 임시</button>
+      </div>
+      <div id="admin-posts-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="text-align:center;padding:30px;color:#444;">불러오는 중...</div>
+      </div>
     </div>
 
-    <!-- 블로그 글 관리 -->
-    <div style="background:#1a1a1a;border-radius:16px;padding:20px;">
-      <div style="font-size:15px;font-weight:700;color:#00B894;margin-bottom:14px;">📝 블로그 글 관리</div>
-      <div id="admin-posts-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <!-- 광고 관리 탭 -->
+    <div id="admin-tab-ads" style="display:none;">
+      <div style="background:#111;border-radius:12px;border:1.5px solid #fde68a33;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#92400e;line-height:1.7;background:#1a1400;">
+        <strong style="color:#fbbf24;">💡 등록 방법</strong><br>
+        1. Google AdSense에서 광고 단위 생성<br>
+        2. 생성된 &lt;script&gt; 코드를 슬롯에 붙여넣기<br>
+        3. 활성화 토글 ON → 저장
+      </div>
+      <div id="admin-ads-list" style="display:flex;flex-direction:column;gap:14px;"></div>
+    </div>
+
+    <!-- SEO 체크리스트 탭 (BlogAdmin에서 그대로) -->
+    <div id="admin-tab-seo" style="display:none;">
+      <div id="seo-tool-panels" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div id="admin-tab-settings" style="display:none;">
+      <div style="background:#1a1a1a;border-radius:16px;padding:20px;">
+        <div style="font-size:15px;font-weight:700;color:#ff8c42;margin-bottom:14px;">🔑 비밀번호 변경</div>
+        <input id="pw-new1" type="password" placeholder="새 비밀번호" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:8px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+        <input id="pw-new2" type="password" placeholder="새 비밀번호 확인" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:12px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+        <button onclick="adminChangePw()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#ff8c42;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">변경하기</button>
+        <div id="pw-change-msg" style="font-size:12px;margin-top:8px;text-align:center;"></div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- 공통 스타일 -->
 <style>
-/* 블로그 마크다운 스타일 */
-.md-body h1{font-size:22px;font-weight:800;margin:20px 0 10px;color:#fff}
-.md-body h2{font-size:18px;font-weight:700;margin:16px 0 8px;color:#eee;border-bottom:1.5px solid #2a2a2a;padding-bottom:6px}
-.md-body h3{font-size:16px;font-weight:700;margin:14px 0 6px;color:#ddd}
-.md-body p{margin:10px 0;line-height:1.8;color:#aaa}
-.md-body ul,ol{padding-left:22px;margin:10px 0}
-.md-body li{margin:5px 0;line-height:1.7;color:#aaa}
-.md-body strong{font-weight:700;color:#fff}
-.md-body em{font-style:italic;color:#ccc}
-.md-body code{background:#222;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace;color:#FF4B6E}
-.md-body pre{background:#111;color:#f9fafb;padding:14px 18px;border-radius:8px;overflow-x:auto;margin:14px 0}
-.md-body pre code{background:none;color:inherit;padding:0}
-.md-body blockquote{border-left:4px solid #FF4B6E;padding:8px 14px;background:#1a0d0d;margin:14px 0;border-radius:0 6px 6px 0;color:#888;font-style:italic}
-.md-body a{color:#FF4B6E;text-decoration:underline}
-.md-body hr{border:none;border-top:1.5px solid #2a2a2a;margin:20px 0}
-.md-body img{max-width:100%;border-radius:8px;margin:6px 0}
+/* 네비게이션 버튼 */
+.nav-btn {
+  flex:1; padding:11px; border-radius:11px; border:1.5px solid #2a2a2a;
+  background:#1a1a1a; color:#888; font-size:13px; font-weight:700;
+  cursor:pointer; font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  transition:all .2s;
+}
+.nav-btn.active { background:#FF4B6E; color:#fff; border-color:#FF4B6E; }
+
+/* 관리자 탭 */
+.admin-tab {
+  padding:10px 16px; border:none; background:none; cursor:pointer;
+  font-size:13px; font-weight:500; color:#888;
+  border-bottom:2px solid transparent; margin-bottom:-2px;
+  font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; white-space:nowrap;
+  transition:all .15s;
+}
+.admin-tab.active { color:#FF4B6E; border-bottom-color:#FF4B6E; font-weight:700; }
+
+/* 필터 버튼 */
+.filter-btn {
+  padding:6px 14px; border-radius:8px; border:1.5px solid #2a2a2a;
+  background:#1a1a1a; color:#888; font-size:12px; font-weight:500; cursor:pointer;
+  font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; transition:all .15s;
+}
+.filter-btn.active { border-color:#FF4B6E; background:#1a0d0d; color:#FF4B6E; font-weight:700; }
+
+/* 마크다운 미리보기 (밝은 배경) */
+.md-preview { line-height:1.8; color:#1f2937; font-size:15px; font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif; word-break:keep-all; }
+.md-preview h1 { font-size:24px; font-weight:800; margin:24px 0 12px; color:#111827; }
+.md-preview h2 { font-size:19px; font-weight:700; margin:20px 0 8px; color:#1f2937; border-bottom:2px solid #fed7aa; padding-bottom:6px; }
+.md-preview h3 { font-size:16px; font-weight:700; margin:16px 0 6px; color:#374151; }
+.md-preview p  { margin:10px 0; }
+.md-preview ul, .md-preview ol { padding-left:22px; margin:10px 0; }
+.md-preview li { margin:5px 0; line-height:1.7; }
+.md-preview strong { font-weight:700; color:#111827; }
+.md-preview em { font-style:italic; }
+.md-preview code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:13px; font-family:monospace; color:#e11d48; }
+.md-preview pre { background:#1f2937; color:#f9fafb; padding:14px 18px; border-radius:8px; overflow-x:auto; margin:14px 0; }
+.md-preview pre code { background:none; color:inherit; padding:0; }
+.md-preview blockquote { border-left:4px solid #f97316; padding:8px 14px; background:#fff7ed; margin:14px 0; border-radius:0 6px 6px 0; color:#92400e; font-style:italic; }
+.md-preview a { color:#f97316; text-decoration:underline; }
+.md-preview hr { border:none; border-top:2px solid #f3f4f6; margin:20px 0; }
+.md-preview img { max-width:100%; border-radius:8px; margin:6px 0; display:block; }
+.md-preview table { width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; }
+.md-preview thead th { background:#f97316; color:#fff; padding:9px 13px; text-align:left; }
+.md-preview tbody td { padding:9px 13px; border:1px solid #e5e7eb; }
+.md-preview tbody tr:nth-child(even) td { background:#fff7ed; }
+
+/* 블로그 카드 (다크) */
+.blog-card { background:#1a1a1a; border-radius:14px; border:1.5px solid #2a2a2a; padding:18px; cursor:pointer; transition:border-color .2s; }
+.blog-card:hover { border-color:#FF4B6E; }
+
+/* 블로그 상세 (다크) */
+.blog-detail-md { line-height:1.8; color:#aaa; font-size:15px; font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif; word-break:keep-all; }
+.blog-detail-md h1 { font-size:22px; font-weight:800; margin:20px 0 10px; color:#fff; }
+.blog-detail-md h2 { font-size:18px; font-weight:700; margin:16px 0 8px; color:#eee; border-bottom:1.5px solid #2a2a2a; padding-bottom:6px; }
+.blog-detail-md h3 { font-size:16px; font-weight:700; margin:14px 0 6px; color:#ddd; }
+.blog-detail-md p { margin:10px 0; color:#aaa; }
+.blog-detail-md ul, .blog-detail-md ol { padding-left:22px; margin:10px 0; }
+.blog-detail-md li { margin:5px 0; line-height:1.7; color:#aaa; }
+.blog-detail-md strong { font-weight:700; color:#fff; }
+.blog-detail-md em { font-style:italic; color:#ccc; }
+.blog-detail-md code { background:#222; padding:2px 6px; border-radius:4px; font-size:12px; font-family:monospace; color:#FF4B6E; }
+.blog-detail-md pre { background:#111; color:#f9fafb; padding:14px 18px; border-radius:8px; overflow-x:auto; margin:14px 0; }
+.blog-detail-md pre code { background:none; color:inherit; padding:0; }
+.blog-detail-md blockquote { border-left:4px solid #FF4B6E; padding:8px 14px; background:#1a0d0d; margin:14px 0; border-radius:0 6px 6px 0; color:#888; font-style:italic; }
+.blog-detail-md a { color:#FF4B6E; text-decoration:underline; }
+.blog-detail-md hr { border:none; border-top:1.5px solid #2a2a2a; margin:20px 0; }
+.blog-detail-md img { max-width:100%; border-radius:8px; margin:8px 0; display:block; }
 </style>
 
 <script>
-// ── Supabase 초기화
-const SUPABASE_URL  = 'https://svpqqvdefcdyrrvtomdi.supabase.co'
-const SUPABASE_KEY  = 'sb_publishable_gofJ8VAU7JuqNB10zLNENw_Jqtdjas2'
-const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+// ─── Supabase 초기화
+const SUPA_URL = 'https://svpqqvdefcdyrrvtomdi.supabase.co'
+const SUPA_KEY = 'sb_publishable_gofJ8VAU7JuqNB10zLNENw_Jqtdjas2'
+const db = supabase.createClient(SUPA_URL, SUPA_KEY)
 
-// ── 관리자 상태
+// ─── 상태
 const ADMIN_PW_KEY = 'cn_admin_pw'
-let isAdmin = false
-let editingPostId = null
+let _isAdmin = false
+let _editingPostId = null
+let _allPosts = []
+let _currentFilter = 'all'
+let _showPreview = false
 
 function getAdminPw() { return localStorage.getItem(ADMIN_PW_KEY) || 'admin1234' }
 
-// ── 페이지 전환
+// ─── 마크다운 파서 (parseMarkdown.js 이식)
+function parseMd(md) {
+  if (!md) return ''
+  const svgPH = [], codePH = []
+  let h = md.replace(/<svg[\s\S]*?<\/svg>/gi, m => { svgPH.push(m.includes('width=') ? m : m.replace('<svg','<svg width="100%"')); return `%%SVG${svgPH.length-1}%%` })
+  h = h.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, c) => { codePH.push(`<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`); return `%%CODE${codePH.length-1}%%` })
+  h = h.replace(/^(---$)/gm,'<hr>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+  h = h.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+  h = h.split(/\n{2,}/).map(b => {
+    b = b.trim(); if (!b) return ''
+    if (/^<(h[1-3]|ul|ol|blockquote|hr|table|pre|img)/.test(b) || /%%/.test(b)) return b
+    return `<p>${b.replace(/\n/g,'<br>')}</p>`
+  }).join('\n')
+  h = h.replace(/%%CODE(\d+)%%/g, (_,i) => codePH[i]).replace(/%%SVG(\d+)%%/g, (_,i) => svgPH[i])
+  return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(h) : h
+}
+
+function slugify(t) {
+  if (!t) return 'post-' + Date.now().toString(36)
+  let r = t.trim().toLowerCase()
+  if (/[가-힣]/.test(r)) {
+    const eng = r.match(/[a-z0-9]+/g)
+    return (eng && eng.join('').length >= 2) ? eng.join('-') : 'post-' + Date.now().toString(36)
+  }
+  return r.replace(/[^a-z0-9-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'') || 'post-' + Date.now().toString(36)
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7) }
+
+// ─── 페이지 전환
 function showPage(p) {
   ['converter','blog','admin'].forEach(name => {
-    document.getElementById('page-'+name).style.display = name===p ? (name==='converter'?'flex':'block') : 'none'
-    const btn = document.getElementById('nav-'+name)
-    btn.style.background = name===p ? '#FF4B6E' : '#1a1a1a'
-    btn.style.color = name===p ? '#fff' : '#888'
-    btn.style.border = name===p ? 'none' : '1.5px solid #2a2a2a'
+    const el = document.getElementById('page-'+name)
+    el.style.display = name === p ? 'flex' : 'none'
+    const btn = document.getElementById('top-nav').querySelector(`[onclick="showPage('${name}')"]`)
+    btn.classList.toggle('active', name === p)
   })
-  if (p==='blog')  { loadBlogPosts(); loadAds() }
-  if (p==='admin') { if(isAdmin) showAdminPanel(); else showAdminLogin() }
+  const mid = document.getElementById('ad-slot-middle')
+  mid.style.display = p === 'blog' ? 'block' : 'none'
+  if (p === 'blog') { loadBlogPosts(); loadAdSlots() }
+  if (p === 'admin') { _isAdmin ? adminShowPanel() : adminShowLogin() }
 }
 
-// ── 마크다운 파서
-function parseMd(text) {
-  if (!text) return ''
-  return text
-    .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    .replace(/^---$/gm,'<hr>')
-    .replace(/^\- (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>'+m+'</ul>')
-    .split('\n\n').map(p=>p.trim()).filter(Boolean)
-    .map(p=>/^<(h[1-3]|ul|ol|li|pre|blockquote|hr)/.test(p)?p:`<p>${p.replace(/\n/g,'<br>')}</p>`)
-    .join('\n')
-}
-
-// ── 광고 로드
-async function loadAds() {
+// ─── 광고 로드
+async function loadAdSlots() {
   try {
-    const { data } = await _supa.from('ad_slots').select('*').eq('active', true)
-    ;(data||[]).forEach(slot => {
-      const el = document.getElementById('ad-'+slot.position)
-      if (el && slot.code) el.innerHTML = slot.code
+    const { data } = await db.from('ad_slots').select('*').eq('active', true)
+    ;(data||[]).forEach(s => {
+      const el = document.getElementById('ad-slot-' + s.position)
+      if (el && s.code) el.innerHTML = s.code
     })
-  } catch(e) { console.warn('광고 로딩 실패', e) }
+  } catch(e) {}
 }
 
-// ── 블로그 목록 로드
+// ─── 블로그 목록
 async function loadBlogPosts() {
-  const el = document.getElementById('blog-posts-list')
-  el.innerHTML = '<div style="text-align:center;padding:40px;color:#444;">불러오는 중...</div>'
+  const el = document.getElementById('blog-posts-container')
+  el.innerHTML = '<div style="text-align:center;padding:48px;color:#444;">불러오는 중...</div>'
   try {
-    const { data, error } = await _supa.from('blog_posts')
-      .select('*').eq('status','published')
-      .order('published_at', { ascending: false })
+    const { data, error } = await db.from('blog_posts').select('*')
+      .eq('status','published').order('published_at',{ascending:false})
     if (error) throw error
-    if (!data || data.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#444;"><div style="font-size:36px;margin-bottom:12px;">📝</div><div>아직 작성된 글이 없습니다</div></div>'
+    if (!data || !data.length) {
+      el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><div style="font-size:36px;margin-bottom:12px;">📝</div><div style="color:#555;">아직 작성된 글이 없습니다</div></div>'
       return
     }
-    el.innerHTML = data.map(post => `
-      <div onclick="blogShowDetail('${post.id}')" style="background:#1a1a1a;border-radius:14px;border:1.5px solid #2a2a2a;padding:18px;cursor:pointer;transition:border-color .2s;" onmouseover="this.style.borderColor='#FF4B6E'" onmouseout="this.style.borderColor='#2a2a2a'">
-        ${post.cover_image ? `<img src="${post.cover_image}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:12px;">` : ''}
-        ${post.category ? `<span style="font-size:11px;font-weight:700;background:#1a0d0d;color:#FF4B6E;border:1px solid #FF4B6E44;border-radius:4px;padding:2px 8px;margin-bottom:8px;display:inline-block;">${post.category}</span>` : ''}
-        <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">${post.title}</div>
-        ${post.summary ? `<div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:8px;">${post.summary}</div>` : ''}
-        <div style="font-size:11px;color:#444;">${post.published_at ? new Date(post.published_at).toLocaleDateString('ko-KR') : ''}</div>
+    el.innerHTML = data.map(p => `
+      <div class="blog-card" onclick="blogShowDetail('${p.id}')">
+        ${p.cover_image ? `<img src="${p.cover_image}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:12px;">` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          ${p.category ? `<span style="font-size:11px;font-weight:700;background:#1a0d0d;color:#FF4B6E;border:1px solid #FF4B6E44;border-radius:4px;padding:2px 8px;">${p.category}</span>` : ''}
+          ${(p.tags||[]).slice(0,3).map(t=>`<span style="font-size:11px;color:#555;background:#111;border-radius:4px;padding:2px 7px;">#${t}</span>`).join('')}
+        </div>
+        <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">${p.title}</div>
+        ${p.summary ? `<div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:8px;">${p.summary}</div>` : ''}
+        <div style="font-size:11px;color:#444;">${p.published_at ? new Date(p.published_at).toLocaleDateString('ko-KR') : ''}</div>
       </div>
     `).join('')
-    // 관리자면 글쓰기 버튼 표시
-    document.getElementById('btn-new-post').style.display = isAdmin ? 'block' : 'none'
+    document.getElementById('btn-blog-new').style.display = _isAdmin ? 'block' : 'none'
   } catch(e) {
     el.innerHTML = '<div style="text-align:center;padding:40px;color:#555;">불러오기 실패</div>'
   }
 }
 
-// ── 블로그 상세
+// ─── 블로그 상세
 async function blogShowDetail(id) {
-  document.getElementById('blog-list-view').style.display = 'none'
-  document.getElementById('blog-detail-view').style.display = 'block'
-  document.getElementById('blog-write-view').style.display = 'none'
-  const el = document.getElementById('blog-detail-content')
+  document.getElementById('blog-view-list').style.display = 'none'
+  document.getElementById('blog-view-detail').style.display = 'block'
+  document.getElementById('blog-view-write').style.display = 'none'
+  const el = document.getElementById('blog-detail-body')
   el.innerHTML = '<div style="text-align:center;padding:40px;color:#444;">불러오는 중...</div>'
   try {
-    const { data } = await _supa.from('blog_posts').select('*').eq('id', id).single()
+    const { data } = await db.from('blog_posts').select('*').eq('id',id).single()
     if (!data) throw new Error('not found')
     el.innerHTML = `
-      ${data.cover_image ? `<img src="${data.cover_image}" style="width:100%;max-height:220px;object-fit:cover;border-radius:14px;margin-bottom:20px;">` : ''}
-      ${data.category ? `<span style="font-size:11px;font-weight:700;background:#1a0d0d;color:#FF4B6E;border:1px solid #FF4B6E44;border-radius:4px;padding:2px 8px;">${data.category}</span>` : ''}
-      <h1 style="font-size:22px;font-weight:800;color:#fff;margin:12px 0 8px;">${data.title}</h1>
-      <div style="font-size:12px;color:#555;margin-bottom:20px;">${data.published_at ? new Date(data.published_at).toLocaleDateString('ko-KR') : ''}</div>
-      ${data.summary ? `<div style="background:#1a0d0d;border:1px solid #FF4B6E33;border-radius:10px;padding:12px 16px;font-size:13px;color:#888;margin-bottom:20px;line-height:1.7;">${data.summary}</div>` : ''}
-      <div class="md-body">${parseMd(data.content)}</div>
-      ${isAdmin ? `<div style="display:flex;gap:8px;margin-top:24px;padding-top:16px;border-top:1.5px solid #2a2a2a;">
-        <button onclick="blogEditPost('${data.id}')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid #FF4B6E;background:#1a0d0d;color:#FF4B6E;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">✏️ 수정</button>
-        <button onclick="blogDeletePost('${data.id}')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid #ef4444;background:#1a0808;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">🗑 삭제</button>
+      ${data.cover_image ? `<img src="${data.cover_image}" style="width:100%;max-height:240px;object-fit:cover;border-radius:14px;margin-bottom:20px;">` : ''}
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        ${data.category ? `<span style="font-size:11px;font-weight:700;background:#1a0d0d;color:#FF4B6E;border:1px solid #FF4B6E44;border-radius:4px;padding:2px 8px;">${data.category}</span>` : ''}
+        ${(data.tags||[]).map(t=>`<span style="font-size:11px;color:#555;">#${t}</span>`).join('')}
+      </div>
+      <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;line-height:1.4;">${data.title}</h1>
+      <div style="font-size:12px;color:#555;margin-bottom:${data.summary?'0':'16px'};">${data.published_at?new Date(data.published_at).toLocaleDateString('ko-KR'):''}</div>
+      ${data.summary ? `<div style="background:#1a0d0d;border:1px solid #FF4B6E22;border-radius:10px;padding:12px 16px;font-size:13px;color:#888;line-height:1.7;margin:12px 0 16px;">${data.summary}</div>` : ''}
+      <div class="blog-detail-md">${parseMd(data.content)}</div>
+      ${_isAdmin ? `<div style="display:flex;gap:8px;margin-top:24px;padding-top:16px;border-top:1.5px solid #2a2a2a;">
+        <button onclick="blogStartEdit('${data.id}')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid #FF4B6E;background:#1a0d0d;color:#FF4B6E;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">✏️ 수정</button>
+        <button onclick="blogDeletePost('${data.id}')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid #ef4444;background:#1a0808;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">🗑 삭제</button>
       </div>` : ''}
     `
-  } catch(e) {
-    el.innerHTML = '<div style="color:#555;text-align:center;padding:40px;">불러오기 실패</div>'
-  }
+  } catch(e) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#555;">불러오기 실패</div>' }
 }
 
-function blogShowList() {
-  document.getElementById('blog-list-view').style.display = 'block'
-  document.getElementById('blog-detail-view').style.display = 'none'
-  document.getElementById('blog-write-view').style.display = 'none'
-  editingPostId = null
+function blogGoList() {
+  document.getElementById('blog-view-list').style.display = 'block'
+  document.getElementById('blog-view-detail').style.display = 'none'
+  document.getElementById('blog-view-write').style.display = 'none'
+  _editingPostId = null
 }
 
-function blogShowWrite() {
-  document.getElementById('blog-list-view').style.display = 'none'
-  document.getElementById('blog-detail-view').style.display = 'none'
-  document.getElementById('blog-write-view').style.display = 'block'
-  document.getElementById('blog-write-title-label').textContent = '📝 글 작성'
-  editingPostId = null
-  ;['bw-title','bw-category','bw-tags','bw-cover','bw-summary','bw-content'].forEach(id => document.getElementById(id).value = '')
+function blogStartNew() {
+  _editingPostId = null
+  document.getElementById('write-view-title').textContent = '📝 글 작성'
+  ;['write-title','write-slug','write-tags','write-cover','write-summary','write-content'].forEach(id=>document.getElementById(id).value='')
+  document.getElementById('write-category').value = ''
+  document.getElementById('scheduled-at-input').value = ''
+  document.getElementById('blog-view-list').style.display = 'none'
+  document.getElementById('blog-view-detail').style.display = 'none'
+  document.getElementById('blog-view-write').style.display = 'block'
+  showPage('blog')
 }
 
-async function blogEditPost(id) {
-  const { data } = await _supa.from('blog_posts').select('*').eq('id', id).single()
+async function blogStartEdit(id) {
+  const { data } = await db.from('blog_posts').select('*').eq('id',id).single()
   if (!data) return
-  editingPostId = id
-  document.getElementById('blog-list-view').style.display = 'none'
-  document.getElementById('blog-detail-view').style.display = 'none'
-  document.getElementById('blog-write-view').style.display = 'block'
-  document.getElementById('blog-write-title-label').textContent = '✏️ 글 수정'
-  document.getElementById('bw-title').value = data.title || ''
-  document.getElementById('bw-category').value = data.category || ''
-  document.getElementById('bw-tags').value = (data.tags||[]).join(', ')
-  document.getElementById('bw-cover').value = data.cover_image || ''
-  document.getElementById('bw-summary').value = data.summary || ''
-  document.getElementById('bw-content').value = data.content || ''
+  _editingPostId = id
+  document.getElementById('write-view-title').textContent = '✏️ 글 수정'
+  document.getElementById('write-title').value = data.title||''
+  document.getElementById('write-slug').value = data.slug||''
+  document.getElementById('write-category').value = data.category||''
+  document.getElementById('write-tags').value = (data.tags||[]).join(', ')
+  document.getElementById('write-cover').value = data.cover_image||''
+  document.getElementById('write-summary').value = data.summary||''
+  document.getElementById('write-content').value = data.content||''
+  document.getElementById('scheduled-at-input').value = data.scheduled_at ? data.scheduled_at.slice(0,16) : ''
+  document.getElementById('blog-view-list').style.display = 'none'
+  document.getElementById('blog-view-detail').style.display = 'none'
+  document.getElementById('blog-view-write').style.display = 'block'
+  showPage('blog')
 }
 
 async function blogDeletePost(id) {
   if (!confirm('이 글을 삭제하시겠습니까?')) return
-  await _supa.from('blog_posts').delete().eq('id', id)
-  blogShowList()
-  loadBlogPosts()
-  loadAdminPosts()
+  await db.from('blog_posts').delete().eq('id',id)
+  blogGoList(); loadBlogPosts(); adminLoadPosts()
 }
 
-// ── 블로그 저장
+// ─── 미리보기 토글
+function blogTogglePreview() {
+  _showPreview = !_showPreview
+  const pc = document.getElementById('preview-col')
+  const btn = document.getElementById('btn-preview-toggle')
+  const layout = document.getElementById('write-layout')
+  pc.style.display = _showPreview ? 'block' : 'none'
+  layout.style.gridTemplateColumns = _showPreview ? '1fr 1.2fr' : '1fr'
+  btn.style.background = _showPreview ? '#222' : '#1a1a1a'
+  btn.style.color = _showPreview ? '#fff' : '#888'
+  btn.textContent = _showPreview ? '✏️ 편집' : '👁 미리보기'
+  if (_showPreview) blogUpdatePreview()
+}
+
+function blogUpdatePreview() {
+  if (!_showPreview) return
+  document.getElementById('preview-title').textContent = document.getElementById('write-title').value || '(제목 없음)'
+  document.getElementById('preview-body').innerHTML = parseMd(document.getElementById('write-content').value)
+}
+
+// ─── 블로그 저장
 async function blogSave(status) {
-  const title = document.getElementById('bw-title').value.trim()
-  const content = document.getElementById('bw-content').value.trim()
+  const title = document.getElementById('write-title').value.trim()
+  const content = document.getElementById('write-content').value.trim()
   if (!title) { alert('제목을 입력해주세요'); return }
   if (!content) { alert('내용을 입력해주세요'); return }
-
-  const tags = document.getElementById('bw-tags').value.split(',').map(t=>t.trim()).filter(Boolean)
-  const slug = 'post-' + Date.now().toString(36)
+  if (status === 'scheduled') {
+    const sat = document.getElementById('scheduled-at-input').value
+    if (!sat) { alert('예약 날짜/시간을 입력해주세요'); return }
+    if (new Date(sat) <= new Date()) { alert('예약 시간은 현재 시간 이후여야 합니다'); return }
+  }
+  const tags = document.getElementById('write-tags').value.split(',').map(t=>t.trim()).filter(Boolean)
+  const slugVal = document.getElementById('write-slug').value.trim() || slugify(title)
   const now = new Date().toISOString()
-
+  const sat = document.getElementById('scheduled-at-input').value
   const payload = {
-    title,
-    slug: editingPostId ? undefined : slug,
-    category: document.getElementById('bw-category').value.trim(),
-    tags,
-    cover_image: document.getElementById('bw-cover').value.trim(),
-    summary: document.getElementById('bw-summary').value.trim(),
-    content,
-    status,
+    title, slug: slugVal,
+    category: document.getElementById('write-category').value,
+    tags, cover_image: document.getElementById('write-cover').value.trim(),
+    summary: document.getElementById('write-summary').value.trim(),
+    content, status,
     published_at: status==='published' ? now : null,
+    scheduled_at: status==='scheduled' ? new Date(sat).toISOString() : null,
     updated_at: now,
   }
-
   try {
-    if (editingPostId) {
-      await _supa.from('blog_posts').update(payload).eq('id', editingPostId)
+    if (_editingPostId) {
+      await db.from('blog_posts').update(payload).eq('id', _editingPostId)
     } else {
-      await _supa.from('blog_posts').insert({ ...payload, id: 'post-'+Date.now(), created_at: now })
+      await db.from('blog_posts').insert({ ...payload, id: uid(), created_at: now })
     }
-    alert(status==='published' ? '🚀 발행되었습니다!' : '💾 임시저장되었습니다!')
-    blogShowList()
-    loadBlogPosts()
-    loadAdminPosts()
-  } catch(e) {
-    alert('저장 실패: ' + e.message)
-  }
+    alert(status==='published'?'🚀 발행되었습니다!':status==='scheduled'?'⏰ 예약발행이 설정되었습니다!':'💾 임시저장되었습니다!')
+    blogGoList(); loadBlogPosts(); adminLoadPosts()
+  } catch(e) { alert('저장 실패: '+e.message) }
 }
 
-// ── 관리자 로그인/로그아웃
-function adminLogin() {
-  const pw = document.getElementById('admin-pw').value
+// ─── 관리자 로그인
+function adminShowLogin() {
+  document.getElementById('admin-view-login').style.display = 'block'
+  document.getElementById('admin-view-panel').style.display = 'none'
+}
+function adminShowPanel() {
+  document.getElementById('admin-view-login').style.display = 'none'
+  document.getElementById('admin-view-panel').style.display = 'block'
+  adminShowTab('posts')
+}
+function adminDoLogin() {
+  const pw = document.getElementById('admin-pw-input').value
   if (pw === getAdminPw()) {
-    isAdmin = true
-    sessionStorage.setItem('cn_admin', '1')
-    showAdminPanel()
-    document.getElementById('btn-new-post').style.display = 'block'
+    _isAdmin = true; sessionStorage.setItem('cn_admin','1')
+    adminShowPanel()
+    document.getElementById('btn-blog-new').style.display = 'block'
   } else {
     document.getElementById('admin-login-err').textContent = '❌ 비밀번호가 틀렸습니다'
   }
 }
-
-function adminLogout() {
-  isAdmin = false
-  sessionStorage.removeItem('cn_admin')
-  showAdminLogin()
-  document.getElementById('btn-new-post').style.display = 'none'
+function adminDoLogout() {
+  _isAdmin = false; sessionStorage.removeItem('cn_admin')
+  adminShowLogin()
+  document.getElementById('btn-blog-new').style.display = 'none'
 }
 
-function showAdminLogin() {
-  document.getElementById('admin-login-view').style.display = 'block'
-  document.getElementById('admin-panel-view').style.display = 'none'
+// ─── 관리자 탭
+function adminShowTab(tab) {
+  ['posts','ads','seo','settings'].forEach(t => {
+    document.getElementById('admin-tab-'+t).style.display = t===tab?'block':'none'
+    document.getElementById('atab-'+t).classList.toggle('active', t===tab)
+  })
+  if (tab==='posts') adminLoadPosts()
+  if (tab==='ads') adminLoadAds()
+  if (tab==='seo') renderSeoChecklist()
 }
 
-function showAdminPanel() {
-  document.getElementById('admin-login-view').style.display = 'none'
-  document.getElementById('admin-panel-view').style.display = 'block'
-  loadAdSlots()
-  loadAdminPosts()
+// ─── 관리자 글 관리
+let _adminFilter = 'all'
+function adminFilterPosts(f) {
+  _adminFilter = f
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+  document.getElementById('filter-'+f).classList.add('active')
+  renderAdminPosts()
 }
-
-// ── 비밀번호 변경
-function changePw() {
-  const p1 = document.getElementById('pw-new1').value
-  const p2 = document.getElementById('pw-new2').value
-  const msg = document.getElementById('pw-msg')
-  if (!p1) { msg.style.color='#FF4B6E'; msg.textContent='새 비밀번호를 입력해주세요'; return }
-  if (p1 !== p2) { msg.style.color='#FF4B6E'; msg.textContent='비밀번호가 일치하지 않습니다'; return }
-  localStorage.setItem(ADMIN_PW_KEY, p1)
-  msg.style.color='#00B894'; msg.textContent='✅ 비밀번호가 변경되었습니다'
-  document.getElementById('pw-new1').value = ''
-  document.getElementById('pw-new2').value = ''
+async function adminLoadPosts() {
+  const { data } = await db.from('blog_posts').select('*').order('created_at',{ascending:false})
+  _allPosts = data || []
+  renderAdminPosts()
 }
-
-// ── 광고 슬롯 관리
-async function loadAdSlots() {
-  const el = document.getElementById('ad-slots-admin')
-  const { data } = await _supa.from('ad_slots').select('*').order('id')
-  el.innerHTML = (data||[]).map(slot => `
-    <div style="background:#111;border-radius:12px;border:1.5px solid #2a2a2a;padding:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:700;color:#fff;">${slot.name}</div>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <span style="font-size:12px;color:#888;">활성화</span>
-          <input type="checkbox" id="ad-active-${slot.id}" ${slot.active?'checked':''} onchange="toggleAdSlot('${slot.id}')">
-        </label>
-      </div>
-      <textarea id="ad-code-${slot.id}" rows="4" placeholder="애드센스 광고 코드 붙여넣기&#10;&lt;ins class=&quot;adsbygoogle&quot; ...&gt;&lt;/ins&gt;" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #2a2a2a;background:#0a0a0a;color:#aaa;font-size:12px;outline:none;resize:vertical;box-sizing:border-box;font-family:monospace;">${slot.code||''}</textarea>
-      <button onclick="saveAdSlot('${slot.id}')" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">저장</button>
-    </div>
-  `).join('')
-}
-
-async function saveAdSlot(id) {
-  const code = document.getElementById('ad-code-'+id).value
-  await _supa.from('ad_slots').update({ code, updated_at: new Date().toISOString() }).eq('id', id)
-  alert('✅ 광고 코드가 저장되었습니다')
-  loadAds()
-}
-
-async function toggleAdSlot(id) {
-  const active = document.getElementById('ad-active-'+id).checked
-  await _supa.from('ad_slots').update({ active }).eq('id', id)
-  loadAds()
-}
-
-// ── 관리자용 블로그 글 목록
-async function loadAdminPosts() {
+function renderAdminPosts() {
   const el = document.getElementById('admin-posts-list')
-  const { data } = await _supa.from('blog_posts').select('*').order('created_at', { ascending: false })
-  if (!data || data.length === 0) {
-    el.innerHTML = '<div style="color:#555;font-size:13px;text-align:center;padding:20px;">작성된 글이 없습니다</div>'
-    return
-  }
-  el.innerHTML = data.map(post => `
+  const filtered = _adminFilter==='all' ? _allPosts : _allPosts.filter(p=>p.status===_adminFilter)
+  if (!filtered.length) { el.innerHTML='<div style="text-align:center;padding:30px;color:#555;">글이 없습니다</div>'; return }
+  el.innerHTML = filtered.map(p => `
     <div style="background:#111;border-radius:10px;border:1.5px solid #2a2a2a;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:${post.status==='published'?'#0a1a12':'#1a1a1a'};color:${post.status==='published'?'#00B894':'#888'};border:1px solid ${post.status==='published'?'#00B89444':'#2a2a2a'};">${post.status==='published'?'✅ 발행':'📝 임시'}</span>
-          ${post.category?`<span style="font-size:10px;color:#555;background:#111;border-radius:4px;padding:2px 7px;border:1px solid #2a2a2a;">${post.category}</span>`:''}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:${p.status==='published'?'#0a1a12':p.status==='scheduled'?'#0d1b2a':'#1a1a1a'};color:${p.status==='published'?'#00B894':p.status==='scheduled'?'#60a5fa':'#888'};border:1px solid ${p.status==='published'?'#00B89444':p.status==='scheduled'?'#3b82f644':'#2a2a2a'};">
+            ${p.status==='published'?'✅ 발행':p.status==='scheduled'?'⏰ 예약':'📝 임시'}
+          </span>
+          ${p.category?`<span style="font-size:10px;color:#555;background:#111;border-radius:4px;padding:2px 7px;border:1px solid #2a2a2a;">${p.category}</span>`:''}
+          ${p.status==='scheduled'&&p.scheduled_at?`<span style="font-size:10px;color:#60a5fa;">${new Date(p.scheduled_at).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>`:''}
         </div>
-        <div style="font-size:14px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${post.title}</div>
-        <div style="font-size:11px;color:#444;margin-top:2px;">${post.created_at?new Date(post.created_at).toLocaleDateString('ko-KR'):''}</div>
+        <div style="font-size:14px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title}</div>
+        <div style="font-size:11px;color:#444;margin-top:2px;">${p.created_at?new Date(p.created_at).toLocaleDateString('ko-KR'):''}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button onclick="blogEditPost('${post.id}');showPage('blog')" style="padding:6px 12px;border-radius:7px;border:1px solid #FF4B6E33;background:#1a0d0d;color:#FF4B6E;font-size:12px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">수정</button>
-        <button onclick="blogDeletePost('${post.id}')" style="padding:6px 10px;border-radius:7px;border:1px solid #ef444433;background:#1a0808;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:Apple SD Gothic Neo,Noto Sans KR,sans-serif;">삭제</button>
+        <button onclick="blogStartEdit('${p.id}')" style="padding:6px 12px;border-radius:7px;border:1px solid #FF4B6E33;background:#1a0d0d;color:#FF4B6E;font-size:12px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">수정</button>
+        <button onclick="blogDeletePost('${p.id}')" style="padding:6px 10px;border-radius:7px;border:1px solid #ef444433;background:#1a0808;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">삭제</button>
       </div>
     </div>
   `).join('')
 }
 
-// ── 초기화
-;(function init() {
-  // 세션 유지
-  if (sessionStorage.getItem('cn_admin') === '1') isAdmin = true
-  // 기본 페이지 레이아웃
-  document.getElementById('page-converter').style.display = 'flex'
-  // 광고 로드
-  loadAds()
+// ─── 광고 슬롯 관리 (Adsense.jsx 이식)
+async function adminLoadAds() {
+  const el = document.getElementById('admin-ads-list')
+  const { data } = await db.from('ad_slots').select('*').order('id')
+  el.innerHTML = (data||[]).map(s => `
+    <div style="background:#111;border-radius:12px;border:1.5px solid #2a2a2a;padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#fff;">${s.name}</div>
+          <div style="font-size:11px;color:#555;margin-top:2px;">슬롯 위치: ${s.position}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;color:${s.active?'#00B894':'#555'};font-weight:600;">${s.active?'ON':'OFF'}</span>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+            <input type="checkbox" ${s.active?'checked':''} onchange="adminToggleAd('${s.id}',this.checked)" style="opacity:0;width:0;height:0;position:absolute;">
+            <span style="position:absolute;inset:0;background:${s.active?'#FF4B6E':'#333'};border-radius:24px;transition:.2s;"></span>
+            <span style="position:absolute;top:3px;left:${s.active?'23':'3'}px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s;"></span>
+          </label>
+        </div>
+      </div>
+      <div style="background:${s.active&&s.code?'#0a1a12':'#0a0a0a'};border:2px dashed ${s.active&&s.code?'#00B89444':'#2a2a2a'};border-radius:8px;padding:12px;margin-bottom:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:12px;color:#444;">${s.active&&s.code?'✅ 광고 활성':s.code?'광고 코드 있음 (OFF)':'광고 코드 없음'}</span>
+      </div>
+      <textarea id="adcode-${s.id}" rows="4" placeholder="Google AdSense 광고 단위 코드를 붙여넣으세요&#10;&lt;ins class=&quot;adsbygoogle&quot; ...&gt;" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #2a2a2a;background:#0a0a0a;color:#aaa;font-size:12px;outline:none;resize:vertical;box-sizing:border-box;font-family:monospace;">${s.code||''}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button onclick="adminSaveAdCode('${s.id}')" style="flex:1;padding:9px;border-radius:8px;border:none;background:#FF4B6E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">저장</button>
+        ${s.code?`<button onclick="adminClearAdCode('${s.id}')" style="padding:9px 14px;border-radius:8px;border:1.5px solid #ef444433;background:#1a0808;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">코드 삭제</button>`:''}
+      </div>
+    </div>
+  `).join('')
+}
+async function adminSaveAdCode(id) {
+  const code = document.getElementById('adcode-'+id).value
+  await db.from('ad_slots').update({code, updated_at:new Date().toISOString()}).eq('id',id)
+  alert('✅ 광고 코드가 저장되었습니다'); adminLoadAds(); loadAdSlots()
+}
+async function adminToggleAd(id, active) {
+  await db.from('ad_slots').update({active}).eq('id',id)
+  adminLoadAds(); loadAdSlots()
+}
+async function adminClearAdCode(id) {
+  if (!confirm('광고 코드를 삭제하시겠습니까?')) return
+  await db.from('ad_slots').update({code:'',active:false}).eq('id',id)
+  adminLoadAds(); loadAdSlots()
+}
+
+// ─── SEO 체크리스트 (BlogAdmin.jsx TOOL_PANELS 이식)
+const SEO_PANELS = {
+  adsense: {
+    label:'💰 애드센스', color:'#d97706', border:'#fbbf24', bg:'#1a1400',
+    link:'https://www.google.com/adsense', linkLabel:'애드센스 대시보드 →',
+    sections:[
+      { title:'🚀 최초 셋팅 (한 번만)', items:[
+        {text:'사이트 URL 등록 및 소유권 확인', desc:'애드센스 가입 후 사이트 주소 등록, <head>에 메타태그 삽입'},
+        {text:'ads.txt 파일 루트에 업로드', desc:'google.com, pub-XXXXXXX, DIRECT, f08c47fec0942fa0 형식으로 /ads.txt 생성'},
+        {text:'자동 광고 ON 또는 광고 단위 수동 생성', desc:'자동 광고는 구글이 최적 위치 자동 배치'},
+        {text:'광고 코드를 <head> 또는 본문에 삽입', desc:'관리자 → 광고 관리 탭에서 슬롯 코드 입력'},
+      ]},
+      { title:'📋 주기적으로 확인', items:[
+        {text:'[주간] 수익 및 RPM 확인', desc:'대시보드 → 보고서에서 날짜별 수익 추이 체크'},
+        {text:'[수시] 정책 위반 경고 확인', desc:'알림 탭에 빨간 경고 뜨면 즉시 조치'},
+        {text:'[월간] 잘 클릭되는 광고 위치 파악', desc:'본문 상단·목차 아래·본문 중간이 일반적으로 CTR 높음'},
+        {text:'[월간] 모바일 광고 노출 확인', desc:'반응형 광고 단위 사용 여부 체크'},
+      ]}
+    ]
+  },
+  searchconsole: {
+    label:'🔍 서치콘솔', color:'#16a34a', border:'#86efac', bg:'#0a1a0a',
+    link:'https://search.google.com/search-console', linkLabel:'Search Console →',
+    sections:[
+      { title:'🚀 최초 셋팅', items:[
+        {text:'속성 추가 및 소유권 인증', desc:'URL 접두사 방식 권장 — HTML 파일 업로드 또는 메타태그 삽입'},
+        {text:'sitemap.xml 제출', desc:'설정 → Sitemaps → sitemap.xml 제출'},
+        {text:'robots.txt 확인', desc:'크롤링 차단 규칙 없는지 확인'},
+      ]},
+      { title:'📋 주기적으로 확인', items:[
+        {text:'[월간] 색인 생성 현황 확인', desc:'색인이 생성되지 않은 페이지 원인 파악'},
+        {text:'[월간] 검색 성과 (클릭수·노출수·CTR)', desc:'어떤 키워드로 유입되는지 확인'},
+        {text:'[글 발행 시] URL 즉시 검사 요청', desc:'URL 검사 → 색인 생성 요청'},
+      ]}
+    ]
+  },
+  seo: {
+    label:'🚀 SEO', color:'#0891b2', border:'#a5f3fc', bg:'#001a1f',
+    link:'https://search.google.com/search-console', linkLabel:'서치콘솔 →',
+    sections:[
+      { title:'✍️ 글 작성 시 매번 체크', items:[
+        {text:'핵심 키워드를 제목(H1)에 포함', desc:'검색자가 실제로 치는 단어를 제목 앞쪽에 배치'},
+        {text:'메타 description 작성 (80~160자)', desc:'검색결과에 표시되는 요약문 — 키워드 포함 + 클릭 유도'},
+        {text:'URL 슬러그를 짧고 명확하게', desc:'한글 금지, 영문 소문자+하이픈 — 예: cardnews-tips'},
+        {text:'H2·H3 소제목으로 콘텐츠 구조화', desc:'목차 역할 + 구글이 콘텐츠 구조 파악'},
+        {text:'발행 후 서치콘솔에서 URL 색인 요청', desc:'URL 검사 → 색인 생성 요청 — 발행 즉시 구글에 알리기'},
+      ]}
+    ]
+  }
+}
+
+const _seoChecks = JSON.parse(localStorage.getItem('cn_seo_checks')||'{}')
+function saveSeoChecks() { localStorage.setItem('cn_seo_checks', JSON.stringify(_seoChecks)) }
+
+function renderSeoChecklist() {
+  const el = document.getElementById('seo-tool-panels')
+  el.innerHTML = Object.entries(SEO_PANELS).map(([key, panel]) => `
+    <div style="border:1.5px solid ${panel.border}22;border-radius:12px;overflow:hidden;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:${panel.bg};cursor:pointer;" onclick="toggleSeoPanel('${key}')">
+        <span style="font-size:14px;font-weight:700;color:${panel.color};">${panel.label}</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <a href="${panel.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+            style="font-size:11px;font-weight:700;color:${panel.color};background:${panel.bg};border:1px solid ${panel.border}44;border-radius:6px;padding:3px 8px;text-decoration:none;">${panel.linkLabel}</a>
+          <span id="seo-arrow-${key}" style="font-size:11px;color:${panel.color};">▼</span>
+        </div>
+      </div>
+      <div id="seo-body-${key}" style="display:none;background:#111;padding:16px;">
+        ${panel.sections.map((sec,si) => `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:12px;font-weight:700;color:${panel.color};margin-bottom:8px;">${sec.title}</div>
+            ${sec.items.map((item,ii) => {
+              const ck = `${key}_${si}_${ii}`
+              return `<div onclick="toggleSeoCheck('${ck}',this)" data-ck="${ck}" style="display:flex;gap:10px;align-items:flex-start;background:#1a1a1a;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;opacity:${_seoChecks[ck]?'0.6':'1'};">
+                <span style="font-size:16px;flex-shrink:0;color:${_seoChecks[ck]?'#00B894':'#555'};">${_seoChecks[ck]?'☑':'☐'}</span>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:${_seoChecks[ck]?'#555':'#fff'};text-decoration:${_seoChecks[ck]?'line-through':'none'};">${item.text}</div>
+                  <div style="font-size:12px;color:#555;margin-top:2px;line-height:1.5;">${item.desc}</div>
+                </div>
+              </div>`
+            }).join('')}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')
+}
+
+function toggleSeoPanel(key) {
+  const body = document.getElementById('seo-body-'+key)
+  const arrow = document.getElementById('seo-arrow-'+key)
+  const open = body.style.display === 'none'
+  body.style.display = open ? 'block' : 'none'
+  arrow.textContent = open ? '▲' : '▼'
+}
+
+function toggleSeoCheck(ck, el) {
+  _seoChecks[ck] = !_seoChecks[ck]
+  saveSeoChecks()
+  const span = el.querySelector('span')
+  const title = el.querySelectorAll('div div')[0]
+  const panel = Object.values(SEO_PANELS).find(p => Object.keys(SEO_PANELS).some(k => ck.startsWith(k) && SEO_PANELS[k]===p))
+  span.style.color = _seoChecks[ck] ? '#00B894' : '#555'
+  span.textContent = _seoChecks[ck] ? '☑' : '☐'
+  if (title) { title.style.textDecoration = _seoChecks[ck] ? 'line-through' : 'none'; title.style.color = _seoChecks[ck] ? '#555' : '#fff' }
+  el.style.opacity = _seoChecks[ck] ? '0.6' : '1'
+}
+
+// ─── 관리자 비밀번호 변경
+function adminChangePw() {
+  const p1 = document.getElementById('pw-new1').value
+  const p2 = document.getElementById('pw-new2').value
+  const msg = document.getElementById('pw-change-msg')
+  if (!p1) { msg.style.color='#FF4B6E'; msg.textContent='새 비밀번호를 입력해주세요'; return }
+  if (p1!==p2) { msg.style.color='#FF4B6E'; msg.textContent='비밀번호가 일치하지 않습니다'; return }
+  localStorage.setItem(ADMIN_PW_KEY, p1)
+  msg.style.color='#00B894'; msg.textContent='✅ 변경되었습니다'
+  document.getElementById('pw-new1').value=''; document.getElementById('pw-new2').value=''
+}
+
+// ─── 초기화
+;(async function init() {
+  if (sessionStorage.getItem('cn_admin')==='1') { _isAdmin=true; document.getElementById('btn-blog-new').style.display='block' }
+  await loadAdSlots()
+  const minDate = new Date(Date.now()+60000).toISOString().slice(0,16)
+  document.getElementById('scheduled-at-input').min = minDate
+  // 제목 입력 시 슬러그 자동 생성
+  document.getElementById('write-title').addEventListener('input', function() {
+    const sl = document.getElementById('write-slug')
+    if (!sl.dataset.manual) sl.value = slugify(this.value)
+  })
+  document.getElementById('write-slug').addEventListener('input', function() {
+    this.dataset.manual = this.value ? '1' : ''
+  })
 })()
 </script>
 
