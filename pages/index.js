@@ -6,6 +6,13 @@ import { AdSlot } from '../components/AdSlot'
 
 const TOOLS = [
   {
+    href: '/cardnews-down/',
+    icon: '📰',
+    name: '카드뉴스 변환기',
+    desc: { ko: 'HTML 카드뉴스를 PNG 7장 + 영상으로 자동 변환', en: 'Convert HTML card news into PNG slides + video' },
+    color: '#FF4B6E',
+  },
+  {
     href: '/thumb-down',
     icon: '🖼',
     name: 'Thumb-Down',
