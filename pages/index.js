@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../components/Header'
@@ -32,31 +33,68 @@ const TOOLS = [
   { href: '/text-down',   icon: '📝', name: 'Text-Down',   desc: { ko: '글자수 세기 · 공백 정리 · 텍스트 변환', en: 'Word Counter & Text Tools' }, color: '#3b82f6' },
 ]
 
+const I18N = {
+  ko: {
+    metaTitle: 'DownTools - 무료 온라인 도구 모음',
+    metaDesc: 'YouTube 썸네일 다운로드, CC0 효과음, 타이머 등 무료 온라인 도구를 한 곳에서',
+    badge: '무료 · 빠름 · 간편',
+    heroTitle: '모든 온라인 도구를',
+    heroHighlight: '한 곳에서',
+    heroSub: 'YouTube 썸네일, 효과음, 타이머 등 유용한 무료 도구 모음',
+    coming: '준비중',
+    adLabel: '광고',
+  },
+  en: {
+    metaTitle: 'DownTools - Free Online Tools Collection',
+    metaDesc: 'YouTube thumbnail downloader, CC0 sound effects, timer and more — all free online tools in one place',
+    badge: 'Free · Fast · Easy',
+    heroTitle: 'All Online Tools',
+    heroHighlight: 'In One Place',
+    heroSub: 'YouTube thumbnails, sound effects, timers and more — free tools collection',
+    coming: 'Coming Soon',
+    adLabel: 'Ad',
+  },
+}
+
 export default function Home() {
+  const [lang, setLang] = useState('ko')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('dt_lang')
+    if (saved === 'en' || saved === 'ko') setLang(saved)
+  }, [])
+
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
+  const t = I18N[lang]
   return (
     <>
       <Head>
-        <title>DownTools - 무료 온라인 도구 모음</title>
-        <meta name="description" content="YouTube 썸네일 다운로드, CC0 효과음, 타이머 등 무료 온라인 도구를 한 곳에서" />
+        <title>{t.metaTitle}</title>
+        <meta name="description" content={t.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`} crossOrigin="anonymous" />
         )}
       </Head>
 
-      <Header siteName="DownTools" siteHref="/" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="DownTools" siteHref="/" />
 
       <div className="wrap">
         {/* 상단 광고 */}
         <div style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label="광고" />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
         </div>
 
         {/* 히어로 */}
         <section className="hero">
-          <div className="hero-badge">무료 · 빠름 · 간편</div>
-          <h1 className="hero-title">모든 온라인 도구를<br /><span className="highlight">한 곳에서</span></h1>
-          <p className="hero-sub">YouTube 썸네일, 효과음, 타이머 등 유용한 무료 도구 모음</p>
+          <div className="hero-badge">{t.badge}</div>
+          <h1 className="hero-title">{t.heroTitle}<br /><span className="highlight">{t.heroHighlight}</span></h1>
+          <p className="hero-sub">{t.heroSub}</p>
         </section>
 
         {/* 툴 그리드 */}
@@ -85,20 +123,20 @@ export default function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tool.name}</span>
                   {tool.coming && (
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'var(--surface3)', color: 'var(--text3)' }}>준비중</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'var(--surface3)', color: 'var(--text3)' }}>{t.coming}</span>
                   )}
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{tool.desc.ko}</p>
+                <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{tool.desc[lang]}</p>
               </div>
             </Link>
           ))}
         </div>
 
         {/* 하단 광고 */}
-        <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label="광고" />
+        <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
       </div>
 
-      <Footer siteName="DownTools" />
+      <Footer lang={lang} siteName="DownTools" />
     </>
   )
 }

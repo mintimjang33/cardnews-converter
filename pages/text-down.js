@@ -4,7 +4,7 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { AdSlot, SidebarAd } from '../components/AdSlot'
 
-const TOOLS = [
+const TOOLS_KO = [
   { id: 'counter', label: '글자수 세기' },
   { id: 'clean',   label: '공백 정리' },
   { id: 'case',    label: '대소문자 변환' },
@@ -12,6 +12,85 @@ const TOOLS = [
   { id: 'sort',    label: '줄 정렬' },
   { id: 'diff',    label: '텍스트 비교' },
 ]
+const TOOLS_EN = [
+  { id: 'counter', label: 'Character Count' },
+  { id: 'clean',   label: 'Clean Spaces' },
+  { id: 'case',    label: 'Change Case' },
+  { id: 'remove',  label: 'Remove Text' },
+  { id: 'sort',    label: 'Sort Lines' },
+  { id: 'diff',    label: 'Text Diff' },
+]
+
+const I18N = {
+  ko: {
+    metaTitle: 'Text-Down · 무료 텍스트 도구',
+    metaDesc: '글자수 세기, 공백 제거, 텍스트 비교 등 무료 온라인 텍스트 도구',
+    tools: TOOLS_KO,
+    // counter
+    counterTitle: '글자수 세기', counterDesc: '공백 포함/제외 글자수, 단어수, 줄수를 실시간으로 세어줍니다',
+    statTotal: '글자수(공백포함)', statNospace: '글자수(공백제외)', statWords: '단어수', statSentences: '문장수', statLines: '줄수', statBytes: '바이트',
+    btnReset: '초기화', btnCopy: '복사', btnCopyResult: '결과 복사', toastCopied: '복사됨!',
+    phCounter: '텍스트를 여기에 붙여넣으세요...',
+    // clean
+    cleanTitle: '공백 / 줄바꿈 정리', cleanDesc: '불필요한 공백, 빈 줄을 제거합니다',
+    optSpace: '연속 공백 제거', optEmpty: '빈 줄 제거', optTrim: '앞뒤 공백 제거',
+    btnClean: '정리하기', phClean: '정리할 텍스트를 붙여넣으세요...',
+    // case
+    caseTitle: '대소문자 변환', caseDesc: '영문 텍스트의 대소문자를 변환합니다',
+    btnUpper: '대문자', btnLower: '소문자', btnTitle: '첫글자 대문자', btnToggle: '대소문자 반전',
+    phCase: '변환할 텍스트를 붙여넣으세요...',
+    // remove
+    removeTitle: '텍스트 제거', removeDesc: '특정 문자, HTML 태그, 특수문자 등을 제거합니다',
+    removeOpts: [['html','HTML 태그 제거'],['special','특수문자 제거'],['number','숫자 제거'],['korean','한글 제거'],['english','영문 제거'],['duplicate','중복 줄 제거']],
+    btnRemove: '제거하기', phRemove: '텍스트를 붙여넣으세요...',
+    // sort
+    sortTitle: '줄 정렬 / 뒤집기', sortDesc: '각 줄을 가나다순, 역순 등으로 정렬합니다',
+    btnAsc: '가나다순', btnDesc: '역순', btnReverse: '줄 뒤집기', btnShuffle: '랜덤 섞기',
+    phSort: '정렬할 텍스트를 줄 단위로 입력하세요...',
+    // diff
+    diffTitle: '텍스트 비교 (Diff)', diffDesc: '두 텍스트의 차이점을 줄 단위로 비교합니다',
+    diffLabelA: '원본', diffLabelB: '비교',
+    phDiffA: '원본 텍스트...', phDiffB: '비교할 텍스트...',
+    btnDiff: '비교하기',
+    diffStat: (s,r,a) => `동일 ${s}줄 · 삭제 ${r}줄 · 추가 ${a}줄`,
+    placeholder: '결과가 여기에 표시됩니다',
+    adLabel: '광고',
+  },
+  en: {
+    metaTitle: 'Text-Down · Free Text Tools',
+    metaDesc: 'Character counter, whitespace cleaner, text diff and more — free online text tools',
+    tools: TOOLS_EN,
+    // counter
+    counterTitle: 'Character Count', counterDesc: 'Count characters (with/without spaces), words, sentences, and lines in real time',
+    statTotal: 'Chars (with spaces)', statNospace: 'Chars (no spaces)', statWords: 'Words', statSentences: 'Sentences', statLines: 'Lines', statBytes: 'Bytes',
+    btnReset: 'Reset', btnCopy: 'Copy', btnCopyResult: 'Copy Result', toastCopied: 'Copied!',
+    phCounter: 'Paste your text here...',
+    // clean
+    cleanTitle: 'Clean Spaces / Line Breaks', cleanDesc: 'Remove unnecessary spaces and blank lines',
+    optSpace: 'Remove extra spaces', optEmpty: 'Remove blank lines', optTrim: 'Trim leading/trailing spaces',
+    btnClean: 'Clean', phClean: 'Paste text to clean...',
+    // case
+    caseTitle: 'Change Case', caseDesc: 'Convert the case of English text',
+    btnUpper: 'UPPERCASE', btnLower: 'lowercase', btnTitle: 'Title Case', btnToggle: 'tOGGLE cASE',
+    phCase: 'Paste text to convert...',
+    // remove
+    removeTitle: 'Remove Text', removeDesc: 'Remove specific characters, HTML tags, special chars, and more',
+    removeOpts: [['html','Remove HTML tags'],['special','Remove special chars'],['number','Remove numbers'],['korean','Remove Korean'],['english','Remove English'],['duplicate','Remove duplicate lines']],
+    btnRemove: 'Remove', phRemove: 'Paste text here...',
+    // sort
+    sortTitle: 'Sort / Reverse Lines', sortDesc: 'Sort each line alphabetically, reverse, or shuffle',
+    btnAsc: 'A → Z', btnDesc: 'Z → A', btnReverse: 'Reverse Lines', btnShuffle: 'Shuffle',
+    phSort: 'Enter text line by line...',
+    // diff
+    diffTitle: 'Text Diff', diffDesc: 'Compare two texts line by line',
+    diffLabelA: 'Original', diffLabelB: 'Comparison',
+    phDiffA: 'Original text...', phDiffB: 'Text to compare...',
+    btnDiff: 'Compare',
+    diffStat: (s,r,a) => `Same: ${s} · Removed: ${r} · Added: ${a}`,
+    placeholder: 'Result will appear here',
+    adLabel: 'Ad',
+  },
+}
 
 const S = {
   panel:       { background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, overflow: 'hidden' },
@@ -29,6 +108,7 @@ const S = {
 export default function TextDown() {
   const [tool, setTool] = useState('counter')
   const [adsOn, setAdsOn] = useState(true)
+  const [lang, setLang] = useState('ko')
 
   const [counterText, setCounterText] = useState('')
   const [cleanInput, setCleanInput]   = useState('')
@@ -49,13 +129,23 @@ export default function TextDown() {
   const [toast, setToast] = useState('')
 
   useEffect(() => {
+    const saved = localStorage.getItem('dt_lang')
+    if (saved === 'en' || saved === 'ko') setLang(saved)
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
     }).catch(() => {})
   }, [])
 
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
+  const t = I18N[lang]
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 1500) }
-  const copy = (text) => { navigator.clipboard.writeText(text).then(() => showToast('복사됨!')) }
+  const copy = (text) => { navigator.clipboard.writeText(text).then(() => showToast(t.toastCopied)) }
 
   const c = {
     total:     counterText.length,
@@ -124,16 +214,16 @@ export default function TextDown() {
         if (lb !== null) { html += `<div style="background:#f0fff0;color:#27ae60;padding:1px 4px">+ ${esc(lb)}</div>`; added++ }
       }
     }
-    setDiffHtml(`<div style="font-size:12px;color:#888;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0ea">동일 ${same}줄 · 삭제 ${removed}줄 · 추가 ${added}줄</div>` + html)
+    setDiffHtml(`<div style="font-size:12px;color:#888;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0ea">${t.diffStat(same, removed, added)}</div>` + html)
   }
 
-  const placeholder = <span style={{ color: '#bbb', fontSize: 13 }}>결과가 여기에 표시됩니다</span>
+  const placeholder = <span style={{ color: '#bbb', fontSize: 13 }}>{t.placeholder}</span>
 
   return (
     <>
       <Head>
-        <title>Text-Down · 무료 텍스트 도구</title>
-        <meta name="description" content="글자수 세기, 공백 제거, 텍스트 비교 등 무료 온라인 텍스트 도구" />
+        <title>{t.metaTitle}</title>
+        <meta name="description" content={t.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
@@ -141,163 +231,160 @@ export default function TextDown() {
         )}
       </Head>
 
-      <Header siteName="Text-Down" siteHref="/" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Text-Down" siteHref="/" />
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
         <main className="wrap main-content" style={{ paddingTop: 24, paddingBottom: 60, fontFamily: "'Outfit', -apple-system, sans-serif" }}>
 
         {/* 탭 */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-          {TOOLS.map(t => (
-            <button key={t.id}
-              style={{ padding: '7px 14px', fontSize: 13, border: `1px solid ${tool === t.id ? '#1a1a1a' : '#e0e0da'}`, background: tool === t.id ? '#1a1a1a' : '#fff', color: tool === t.id ? '#fff' : '#555', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap' }}
-              onClick={() => setTool(t.id)}>{t.label}
+          {t.tools.map(item => (
+            <button key={item.id}
+              style={{ padding: '7px 14px', fontSize: 13, border: `1px solid ${tool === item.id ? '#1a1a1a' : '#e0e0da'}`, background: tool === item.id ? '#1a1a1a' : '#fff', color: tool === item.id ? '#fff' : '#555', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              onClick={() => setTool(item.id)}>{item.label}
             </button>
           ))}
         </div>
 
-        {/* 글자수 세기 */}
+        {/* Character Counter */}
         {tool === 'counter' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>글자수 세기</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>공백 포함/제외 글자수, 단어수, 줄수를 실시간으로 세어줍니다</p></div>
-            <textarea style={S.textarea} value={counterText} onChange={e => setCounterText(e.target.value)} placeholder="텍스트를 여기에 붙여넣으세요..." />
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.counterTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.counterDesc}</p></div>
+            <textarea style={S.textarea} value={counterText} onChange={e => setCounterText(e.target.value)} placeholder={t.phCounter} />
             <div style={S.statsBar}>
-              <div style={S.stat}>글자수(공백포함) <strong>{c.total.toLocaleString()}</strong></div>
-              <div style={S.stat}>글자수(공백제외) <strong>{c.nospace.toLocaleString()}</strong></div>
-              <div style={S.stat}>단어수 <strong>{c.words.toLocaleString()}</strong></div>
-              <div style={S.stat}>문장수 <strong>{c.sentences}</strong></div>
-              <div style={S.stat}>줄수 <strong>{c.lines.toLocaleString()}</strong></div>
-              <div style={S.stat}>바이트 <strong>{c.bytes >= 1024 ? (c.bytes / 1024).toFixed(1) + 'KB' : c.bytes + 'B'}</strong></div>
+              <div style={S.stat}>{t.statTotal} <strong>{c.total.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statNospace} <strong>{c.nospace.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statWords} <strong>{c.words.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statSentences} <strong>{c.sentences}</strong></div>
+              <div style={S.stat}>{t.statLines} <strong>{c.lines.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statBytes} <strong>{c.bytes >= 1024 ? (c.bytes / 1024).toFixed(1) + 'KB' : c.bytes + 'B'}</strong></div>
             </div>
             <div style={S.actions}>
-              <button style={S.btn(false)} onClick={() => setCounterText('')}>초기화</button>
-              <button style={S.btn(false)} onClick={() => copy(counterText)}>복사</button>
+              <button style={S.btn(false)} onClick={() => setCounterText('')}>{t.btnReset}</button>
+              <button style={S.btn(false)} onClick={() => copy(counterText)}>{t.btnCopy}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
           </div>
         )}
 
-        {/* 공백 정리 */}
+        {/* Clean Spaces */}
         {tool === 'clean' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>공백 / 줄바꿈 정리</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>불필요한 공백, 빈 줄을 제거합니다</p></div>
-            <textarea style={S.textarea} value={cleanInput} onChange={e => setCleanInput(e.target.value)} placeholder="정리할 텍스트를 붙여넣으세요..." />
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.cleanTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.cleanDesc}</p></div>
+            <textarea style={S.textarea} value={cleanInput} onChange={e => setCleanInput(e.target.value)} placeholder={t.phClean} />
             <div style={S.options}>
-              {[['optSpace', optSpace, setOptSpace, '연속 공백 제거'], ['optEmpty', optEmpty, setOptEmpty, '빈 줄 제거'], ['optTrim', optTrim, setOptTrim, '앞뒤 공백 제거']].map(([, val, set, label]) => (
+              {[[optSpace, setOptSpace, t.optSpace], [optEmpty, setOptEmpty, t.optEmpty], [optTrim, setOptTrim, t.optTrim]].map(([val, set, label]) => (
                 <label key={label} style={{ fontSize: 12, color: '#555', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
                   <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} /> {label}
                 </label>
               ))}
             </div>
             <div style={S.actions}>
-              <button style={S.btn(true)} onClick={runClean}>정리하기</button>
-              <button style={S.btn(false)} onClick={() => copy(cleanResult)}>결과 복사</button>
+              <button style={S.btn(true)} onClick={runClean}>{t.btnClean}</button>
+              <button style={S.btn(false)} onClick={() => copy(cleanResult)}>{t.btnCopyResult}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
             <div style={S.result}>{cleanResult || placeholder}</div>
           </div>
         )}
 
-        {/* 대소문자 */}
+        {/* Change Case */}
         {tool === 'case' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>대소문자 변환</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>영문 텍스트의 대소문자를 변환합니다</p></div>
-            <textarea style={S.textarea} value={caseInput} onChange={e => setCaseInput(e.target.value)} placeholder="변환할 텍스트를 붙여넣으세요..." />
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.caseTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.caseDesc}</p></div>
+            <textarea style={S.textarea} value={caseInput} onChange={e => setCaseInput(e.target.value)} placeholder={t.phCase} />
             <div style={S.actions}>
-              <button style={S.btn(true)}  onClick={() => runCase('upper')}>대문자</button>
-              <button style={S.btn(false)} onClick={() => runCase('lower')}>소문자</button>
-              <button style={S.btn(false)} onClick={() => runCase('title')}>첫글자 대문자</button>
-              <button style={S.btn(false)} onClick={() => runCase('toggle')}>대소문자 반전</button>
+              <button style={S.btn(true)}  onClick={() => runCase('upper')}>{t.btnUpper}</button>
+              <button style={S.btn(false)} onClick={() => runCase('lower')}>{t.btnLower}</button>
+              <button style={S.btn(false)} onClick={() => runCase('title')}>{t.btnTitle}</button>
+              <button style={S.btn(false)} onClick={() => runCase('toggle')}>{t.btnToggle}</button>
             </div>
             <div style={S.actions}>
-              <button style={S.btn(false)} onClick={() => copy(caseResult)}>결과 복사</button>
+              <button style={S.btn(false)} onClick={() => copy(caseResult)}>{t.btnCopyResult}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
             <div style={S.result}>{caseResult || placeholder}</div>
           </div>
         )}
 
-        {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} style={{ margin: '16px 0' }} />}
+        {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} style={{ margin: '16px 0' }} />}
 
-        {/* 텍스트 제거 */}
+        {/* Remove Text */}
         {tool === 'remove' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>텍스트 제거</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>특정 문자, HTML 태그, 특수문자 등을 제거합니다</p></div>
-            <textarea style={S.textarea} value={removeInput} onChange={e => setRemoveInput(e.target.value)} placeholder="텍스트를 붙여넣으세요..." />
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.removeTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.removeDesc}</p></div>
+            <textarea style={S.textarea} value={removeInput} onChange={e => setRemoveInput(e.target.value)} placeholder={t.phRemove} />
             <div style={S.options}>
               <select value={removeType} onChange={e => setRemoveType(e.target.value)} style={{ padding: '5px 8px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6 }}>
-                <option value="html">HTML 태그 제거</option>
-                <option value="special">특수문자 제거</option>
-                <option value="number">숫자 제거</option>
-                <option value="korean">한글 제거</option>
-                <option value="english">영문 제거</option>
-                <option value="duplicate">중복 줄 제거</option>
+                {t.removeOpts.map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
               </select>
             </div>
             <div style={S.actions}>
-              <button style={S.btn(true)} onClick={runRemove}>제거하기</button>
-              <button style={S.btn(false)} onClick={() => copy(removeResult)}>결과 복사</button>
+              <button style={S.btn(true)} onClick={runRemove}>{t.btnRemove}</button>
+              <button style={S.btn(false)} onClick={() => copy(removeResult)}>{t.btnCopyResult}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
             <div style={S.result}>{removeResult || placeholder}</div>
           </div>
         )}
 
-        {/* 줄 정렬 */}
+        {/* Sort Lines */}
         {tool === 'sort' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>줄 정렬 / 뒤집기</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>각 줄을 가나다순, 역순 등으로 정렬합니다</p></div>
-            <textarea style={S.textarea} value={sortInput} onChange={e => setSortInput(e.target.value)} placeholder="정렬할 텍스트를 줄 단위로 입력하세요..." />
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.sortTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.sortDesc}</p></div>
+            <textarea style={S.textarea} value={sortInput} onChange={e => setSortInput(e.target.value)} placeholder={t.phSort} />
             <div style={S.actions}>
-              <button style={S.btn(true)}  onClick={() => runSort('asc')}>가나다순</button>
-              <button style={S.btn(false)} onClick={() => runSort('desc')}>역순</button>
-              <button style={S.btn(false)} onClick={() => runSort('reverse')}>줄 뒤집기</button>
-              <button style={S.btn(false)} onClick={() => runSort('shuffle')}>랜덤 섞기</button>
+              <button style={S.btn(true)}  onClick={() => runSort('asc')}>{t.btnAsc}</button>
+              <button style={S.btn(false)} onClick={() => runSort('desc')}>{t.btnDesc}</button>
+              <button style={S.btn(false)} onClick={() => runSort('reverse')}>{t.btnReverse}</button>
+              <button style={S.btn(false)} onClick={() => runSort('shuffle')}>{t.btnShuffle}</button>
             </div>
             <div style={S.actions}>
-              <button style={S.btn(false)} onClick={() => copy(sortResult)}>결과 복사</button>
+              <button style={S.btn(false)} onClick={() => copy(sortResult)}>{t.btnCopyResult}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
             <div style={{ ...S.result, fontFamily: 'monospace', fontSize: 13 }}>{sortResult || placeholder}</div>
           </div>
         )}
 
-        {/* 텍스트 비교 */}
+        {/* Text Diff */}
         {tool === 'diff' && (
           <div style={S.panel}>
-            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>텍스트 비교 (Diff)</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>두 텍스트의 차이점을 줄 단위로 비교합니다</p></div>
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.diffTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.diffDesc}</p></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #f0f0ea' }}>
               <div style={{ borderRight: '1px solid #f0f0ea' }}>
-                <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', background: '#fafaf8', borderBottom: '1px solid #f0f0ea' }}>원본</div>
-                <textarea style={{ ...S.textarea, minHeight: 140, borderBottom: 'none' }} value={diffA} onChange={e => setDiffA(e.target.value)} placeholder="원본 텍스트..." />
+                <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', background: '#fafaf8', borderBottom: '1px solid #f0f0ea' }}>{t.diffLabelA}</div>
+                <textarea style={{ ...S.textarea, minHeight: 140, borderBottom: 'none' }} value={diffA} onChange={e => setDiffA(e.target.value)} placeholder={t.phDiffA} />
               </div>
               <div>
-                <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', background: '#fafaf8', borderBottom: '1px solid #f0f0ea' }}>비교</div>
-                <textarea style={{ ...S.textarea, minHeight: 140, borderBottom: 'none' }} value={diffB} onChange={e => setDiffB(e.target.value)} placeholder="비교할 텍스트..." />
+                <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', background: '#fafaf8', borderBottom: '1px solid #f0f0ea' }}>{t.diffLabelB}</div>
+                <textarea style={{ ...S.textarea, minHeight: 140, borderBottom: 'none' }} value={diffB} onChange={e => setDiffB(e.target.value)} placeholder={t.phDiffB} />
               </div>
             </div>
             <div style={S.actions}>
-              <button style={S.btn(true)}  onClick={runDiff}>비교하기</button>
-              <button style={S.btn(false)} onClick={() => { setDiffA(''); setDiffB(''); setDiffHtml('') }}>초기화</button>
+              <button style={S.btn(true)}  onClick={runDiff}>{t.btnDiff}</button>
+              <button style={S.btn(false)} onClick={() => { setDiffA(''); setDiffB(''); setDiffHtml('') }}>{t.btnReset}</button>
             </div>
             {diffHtml
               ? <div style={{ padding: '12px 16px', fontSize: 13, fontFamily: 'monospace', lineHeight: 1.8, minHeight: 80 }} dangerouslySetInnerHTML={{ __html: diffHtml }} />
-              : <div style={{ padding: '12px 16px', color: '#bbb', fontSize: 13 }}>결과가 여기에 표시됩니다</div>
+              : <div style={{ padding: '12px 16px', color: '#bbb', fontSize: 13 }}>{t.placeholder}</div>
             }
           </div>
         )}
         </main>
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
 
-      <Footer siteName="Text-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Text-Down" adsOn={adsOn} />
     </>
   )
 }

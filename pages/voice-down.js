@@ -13,10 +13,57 @@ const VOICE_LANGS = [
   { code: 'fr-FR', flag: '🇫🇷', label: 'Français' },
 ]
 
+const I18N = {
+  ko: {
+    metaTitle: 'Voice-Down - 무료 음성 타이핑 | 클릭 한 번으로 말하기',
+    metaDesc: '클릭 한 번으로 말하면 자동으로 텍스트 변환! 한국어·영어·일본어·중국어 지원. 무료 음성 인식 타이핑 도구.',
+    badge: '무료 · 클릭 한 번 · 음성 타이핑',
+    heroTitle: '클릭 한 번으로',
+    heroHighlight: '음성 타이핑',
+    heroSub: '말하면 자동으로 텍스트 변환! 키보드 없이 편하게 타이핑하세요.',
+    noSupport: '❌ 이 브라우저는 음성인식을 지원하지 않습니다. 크롬(Chrome) 또는 엣지(Edge)를 사용해주세요.',
+    statusIdle: '대기 중',
+    statusListening: '🔴 듣는 중...',
+    btnStop: '클릭해서 중지',
+    btnStart: '클릭해서 말하기',
+    labelRecognized: '인식된 텍스트',
+    labelShortcut: '단축키: 스페이스바',
+    placeholder: '여기에 음성이 텍스트로 변환됩니다...',
+    btnClear: '지우기',
+    btnCopy: '복사',
+    btnCopied: '복사됨 ✓',
+    howTitle: '사용 방법',
+    steps: ['인식 언어 선택', '버튼 클릭 후 말하기', '변환된 텍스트 복사·붙여넣기'],
+    adLabel: '광고',
+  },
+  en: {
+    metaTitle: 'Voice-Down - Free Voice Typing | Speak with One Click',
+    metaDesc: 'Speak and convert to text instantly with one click! Supports Korean, English, Japanese, Chinese. Free speech recognition typing tool.',
+    badge: 'Free · One Click · Voice Typing',
+    heroTitle: 'Voice Typing',
+    heroHighlight: 'With One Click',
+    heroSub: 'Speak and auto-convert to text! Type comfortably without a keyboard.',
+    noSupport: '❌ This browser does not support speech recognition. Please use Chrome or Edge.',
+    statusIdle: 'Ready',
+    statusListening: '🔴 Listening...',
+    btnStop: 'Click to stop',
+    btnStart: 'Click to speak',
+    labelRecognized: 'Recognized Text',
+    labelShortcut: 'Shortcut: Spacebar',
+    placeholder: 'Your speech will be converted to text here...',
+    btnClear: 'Clear',
+    btnCopy: 'Copy',
+    btnCopied: 'Copied ✓',
+    howTitle: 'How to Use',
+    steps: ['Select recognition language', 'Click button and speak', 'Copy & paste the converted text'],
+    adLabel: 'Ad',
+  },
+}
+
 export default function VoiceDown() {
   const [voiceLang, setVoiceLang] = useState('ko-KR')
   const [isRecording, setIsRecording] = useState(false)
-  const [status, setStatus] = useState('대기 중')
+  const [lang, setLang] = useState('ko')
   const [text, setText] = useState('')
   const [copied, setCopied] = useState(false)
   const [adsOn, setAdsOn] = useState(true)
@@ -26,6 +73,9 @@ export default function VoiceDown() {
   const finalTextRef = useRef('')
   const isRecordingRef = useRef(false)
 
+
+  const t = I18N[lang]
+
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { setSupported(false); return }
@@ -33,16 +83,24 @@ export default function VoiceDown() {
     const savedVoiceLang = localStorage.getItem('vd_voice_lang')
     if (savedVoiceLang) setVoiceLang(savedVoiceLang)
 
+    const savedLang = localStorage.getItem('dt_lang')
+    if (savedLang === 'en' || savedLang === 'ko') setLang(savedLang)
+
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
     }).catch(() => {})
   }, [])
 
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
   const stopRecording = useCallback(() => {
     isRecordingRef.current = false
     setIsRecording(false)
     recognitionRef.current?.stop()
-    setStatus('대기 중')
   }, [])
 
   const startRecording = useCallback(() => {
@@ -57,7 +115,6 @@ export default function VoiceDown() {
     recognition.onstart = () => {
       setIsRecording(true)
       isRecordingRef.current = true
-      setStatus('🔴 듣는 중...')
     }
     recognition.onresult = (e) => {
       let interim = ''
@@ -69,13 +126,12 @@ export default function VoiceDown() {
     }
     recognition.onend = () => {
       if (isRecordingRef.current) recognition.start()
-      else { setIsRecording(false); setStatus('대기 중') }
+      else setIsRecording(false)
     }
     recognition.onerror = (e) => {
       if (e.error !== 'no-speech') {
         isRecordingRef.current = false
         setIsRecording(false)
-        setStatus('대기 중')
       }
     }
 
@@ -118,34 +174,34 @@ export default function VoiceDown() {
   return (
     <>
       <Head>
-        <title>Voice-Down - 무료 음성 타이핑 | 클릭 한 번으로 말하기</title>
-        <meta name="description" content="클릭 한 번으로 말하면 자동으로 텍스트 변환! 한국어·영어·일본어·중국어 지원. 무료 음성 인식 타이핑 도구." />
+        <title>{t.metaTitle}</title>
+        <meta name="description" content={t.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`} crossOrigin="anonymous" />
         )}
       </Head>
 
-      <Header siteName="Voice-Down" siteHref="/" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Voice-Down" siteHref="/" />
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
         <main className="wrap main-content">
 
         <section className="hero">
-          <div className="hero-badge">무료 · 클릭 한 번 · 음성 타이핑</div>
-          <h1 className="hero-title">클릭 한 번으로 <span className="hl">음성 타이핑</span></h1>
-          <p className="hero-sub">말하면 자동으로 텍스트 변환! 키보드 없이 편하게 타이핑하세요.</p>
+          <div className="hero-badge">{t.badge}</div>
+          <h1 className="hero-title">{t.heroTitle} <span className="hl">{t.heroHighlight}</span></h1>
+          <p className="hero-sub">{t.heroSub}</p>
         </section>
 
         {!supported && (
-          <div className="no-support">❌ 이 브라우저는 음성인식을 지원하지 않습니다. 크롬(Chrome) 또는 엣지(Edge)를 사용해주세요.</div>
+          <div className="no-support">{t.noSupport}</div>
         )}
 
         {supported && (
@@ -161,36 +217,38 @@ export default function VoiceDown() {
             <div className="mic-wrap">
               <button className={`mic-btn${isRecording ? ' recording' : ''}`} onClick={toggleRecording}>
                 <span className="mic-icon">{isRecording ? '⏹' : '🎤'}</span>
-                <span className="mic-label">{isRecording ? '클릭해서 중지' : '클릭해서 말하기'}</span>
+                <span className="mic-label">{isRecording ? t.btnStop : t.btnStart}</span>
               </button>
             </div>
 
             <div className="status-row">
-              <span className={`status-text${isRecording ? ' active' : ''}`}>{status}</span>
+              <span className={`status-text${isRecording ? ' active' : ''}`}>
+                {isRecording ? t.statusListening : t.statusIdle}
+              </span>
             </div>
 
             <div className="output-wrap">
               <div className="output-label">
-                <span style={{ fontSize: 13, color: 'var(--text3)' }}>인식된 텍스트</span>
-                <span style={{ fontSize: 11, color: 'var(--text3)' }}>단축키: 스페이스바</span>
+                <span style={{ fontSize: 13, color: 'var(--text3)' }}>{t.labelRecognized}</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{t.labelShortcut}</span>
               </div>
-              <textarea className="output-textarea" value={text} onChange={e => setText(e.target.value)} placeholder="여기에 음성이 텍스트로 변환됩니다..." />
+              <textarea className="output-textarea" value={text} onChange={e => setText(e.target.value)} placeholder={t.placeholder} />
               <div className="action-btns">
-                <button className="action-btn" onClick={handleClear}>지우기</button>
+                <button className="action-btn" onClick={handleClear}>{t.btnClear}</button>
                 <button className={`action-btn copy-btn${copied ? ' copied' : ''}`} onClick={handleCopy}>
-                  {copied ? '복사됨 ✓' : '복사'}
+                  {copied ? t.btnCopied : t.btnCopy}
                 </button>
               </div>
             </div>
 
-            {adsOn && <div style={{ marginBottom: 32 }}><AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} /></div>}
+            {adsOn && <div style={{ marginBottom: 32 }}><AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} /></div>}
           </>
         )}
 
         <section className="how-section">
-          <h2 className="section-title">사용 방법</h2>
+          <h2 className="section-title">{t.howTitle}</h2>
           <div className="steps">
-            {['인식 언어 선택', '버튼 클릭 후 말하기', '변환된 텍스트 복사·붙여넣기'].map((step, i) => (
+            {t.steps.map((step, i) => (
               <div key={i} className="step">
                 <div className="step-num">{i + 1}</div>
                 <p>{step}</p>
@@ -199,10 +257,10 @@ export default function VoiceDown() {
           </div>
         </section>
         </main>
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
 
-      <Footer siteName="Voice-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Voice-Down" adsOn={adsOn} />
     </>
   )
 }

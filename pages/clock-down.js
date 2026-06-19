@@ -4,40 +4,78 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { AdSlot, SidebarAd } from '../components/AdSlot'
 
-const T = {
-  tabs: ['시계','스탑워치','타이머','알람','세계시각','포모도로'],
-  tabIcons: ['🕐','⏱','⏳','🔔','🌍','🍅'],
-  digital: '디지털', analog: '아날로그',
-  start: '시작', pause: '일시정지', resume: '계속', stop: '정지', reset: '초기화', lap: '랩', add: '추가', skip: '건너뛰기',
-  hours: '시간', mins: '분', secs: '초',
-  noAlarm: '등록된 알람이 없습니다',
-  once: '반복 없음', everyday: '매일 반복', weekly: '매주 ',
-  days: ['월','화','수','목','금','토','일'],
-  weekdays: ['일','월','화','수','목','금','토'],
-  best: '최고', worst: '최저',
-  presets: [['1시간',3600],['30분',1800],['10분',600],['5분',300],['3분',180],['1분',60]],
-  regions: ['전체','아시아','유럽','아메리카','오세아니아','중동·아프리카'],
-  diffFrom: '서울 기준',
-  pomModes: ['집중','짧은 휴식','긴 휴식'],
-  pomPhase: ['FOCUS','SHORT BREAK','LONG BREAK'],
-  pomFocus: '집중 (분)', pomShort: '짧은 휴식 (분)', pomLong: '긴 휴식 (분)', pomSessions: '세션 수',
-  pomStats: '오늘 통계', sessions: '완료 세션', focusMins: '집중 분', sets: '완료 세트',
-  alarmLabel: '알람 이름 (선택)', alarmDismiss: '끄기', alarmTag: '알람',
-  settings: '시간 설정',
+const LANGS = {
+  ko: {
+    tabs: ['시계','스탑워치','타이머','알람','세계시각','포모도로'],
+    tabIcons: ['🕐','⏱','⏳','🔔','🌍','🍅'],
+    digital: '디지털', analog: '아날로그',
+    start: '시작', pause: '일시정지', resume: '계속', stop: '정지', reset: '초기화', lap: '랩', add: '추가', skip: '건너뛰기',
+    hours: '시간', mins: '분', secs: '초',
+    noAlarm: '등록된 알람이 없습니다',
+    once: '반복 없음', everyday: '매일 반복', weekly: '매주 ',
+    days: ['월','화','수','목','금','토','일'],
+    weekdays: ['일','월','화','수','목','금','토'],
+    best: '최고', worst: '최저',
+    presets: [['1시간',3600],['30분',1800],['10분',600],['5분',300],['3분',180],['1분',60]],
+    regions: ['전체','아시아','유럽','아메리카','오세아니아','중동·아프리카'],
+    diffFrom: '서울 기준',
+    pomModes: ['집중','짧은 휴식','긴 휴식'],
+    pomPhase: ['FOCUS','SHORT BREAK','LONG BREAK'],
+    pomFocus: '집중 (분)', pomShort: '짧은 휴식 (분)', pomLong: '긴 휴식 (분)', pomSessions: '세션 수',
+    pomStats: '오늘 통계', sessions: '완료 세션', focusMins: '집중 분', sets: '완료 세트',
+    alarmLabel: '알람 이름 (선택)', alarmDismiss: '끄기', alarmTag: '알람',
+    settings: '시간 설정',
+    metaTitle: 'Clock-Down — 무료 온라인 시계 | 알람·타이머·스탑워치·세계시각·포모도로',
+    metaDesc: '알람, 타이머, 스탑워치, 세계시각, 포모도로가 모두 있는 무료 온라인 시계.',
+    adLabel: '광고',
+  },
+  en: {
+    tabs: ['Clock','Stopwatch','Timer','Alarm','World Time','Pomodoro'],
+    tabIcons: ['🕐','⏱','⏳','🔔','🌍','🍅'],
+    digital: 'Digital', analog: 'Analog',
+    start: 'Start', pause: 'Pause', resume: 'Resume', stop: 'Stop', reset: 'Reset', lap: 'Lap', add: 'Add', skip: 'Skip',
+    hours: 'h', mins: 'm', secs: 's',
+    noAlarm: 'No alarms set',
+    once: 'Once', everyday: 'Every day', weekly: 'Weekly ',
+    days: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    weekdays: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    best: 'Best', worst: 'Worst',
+    presets: [['1h',3600],['30m',1800],['10m',600],['5m',300],['3m',180],['1m',60]],
+    regions: ['All','Asia','Europe','Americas','Oceania','Middle East & Africa'],
+    diffFrom: 'vs Seoul',
+    pomModes: ['Focus','Short Break','Long Break'],
+    pomPhase: ['FOCUS','SHORT BREAK','LONG BREAK'],
+    pomFocus: 'Focus (min)', pomShort: 'Short Break (min)', pomLong: 'Long Break (min)', pomSessions: 'Sessions',
+    pomStats: "Today's Stats", sessions: 'Sessions Done', focusMins: 'Focus Mins', sets: 'Sets Done',
+    alarmLabel: 'Alarm name (optional)', alarmDismiss: 'Dismiss', alarmTag: 'Alarm',
+    settings: 'Time Settings',
+    metaTitle: 'Clock-Down — Free Online Clock | Alarm · Timer · Stopwatch · World Time · Pomodoro',
+    metaDesc: 'All-in-one free online clock with alarm, timer, stopwatch, world time, and Pomodoro.',
+    adLabel: 'Ad',
+  },
 }
 
 const CITIES = [
-  {ko:'서울',tz:'Asia/Seoul',r:0},{ko:'도쿄',tz:'Asia/Tokyo',r:0},
-  {ko:'베이징',tz:'Asia/Shanghai',r:0},{ko:'방콕',tz:'Asia/Bangkok',r:0},
-  {ko:'싱가포르',tz:'Asia/Singapore',r:0},{ko:'뭄바이',tz:'Asia/Kolkata',r:0},
-  {ko:'런던',tz:'Europe/London',r:1},{ko:'파리',tz:'Europe/Paris',r:1},
-  {ko:'베를린',tz:'Europe/Berlin',r:1},{ko:'모스크바',tz:'Europe/Moscow',r:1},
-  {ko:'이스탄불',tz:'Europe/Istanbul',r:1},
-  {ko:'뉴욕',tz:'America/New_York',r:2},{ko:'LA',tz:'America/Los_Angeles',r:2},
-  {ko:'시카고',tz:'America/Chicago',r:2},{ko:'토론토',tz:'America/Toronto',r:2},
-  {ko:'상파울루',tz:'America/Sao_Paulo',r:2},
-  {ko:'시드니',tz:'Australia/Sydney',r:3},{ko:'오클랜드',tz:'Pacific/Auckland',r:3},
-  {ko:'두바이',tz:'Asia/Dubai',r:4},{ko:'카이로',tz:'Africa/Cairo',r:4},
+  {ko:'서울',   en:'Seoul',       tz:'Asia/Seoul',         r:0},
+  {ko:'도쿄',   en:'Tokyo',       tz:'Asia/Tokyo',         r:0},
+  {ko:'베이징', en:'Beijing',     tz:'Asia/Shanghai',      r:0},
+  {ko:'방콕',   en:'Bangkok',     tz:'Asia/Bangkok',       r:0},
+  {ko:'싱가포르',en:'Singapore',  tz:'Asia/Singapore',     r:0},
+  {ko:'뭄바이', en:'Mumbai',      tz:'Asia/Kolkata',       r:0},
+  {ko:'런던',   en:'London',      tz:'Europe/London',      r:1},
+  {ko:'파리',   en:'Paris',       tz:'Europe/Paris',       r:1},
+  {ko:'베를린', en:'Berlin',      tz:'Europe/Berlin',      r:1},
+  {ko:'모스크바',en:'Moscow',     tz:'Europe/Moscow',      r:1},
+  {ko:'이스탄불',en:'Istanbul',   tz:'Europe/Istanbul',    r:1},
+  {ko:'뉴욕',   en:'New York',    tz:'America/New_York',   r:2},
+  {ko:'LA',     en:'LA',          tz:'America/Los_Angeles',r:2},
+  {ko:'시카고', en:'Chicago',     tz:'America/Chicago',    r:2},
+  {ko:'토론토', en:'Toronto',     tz:'America/Toronto',    r:2},
+  {ko:'상파울루',en:'São Paulo',  tz:'America/Sao_Paulo',  r:2},
+  {ko:'시드니', en:'Sydney',      tz:'Australia/Sydney',   r:3},
+  {ko:'오클랜드',en:'Auckland',   tz:'Pacific/Auckland',   r:3},
+  {ko:'두바이', en:'Dubai',       tz:'Asia/Dubai',         r:4},
+  {ko:'카이로', en:'Cairo',       tz:'Africa/Cairo',       r:4},
 ]
 
 const pad = (n, d=2) => String(Math.floor(n)).padStart(d,'0')
@@ -86,7 +124,7 @@ export default function ClockDown() {
   const [tab, setTab] = useState(0)
   const [now, setNow] = useState(new Date())
   const [adsOn, setAdsOn] = useState(true)
-  const t = T
+  const [lang, setLang] = useState('ko')
 
   const [cMode, setCMode] = useState('digital')
 
@@ -182,8 +220,18 @@ export default function ClockDown() {
   useEffect(() => {
     const saved = localStorage.getItem('clkdown_alarms')
     if (saved) setAlarms(JSON.parse(saved))
+    const savedLang = localStorage.getItem('dt_lang')
+    if (savedLang === 'en' || savedLang === 'ko') setLang(savedLang)
     fetch('/api/settings/get').then(r=>r.json()).then(d=>{if(d.adsOn!==undefined)setAdsOn(d.adsOn)}).catch(()=>{})
   }, [])
+
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
+  const t = LANGS[lang]
 
   const saveAlarms = (list) => localStorage.setItem('clkdown_alarms', JSON.stringify(list))
 
@@ -227,7 +275,7 @@ export default function ClockDown() {
 
   const addAlarm = () => {
     if (!aTime) return
-    const label = aLabel.trim() || '알람'
+    const label = aLabel.trim() || t.alarmTag
     const next = [...alarms, {id:Date.now(), time:aTime, label, on:true, days:[...selDays]}]
     setAlarms(next); saveAlarms(next)
     setATime(''); setALabel(''); setSelDays([])
@@ -308,14 +356,16 @@ export default function ClockDown() {
     setPomLeft(sec); setPomTotal(sec)
   }
 
-  const dateStr = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${t.weekdays[now.getDay()]})`
+  const dateStr = lang === 'en'
+    ? now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+    : `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${t.weekdays[now.getDay()]})`
   const pomArcOffset = pomTotal>0 ? CIRC*(1-pomLeft/pomTotal) : 0
 
   return (
     <>
       <Head>
-        <title>Clock-Down — 무료 온라인 시계 | 알람·타이머·스탑워치·세계시각·포모도로</title>
-        <meta name="description" content="알람, 타이머, 스탑워치, 세계시각, 포모도로가 모두 있는 무료 온라인 시계." />
+        <title>{t.metaTitle}</title>
+        <meta name="description" content={t.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Orbitron:wght@300;400;700&display=swap" rel="stylesheet" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
@@ -711,16 +761,16 @@ export default function ClockDown() {
         </div>
       )}
 
-      <Header siteName="Clock-Down" siteHref="/" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Clock-Down" siteHref="/" />
 
       {adsOn && (
         <div style={{maxWidth:1280,margin:'0 auto',padding:'12px 20px'}}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP||'1111111111'} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP||'1111111111'} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
         <nav className="sidebar-nav">
           {t.tabs.map((name,i) => (
             <div key={i} className={`nav-item${tab===i?' active':''}`} onClick={()=>setTab(i)}>
@@ -866,7 +916,7 @@ export default function ClockDown() {
                   const di=now.toLocaleDateString('ko-KR',{timeZone:c.tz,month:'numeric',day:'numeric',weekday:'short'})
                   return (
                     <div key={c.tz} className="wc-card">
-                      <div className="wc-city">{c.ko}</div>
+                      <div className="wc-city">{lang === 'en' ? c.en : c.ko}</div>
                       <div className="wc-t">{wcTimes[c.tz]||'--:--:--'}</div>
                       <div className="wc-d">{di}</div>
                       <div className="wc-diff">{diff===0?'—':`${t.diffFrom} ${diff>0?'+':''}${diff}h`}</div>
@@ -944,10 +994,10 @@ export default function ClockDown() {
 
         </div>
 
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
 
-      <Footer siteName="Clock-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} />
 
       </div>
     </>

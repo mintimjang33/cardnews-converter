@@ -23,13 +23,13 @@ const LOGO_ICONS = {
 }
 
 const TOOLS = [
-  { href: '/',              label: '🏠 홈' },
-  { href: '/cardnews-down', label: '📰 카드뉴스' },
-  { href: '/thumb-down',    label: '🖼 썸네일' },
-  { href: '/sound-down',    label: '🔊 효과음' },
-  { href: '/voice-down',    label: '🎤 보이스' },
-  { href: '/text-down',     label: '📝 텍스트' },
-  { href: '/clock-down',    label: '⏱ 클럭' },
+  { href: '/',              ko: '🏠 홈',      en: '🏠 Home' },
+  { href: '/cardnews-down', ko: '📰 카드뉴스', en: '📰 CardNews' },
+  { href: '/thumb-down',    ko: '🖼 썸네일',   en: '🖼 Thumbnail' },
+  { href: '/sound-down',    ko: '🔊 효과음',   en: '🔊 Sounds' },
+  { href: '/voice-down',    ko: '🎤 보이스',   en: '🎤 Voice' },
+  { href: '/text-down',     ko: '📝 텍스트',   en: '📝 Text' },
+  { href: '/clock-down',    ko: '⏱ 클럭',     en: '⏱ Clock' },
 ]
 
 export default function Header({ lang, onToggleLang, siteName = 'DownTools', siteHref = '/' }) {
@@ -64,13 +64,13 @@ export default function Header({ lang, onToggleLang, siteName = 'DownTools', sit
                   <Link key={t.href} href={t.href}
                     className={`nav-link${isActive ? ' active' : ''}`}
                     style={isActive ? { color, background: `${color}18`, borderColor: `${color}44` } : {}}>
-                    {t.label}
+                    {lang === 'en' ? t.en : t.ko}
                   </Link>
                 )
               })}
               <Link href="/blog"
                 className={`nav-link${router.pathname.startsWith('/blog') ? ' active' : ''}`}>
-                📝 블로그
+                {lang === 'en' ? '📝 Blog' : '📝 블로그'}
               </Link>
             </nav>
             {onToggleLang && (
