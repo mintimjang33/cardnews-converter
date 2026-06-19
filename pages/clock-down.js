@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import { AdSlot } from '../components/AdSlot'
+import { AdSlot, SidebarAd } from '../components/AdSlot'
 
 const T = {
   tabs: ['시계','스탑워치','타이머','알람','세계시각','포모도로'],
@@ -720,6 +720,7 @@ export default function ClockDown() {
       )}
 
       <div className="page-layout">
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
         <nav className="sidebar-nav">
           {t.tabs.map((name,i) => (
             <div key={i} className={`nav-item${tab===i?' active':''}`} onClick={()=>setTab(i)}>
@@ -943,14 +944,10 @@ export default function ClockDown() {
 
         </div>
 
-        {adsOn && (
-          <div className="ad-sidebar">
-            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT||'6666666666'} />
-          </div>
-        )}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
       </div>
 
-      <Footer siteName="Clock-Down" />
+      <Footer siteName="Clock-Down" adsOn={adsOn} />
 
       </div>
     </>

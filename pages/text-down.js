@@ -143,8 +143,15 @@ export default function TextDown() {
 
       <Header siteName="Text-Down" siteHref="/" />
 
-      <div className="wrap" style={{ paddingTop: 24, paddingBottom: 60, fontFamily: "'Outfit', -apple-system, sans-serif" }}>
-        {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} style={{ marginBottom: 24 }} />}
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} />
+        </div>
+      )}
+
+      <div className="page-layout">
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
+        <main className="wrap main-content" style={{ paddingTop: 24, paddingBottom: 60, fontFamily: "'Outfit', -apple-system, sans-serif" }}>
 
         {/* 탭 */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -286,9 +293,11 @@ export default function TextDown() {
             }
           </div>
         )}
+        </main>
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
       </div>
 
-      <Footer siteName="Text-Down" />
+      <Footer siteName="Text-Down" adsOn={adsOn} />
     </>
   )
 }

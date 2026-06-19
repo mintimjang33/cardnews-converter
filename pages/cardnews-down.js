@@ -84,7 +84,7 @@ export default function CardnewsDown() {
         </div>
       )}
 
-      <Footer siteName="CardNews-Down" />
+      <Footer siteName="CardNews-Down" adsOn={adsOn} />
     </>
   )
 }

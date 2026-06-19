@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import { AdSlot } from '../components/AdSlot'
+import { AdSlot, SidebarAd } from '../components/AdSlot'
 
 const VOICE_LANGS = [
   { code: 'ko-KR', flag: '🇰🇷', label: '한국어' },
@@ -128,8 +128,15 @@ export default function VoiceDown() {
 
       <Header siteName="Voice-Down" siteHref="/" />
 
-      <div className="wrap">
-        {adsOn && <div style={{ marginTop: 24 }}><AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} /></div>}
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} />
+        </div>
+      )}
+
+      <div className="page-layout">
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} /></aside>}
+        <main className="wrap main-content">
 
         <section className="hero">
           <div className="hero-badge">무료 · 클릭 한 번 · 음성 타이핑</div>
@@ -191,9 +198,11 @@ export default function VoiceDown() {
             ))}
           </div>
         </section>
+        </main>
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} /></aside>}
       </div>
 
-      <Footer siteName="Voice-Down" />
+      <Footer siteName="Voice-Down" adsOn={adsOn} />
     </>
   )
 }
