@@ -37,7 +37,7 @@ body {
   backdrop-filter: blur(12px);
   z-index: 100;
 }
-.header-inner { display: flex; align-items: center; justify-content: space-between; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1280px; margin: 0 auto; padding: 0 20px; }
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
 .logo-icon {
   width: 36px; height: 36px;
@@ -130,13 +130,13 @@ body {
 .ad-slot.tall { min-height: 200px; }
 .ad-tag { font-size: 10px; color: var(--text3); text-align: right; margin-bottom: 4px; }
 
-/* SIDEBAR */
+/* SIDEBAR — 클럭페이지(clock-down) 기준 통일: max-width 1280px, 패딩 20px */
 .page-layout {
   display: flex; justify-content: center;
   gap: 0; align-items: flex-start;
-  max-width: 1280px; margin: 0 auto; padding: 0 12px;
+  max-width: 1280px; margin: 0 auto; padding: 0 20px;
 }
-.sidebar { display: none; flex-shrink: 0; width: 180px; padding-top: 24px; position: sticky; top: 24px; }
+.sidebar { display: block; flex-shrink: 0; width: 180px; padding-top: 24px; position: sticky; top: 24px; }
 .sidebar-ad-placeholder {
   width: 160px; height: 600px;
   background: var(--surface); border: 1px dashed var(--border);
@@ -145,7 +145,7 @@ body {
   color: var(--text3); font-size: 12px;
 }
 .main-content { flex: 1; min-width: 0; max-width: 780px; }
-@media (min-width: 1100px) { .sidebar { display: block; } }
+@media (max-width: 1100px) { .sidebar { display: none; } }
 
 /* RESULTS */
 .results-section { margin: 28px 0; }
