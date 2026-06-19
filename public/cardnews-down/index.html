@@ -350,17 +350,12 @@
         ondragleave="this.style.borderColor='#2a2a2a';"
         ondrop="handleAudioDrop(event)">
         <div style="font-size:11px;color:#555;margin-bottom:6px;">📂 기존 음성 불러오기</div>
-        <input id="audio-url-input" type="text" placeholder="URL 입력..." style="width:100%;background:#111;border:1.5px solid #2a2a2a;border-radius:8px;padding:6px 10px;color:#fff;font-size:11px;outline:none;box-sizing:border-box;">
-        <div style="display:flex;gap:6px;margin-top:6px;">
-          <button onclick="loadAudioFromUrl()" style="flex:1;background:#6c5ce7;border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">불러오기</button>
-          <label style="flex:1;text-align:center;background:#333;color:#aaa;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
-            파일 첨부<input type="file" accept="audio/*" style="display:none;" onchange="loadAudioFromFile(this)">
-          </label>
+        <div style="display:flex;gap:6px;">
           <label style="flex:1;text-align:center;background:#2d3436;color:#aaa;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
-            ZIP<input type="file" accept=".zip" style="display:none;" onchange="loadAudioZip(this)">
+            ZIP 선택<input type="file" accept=".zip" style="display:none;" onchange="loadAudioZip(this)">
           </label>
         </div>
-        <div style="font-size:10px;color:#444;margin-top:4px;">또는 오디오 파일을 여기에 드래그</div>
+        <div style="font-size:10px;color:#444;margin-top:4px;">또는 ZIP 파일을 여기에 드래그</div>
       </div>
       <button onclick="playWithVideo()" id="btn-play-video" style="width:100%;background:#FF4B6E;border:none;color:#fff;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;">▶ 영상과 함께 플레이</button>
       <div id="browser-tts-controls" style="display:flex;gap:8px;margin-top:6px;">
@@ -901,6 +896,10 @@
   async function loadAudioZip(input) {
     const file = input.files[0];
     if (!file) return;
+    await processAudioZipFile(file);
+  }
+
+  async function processAudioZipFile(file) {
     try {
       const zip = await JSZip.loadAsync(file);
       let timing = [];
@@ -931,24 +930,17 @@
     }
   }
 
-  function loadAudioFromUrl() {
-    const url = document.getElementById('audio-url-input').value.trim();
-    if (!url) return;
-    setAudioSource(url);
-  }
-
-  function loadAudioFromFile(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setAudioSource(url);
-  }
-
   function handleAudioDrop(e) {
     e.preventDefault();
     document.getElementById('audio-drop-zone').style.borderColor = '#2a2a2a';
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('audio/')) {
+    if (!file) return;
+    const isZip = file.type === 'application/zip'
+      || file.type === 'application/x-zip-compressed'
+      || file.name.toLowerCase().endsWith('.zip');
+    if (isZip) {
+      processAudioZipFile(file);
+    } else if (file.type.startsWith('audio/')) {
       const url = URL.createObjectURL(file);
       setAudioSource(url);
     }
