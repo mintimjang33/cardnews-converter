@@ -986,7 +986,7 @@
     goToSlide(i);
     const player = document.getElementById('audio-player');
     player.src = slides[i].audioUrl;
-    player.play();
+    player.play().catch(()=>{});
     await new Promise(r => { player.onended = r; player.onerror = r; });
     await playApiAudio(i + 1);
   }
@@ -999,7 +999,7 @@
       goToSlide(i);
       const player = document.getElementById('audio-player');
       player.src = slides[i].audioUrl;
-      player.play();
+      player.play().catch(()=>{});
       await new Promise(r => { player.onended = r; player.onerror = r; });
     }
     videoPlaying = false;
@@ -1028,7 +1028,7 @@
     const player = document.getElementById('audio-player');
     player.src = url;
     player.style.display = 'block';
-    player.play();
+    player.play().catch(()=>{});
   }
 
   let videoPlaying = false;
@@ -1070,7 +1070,7 @@
       player.src = slides[0].audioUrl;
       player.style.display = 'block';
       player.currentTime = 0;
-      player.play();
+      player.play().catch(()=>{});
       player.onended = () => { videoPlaying = false; };
     } else {
       playAllTTS(0, rate).then(() => stopWithVideo());
@@ -1288,7 +1288,7 @@
         }, 400);
       };
     } else if (slide.audioUrl) {
-      audio.src = slide.audioUrl; audio.currentTime = 0; audio.play();
+      audio.src = slide.audioUrl; audio.currentTime = 0; audio.play().catch(()=>{});
       audio.onended = () => {
         if (!isPlaying) return;
         setTimeout(() => {
