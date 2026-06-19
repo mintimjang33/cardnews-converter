@@ -115,7 +115,7 @@
   .status-log { font-size: 12px; color: #555; line-height: 1.9; max-height: 100px; overflow-y: auto; }
 
   /* 결과 섹션 */
-  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; display: none; }
+  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
   .result-section.show { display: block; }
   .result-title { font-size: 14px; font-weight: 700; color: #00B894; margin-bottom: 16px; }
 
@@ -287,7 +287,7 @@
   </div>
 
   <!-- 슬라이드 썸네일 그리드 -->
-  <div class="slides-grid" id="slides-grid" style="display:none;"></div>
+  <div class="slides-grid" id="slides-grid"></div>
 
   <!-- 슬라이드 전환 시간 -->
   <div style="margin-bottom:12px;">
@@ -316,7 +316,7 @@
       <audio id="audio-player" controls style="width:100%;filter:invert(1) hue-rotate(180deg);display:none;"></audio>
     </div>
     <!-- 오른쪽: 대본 -->
-    <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;">
 
       <!-- 원본 대본 -->
       <div>
@@ -366,6 +366,7 @@
 
       <!-- 예상 금액 -->
       <div id="cost-box" style="display:none;margin-top:10px;background:#111;border-radius:10px;padding:12px 14px;font-size:12px;color:#888;line-height:1.9;"></div>
+      </div>
 
       <!-- 생성된 음성 미리듣기 -->
       <div id="slide-audio-box" style="display:none;">
@@ -681,9 +682,9 @@
     }));
 
     renderResult();
-    document.getElementById('result-section').classList.add('show');
     document.getElementById('result-badge').textContent = slides.length + '장 완료';
     updateCostBox();
+    goToSlide(0);
   }
 
   // ── 비용 계산 ──
@@ -775,10 +776,11 @@
     setProgress(100, '✅ 완료!');
     setTimeout(() => {
       document.getElementById('status-box').classList.remove('show');
-      renderResult();
       document.getElementById('result-section').classList.add('show');
+      renderResult();
       updateStartButtonState();
       document.getElementById('result-badge').textContent = slides.length + '장 완료';
+      goToSlide(0);
     }, 600);
   }
 
