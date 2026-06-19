@@ -192,7 +192,7 @@ export default function VoiceDown() {
 
       <div className="page-layout">
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
-        <main className="wrap main-content">
+        <main className="main-content" style={{ padding: '24px 20px 60px' }}>
 
         <section className="hero">
           <div className="hero-badge">{t.badge}</div>
@@ -241,10 +241,6 @@ export default function VoiceDown() {
               </div>
             </div>
 
-            {adsOn && <div style={{ marginBottom: 32 }}><AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} /></div>}
-          </>
-        )}
-
         <section className="how-section">
           <h2 className="section-title">{t.howTitle}</h2>
           <div className="steps">
@@ -259,6 +255,12 @@ export default function VoiceDown() {
         </main>
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
+
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+        </div>
+      )}
 
       <Footer lang={lang} siteName="Voice-Down" adsOn={adsOn} />
     </>

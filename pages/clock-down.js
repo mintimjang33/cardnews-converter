@@ -764,7 +764,7 @@ export default function ClockDown() {
       <Header lang={lang} onToggleLang={toggleLang} siteName="Clock-Down" siteHref="/" />
 
       {adsOn && (
-        <div style={{maxWidth:1280,margin:'0 auto',padding:'12px 20px'}}>
+        <div className="wrap" style={{ marginTop: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP||'1111111111'} label={t.adLabel} />
         </div>
       )}
@@ -996,6 +996,12 @@ export default function ClockDown() {
 
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
+
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+        </div>
+      )}
 
       <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} />
 

@@ -317,11 +317,6 @@ export default function SoundDown() {
             </div>
           )}
 
-          {sounds.length > 0 && adsOn && (
-            <div style={{ marginTop: 32 }}>
-              <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
-            </div>
-          )}
 
           <section className="how-section">
             <h2 className="section-title">{t.howTitle}</h2>
@@ -338,6 +333,12 @@ export default function SoundDown() {
 
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
+
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+        </div>
+      )}
 
       <Footer lang={lang} adsOn={adsOn} siteName="Sound-Down" />
     </>

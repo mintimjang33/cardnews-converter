@@ -241,7 +241,7 @@ export default function TextDown() {
 
       <div className="page-layout">
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
-        <main className="wrap main-content" style={{ paddingTop: 24, paddingBottom: 60, fontFamily: "'Outfit', -apple-system, sans-serif" }}>
+        <main className="main-content" style={{ paddingTop: 24, paddingBottom: 60, padding: '24px 20px 60px', fontFamily: "'Outfit', -apple-system, sans-serif" }}>
 
         {/* 탭 */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -314,9 +314,7 @@ export default function TextDown() {
           </div>
         )}
 
-        {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} style={{ margin: '16px 0' }} />}
-
-        {/* Remove Text */}
+{/* Remove Text */}
         {tool === 'remove' && (
           <div style={S.panel}>
             <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.removeTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.removeDesc}</p></div>
@@ -383,6 +381,12 @@ export default function TextDown() {
         </main>
         {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
       </div>
+
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+        </div>
+      )}
 
       <Footer lang={lang} siteName="Text-Down" adsOn={adsOn} />
     </>
