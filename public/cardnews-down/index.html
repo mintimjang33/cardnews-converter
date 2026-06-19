@@ -413,6 +413,19 @@
 
   window.addEventListener('load', () => {});
 
+  // 부모 창(cardnews-down.js)에 실제 콘텐츠 높이를 알려서
+  // 부모가 iframe의 height를 콘텐츠에 맞게 조절하도록 함 → iframe 내부 스크롤바 방지
+  function reportHeightToParent() {
+    if (window.parent === window) return; // iframe이 아니면 무시
+    const h = document.documentElement.scrollHeight;
+    window.parent.postMessage({ type: 'cardnews-height', height: h }, '*');
+  }
+  window.addEventListener('load', reportHeightToParent);
+  window.addEventListener('resize', reportHeightToParent);
+  // 동적으로 콘텐츠가 바뀌는 시점들(업로드, 섹션 펼침/접힘, 미리보기 생성 등)에 맞춰
+  // 주기적으로도 체크 (가장 단순하고 확실한 방법)
+  setInterval(reportHeightToParent, 300);
+
   let slides = [], currentSlide = 0, isPlaying = false;
   let previewSrcs = [], previewPlayerIndex = 0;
   let editedTexts = []; // 슬라이드별 수정본 저장
@@ -616,7 +629,6 @@
     const renderArea = document.getElementById('render-area');
     renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
     renderArea.innerHTML = '';
-    console.log('[DEBUG] 0. 시작:', document.documentElement.scrollWidth, document.documentElement.scrollHeight, window.innerWidth, window.innerHeight);
 
     // iframe 없이 현재 DOM에 직접 삽입해서 캡처
     const parser = new DOMParser();
@@ -638,13 +650,7 @@
       styleContainer.appendChild(card);
     });
     document.body.appendChild(styleContainer);
-    console.log('[DEBUG] 1. styleContainer 추가 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
-    window.__scrollPoll = setInterval(() => {
-      console.log('[DEBUG] poll:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
-    }, 100);
     await new Promise(r => setTimeout(r, 800));
-    clearInterval(window.__scrollPoll);
-    console.log('[DEBUG] 2. 800ms 대기 후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
 
     const cards = Array.from(styleContainer.querySelectorAll('.card'));
     const cardTexts = [];
@@ -667,7 +673,6 @@
         windowWidth: 1080, windowHeight: 1350,
         useCORS: true, allowTaint: true, backgroundColor: null, logging: false
       });
-      console.log('[DEBUG] 카드 ' + (i+1) + ' 캡처 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
       const wrapper = document.createElement('div');
       wrapper.className = 'preview-thumb';
       const img = document.createElement('img');
@@ -679,9 +684,7 @@
       wrapper.appendChild(badge);
       scroll.appendChild(wrapper);
     }
-    console.log('[DEBUG] 3. 루프 끝, styleContainer 제거 직전:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
     document.body.removeChild(styleContainer);
-    console.log('[DEBUG] 4. styleContainer 제거 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
 
     setProgress(100, '✅ 미리보기 완료!');
     setTimeout(() => document.getElementById('status-box').classList.remove('show'), 600);
