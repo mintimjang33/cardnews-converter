@@ -616,6 +616,7 @@
     const renderArea = document.getElementById('render-area');
     renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
     renderArea.innerHTML = '';
+    console.log('[DEBUG] 0. 시작:', document.documentElement.scrollWidth, document.documentElement.scrollHeight, window.innerWidth, window.innerHeight);
 
     // iframe 없이 현재 DOM에 직접 삽입해서 캡처
     const parser = new DOMParser();
@@ -623,7 +624,7 @@
 
     // 스타일 태그 현재 문서에 주입
     const styleContainer = document.createElement('div');
-    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
+    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;';
     parsedDoc.querySelectorAll('style').forEach(s => {
       const st = document.createElement('style');
       st.textContent = s.textContent;
@@ -637,7 +638,13 @@
       styleContainer.appendChild(card);
     });
     document.body.appendChild(styleContainer);
+    console.log('[DEBUG] 1. styleContainer 추가 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
+    window.__scrollPoll = setInterval(() => {
+      console.log('[DEBUG] poll:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
+    }, 100);
     await new Promise(r => setTimeout(r, 800));
+    clearInterval(window.__scrollPoll);
+    console.log('[DEBUG] 2. 800ms 대기 후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
 
     const cards = Array.from(styleContainer.querySelectorAll('.card'));
     const cardTexts = [];
@@ -660,6 +667,7 @@
         windowWidth: 1080, windowHeight: 1350,
         useCORS: true, allowTaint: true, backgroundColor: null, logging: false
       });
+      console.log('[DEBUG] 카드 ' + (i+1) + ' 캡처 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
       const wrapper = document.createElement('div');
       wrapper.className = 'preview-thumb';
       const img = document.createElement('img');
@@ -671,7 +679,9 @@
       wrapper.appendChild(badge);
       scroll.appendChild(wrapper);
     }
+    console.log('[DEBUG] 3. 루프 끝, styleContainer 제거 직전:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
     document.body.removeChild(styleContainer);
+    console.log('[DEBUG] 4. styleContainer 제거 직후:', document.documentElement.scrollWidth, document.documentElement.scrollHeight);
 
     setProgress(100, '✅ 미리보기 완료!');
     setTimeout(() => document.getElementById('status-box').classList.remove('show'), 600);
