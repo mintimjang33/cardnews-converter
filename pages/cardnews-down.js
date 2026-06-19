@@ -9,12 +9,14 @@ const I18N = {
     metaTitle: '카드뉴스 변환기 - HTML을 PNG + 영상으로 자동 변환',
     metaDesc: 'Claude가 만들어준 카드뉴스 HTML을 PNG 7장과 TTS 음성, 영상으로 자동 변환하세요.',
     iframeTitle: '카드뉴스 변환기',
+    cooldownTitle: '변환 준비 중', cooldownSub: '아래 광고를 잠시 봐주세요 :)',
     adLabel: '광고',
   },
   en: {
     metaTitle: 'Card News Converter - Auto Convert HTML to PNG + Video',
     metaDesc: 'Automatically convert your card news HTML into 7 PNG slides, TTS audio, and video.',
     iframeTitle: 'Card News Converter',
+    cooldownTitle: 'Getting ready...', cooldownSub: 'Please view the ad below while you wait :)',
     adLabel: 'Ad',
   },
 }
@@ -24,11 +26,33 @@ export default function CardnewsDown() {
   const iframeRef = useRef(null)
   const [iframeHeight, setIframeHeight] = useState(2600)
   const [lang, setLang] = useState('ko')
+  const [cooldown, setCooldown] = useState(0)
+  const [maxCooldown, setMaxCooldown] = useState(12)
+  const [showCooldownAd, setShowCooldownAd] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+
+    // 페이지 진입 시 쿨다운 (iframe 변환 도구이므로 진입 시 1회)
+    const end = localStorage.getItem('cdn_cooldown_end')
+    if (end) {
+      const rem = Math.ceil((parseInt(end) - Date.now()) / 1000)
+      if (rem > 0) { setCooldown(rem); setShowCooldownAd(true) }
+    } else {
+      // 첫 진입 시 쿨다운 자동 시작
+      const dur = maxCooldown
+      setCooldown(dur)
+      setShowCooldownAd(true)
+      localStorage.setItem('cdn_cooldown_end', (Date.now() + dur * 1000).toString())
+    }
   }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) { setShowCooldownAd(false); return }
+    const id = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [cooldown])
 
   const toggleLang = () => {
     const next = lang === 'ko' ? 'en' : 'ko'
@@ -39,25 +63,22 @@ export default function CardnewsDown() {
   const t = I18N[lang]
 
   useEffect(() => {
-    let debounceTimer = null;
+    let debounceTimer = null
     function handleMessage(e) {
       if (!e.data || e.data.type !== 'cardnews-height') return
       if (iframeRef.current && e.source !== iframeRef.current.contentWindow) return
       const h = Number(e.data.height)
       if (!h || Number.isNaN(h)) return
       const newHeight = Math.max(2600, h + 24)
-      // 300ms 디바운스 — 안정된 값이 들어올 때만 반영
       clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        setIframeHeight(newHeight)
-      }, 300)
+      debounceTimer = setTimeout(() => setIframeHeight(newHeight), 300)
     }
     window.addEventListener('message', handleMessage)
-    return () => {
-      window.removeEventListener('message', handleMessage)
-      clearTimeout(debounceTimer)
-    }
+    return () => { window.removeEventListener('message', handleMessage); clearTimeout(debounceTimer) }
   }, [])
+
+  const cooldownPct = maxCooldown > 0 ? cooldown / maxCooldown : 0
+  const circumference = 2 * Math.PI * 24
 
   return (
     <>
@@ -74,18 +95,40 @@ export default function CardnewsDown() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
         {adsOn && (
           <aside className="sidebar">
-            <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} />
+            <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} number={2} label={t.adLabel} />
           </aside>
         )}
 
         <main className="main-content" style={{ maxWidth: 760, width: '100%' }}>
+
+          {showCooldownAd && cooldown > 0 && (
+            <div className="cooldown-block" style={{ marginBottom: 16 }}>
+              <div className="cooldown-top">
+                <div className="ring-wrap">
+                  <svg className="ring-svg" viewBox="0 0 56 56">
+                    <circle className="ring-bg" cx="28" cy="28" r="24" />
+                    <circle className="ring-progress" cx="28" cy="28" r="24"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={circumference * (1 - cooldownPct)} />
+                  </svg>
+                  <span className="ring-num">{cooldown}</span>
+                </div>
+                <div className="cooldown-text">
+                  <strong>{t.cooldownTitle}</strong>
+                  <p>{t.cooldownSub}</p>
+                </div>
+              </div>
+              {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} tall number={4} label={t.adLabel} />}
+            </div>
+          )}
+
           <iframe
             ref={iframeRef}
             src="/cardnews-down/index.html"
@@ -102,14 +145,14 @@ export default function CardnewsDown() {
 
         {adsOn && (
           <aside className="sidebar">
-            <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} />
+            <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} number={3} label={t.adLabel} />
           </aside>
         )}
       </div>
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={5} label={t.adLabel} />
         </div>
       )}
 

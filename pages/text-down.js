@@ -54,6 +54,7 @@ const I18N = {
     btnDiff: '비교하기',
     diffStat: (s,r,a) => `동일 ${s}줄 · 삭제 ${r}줄 · 추가 ${a}줄`,
     placeholder: '결과가 여기에 표시됩니다',
+    cooldownTitle: '잠시 대기 중', cooldownSub: '아래 광고를 잠시 봐주세요 :)',
     adLabel: '광고',
   },
   en: {
@@ -88,6 +89,7 @@ const I18N = {
     btnDiff: 'Compare',
     diffStat: (s,r,a) => `Same: ${s} · Removed: ${r} · Added: ${a}`,
     placeholder: 'Result will appear here',
+    cooldownTitle: 'Please wait a moment', cooldownSub: 'Please view the ad below while you wait :)',
     adLabel: 'Ad',
   },
 }
@@ -109,6 +111,9 @@ export default function TextDown() {
   const [tool, setTool] = useState('counter')
   const [adsOn, setAdsOn] = useState(true)
   const [lang, setLang] = useState('ko')
+  const [cooldown, setCooldown] = useState(0)
+  const [maxCooldown, setMaxCooldown] = useState(12)
+  const [showCooldownAd, setShowCooldownAd] = useState(false)
 
   const [counterText, setCounterText] = useState('')
   const [cleanInput, setCleanInput]   = useState('')
@@ -131,10 +136,22 @@ export default function TextDown() {
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+    const end = localStorage.getItem('txtdown_cooldown_end')
+    if (end) {
+      const rem = Math.ceil((parseInt(end) - Date.now()) / 1000)
+      if (rem > 0) { setCooldown(rem); setShowCooldownAd(true) }
+    }
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+      if (d.cooldown) setMaxCooldown(d.cooldown)
     }).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) { setShowCooldownAd(false); return }
+    const id = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [cooldown])
 
   const toggleLang = () => {
     const next = lang === 'ko' ? 'en' : 'ko'
@@ -143,6 +160,12 @@ export default function TextDown() {
   }
 
   const t = I18N[lang]
+
+  const triggerCooldown = () => {
+    setCooldown(c => c > 0 ? c : maxCooldown)
+    setShowCooldownAd(true)
+    localStorage.setItem('txtdown_cooldown_end', (Date.now() + maxCooldown * 1000).toString())
+  }
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 1500) }
   const copy = (text) => { navigator.clipboard.writeText(text).then(() => showToast(t.toastCopied)) }
@@ -162,6 +185,7 @@ export default function TextDown() {
     if (optEmpty) t = t.split('\n').filter(l => l.trim()).join('\n')
     if (optTrim)  t = t.split('\n').map(l => l.trim()).join('\n').trim()
     setCleanResult(t)
+    triggerCooldown()
   }
 
   const runCase = (type) => {
@@ -171,6 +195,7 @@ export default function TextDown() {
       type === 'title'  ? caseInput.replace(/\b\w/g, c => c.toUpperCase()) :
       caseInput.split('').map(c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join('')
     setCaseResult(r)
+    triggerCooldown()
   }
 
   const runRemove = () => {
@@ -185,6 +210,7 @@ export default function TextDown() {
       r = r.split('\n').filter(l => { if (seen.has(l)) return false; seen.add(l); return true }).join('\n')
     }
     setRemoveResult(r)
+    triggerCooldown()
   }
 
   const runSort = (type) => {
@@ -199,6 +225,7 @@ export default function TextDown() {
       }
     }
     setSortResult(lines.join('\n'))
+    triggerCooldown()
   }
 
   const runDiff = () => {
@@ -215,9 +242,12 @@ export default function TextDown() {
       }
     }
     setDiffHtml(`<div style="font-size:12px;color:#888;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0ea">${t.diffStat(same, removed, added)}</div>` + html)
+    triggerCooldown()
   }
 
   const placeholder = <span style={{ color: '#bbb', fontSize: 13 }}>{t.placeholder}</span>
+  const cooldownPct = maxCooldown > 0 ? cooldown / maxCooldown : 0
+  const circumference = 2 * Math.PI * 24
 
   return (
     <>
@@ -235,12 +265,12 @@ export default function TextDown() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} number={2} label={t.adLabel} /></aside>}
         <main className="main-content" style={{ paddingTop: 24, paddingBottom: 60, padding: '24px 20px 60px', fontFamily: "'Outfit', -apple-system, sans-serif" }}>
 
         {/* 탭 */}
@@ -252,6 +282,27 @@ export default function TextDown() {
             </button>
           ))}
         </div>
+
+        {showCooldownAd && cooldown > 0 && (
+          <div className="cooldown-block" style={{ marginBottom: 16 }}>
+            <div className="cooldown-top">
+              <div className="ring-wrap">
+                <svg className="ring-svg" viewBox="0 0 56 56">
+                  <circle className="ring-bg" cx="28" cy="28" r="24" />
+                  <circle className="ring-progress" cx="28" cy="28" r="24"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={circumference * (1 - cooldownPct)} />
+                </svg>
+                <span className="ring-num">{cooldown}</span>
+              </div>
+              <div className="cooldown-text">
+                <strong>{t.cooldownTitle}</strong>
+                <p>{t.cooldownSub}</p>
+              </div>
+            </div>
+            {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} tall number={4} label={t.adLabel} />}
+          </div>
+        )}
 
         {/* Character Counter */}
         {tool === 'counter' && (
@@ -379,12 +430,12 @@ export default function TextDown() {
           </div>
         )}
         </main>
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} number={3} label={t.adLabel} /></aside>}
       </div>
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={5} label={t.adLabel} />
         </div>
       )}
 

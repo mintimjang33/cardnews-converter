@@ -173,12 +173,12 @@ export default function ThumbDown() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} number={2} label={t.adLabel} /></aside>}
 
         <main className="main-content">
           <section className="hero">
@@ -218,7 +218,7 @@ export default function ThumbDown() {
                   <p>{t.cooldownSub}</p>
                 </div>
               </div>
-              {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} format="rectangle" tall label={t.adLabel} />}
+              {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} format="rectangle" tall number={4} label={t.adLabel} />}
             </div>
           )}
 
@@ -257,12 +257,12 @@ export default function ThumbDown() {
           </section>
         </main>
 
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} number={3} label={t.adLabel} /></aside>}
       </div>
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={5} label={t.adLabel} />
         </div>
       )}
 
