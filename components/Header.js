@@ -47,14 +47,14 @@ export default function Header({ lang, onToggleLang, siteName = 'DownTools', sit
       <style>{`:root { --accent: ${accent}; }`}</style>
 
       <header className="header">
-        <div className="wrap header-inner">
+        <div className="header-inner">
           {/* 로고 클릭 → 항상 홈(/) */}
           <Link href="/" className="logo">
             <div className="logo-icon">{icon}</div>
             <span className="logo-text">{siteName}</span>
           </Link>
           <div className="header-right">
-            <nav style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <nav className="header-nav">
               {TOOLS.map(t => {
                 const isActive = t.href === '/'
                   ? router.pathname === '/'
