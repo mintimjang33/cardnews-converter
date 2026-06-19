@@ -5,6 +5,8 @@ const TOOLS = [
   { href: '/',           label: '🏠 홈' },
   { href: '/thumb-down', label: '🖼 썸네일' },
   { href: '/sound-down', label: '🔊 효과음' },
+  { href: '/voice-down', label: '🎤 보이스' },
+  { href: '/text-down',  label: '📝 텍스트' },
 ]
 
 export default function Header({ lang, onToggleLang, siteName = 'Tools', siteHref = '/' }) {

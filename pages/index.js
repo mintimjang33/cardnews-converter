@@ -27,9 +27,9 @@ const TOOLS = [
     color: '#00d4aa',
   },
   // 나머지 사이트 추가 예정
-  { href: '/clock-down',  icon: '⏱', name: 'Clock-Down',  desc: { ko: '온라인 타이머 / 카운트다운', en: 'Online Timer / Countdown' }, color: '#f97316', coming: true },
-  { href: '/voice-down',  icon: '🎤', name: 'Voice-Down',  desc: { ko: '음성 다운로드 / 변환', en: 'Voice Download & Convert' }, color: '#8b5cf6', coming: true },
-  { href: '/text-down',   icon: '📝', name: 'Text-Down',   desc: { ko: '텍스트 변환 도구', en: 'Text Conversion Tool' }, color: '#3b82f6', coming: true },
+  { href: '/clock-down',  icon: '⏱', name: 'Clock-Down',  desc: { ko: '알람·타이머·스탑워치·포모도로', en: 'Alarm · Timer · Stopwatch · Pomodoro' }, color: '#f97316' },
+  { href: '/voice-down',  icon: '🎤', name: 'Voice-Down',  desc: { ko: '음성 타이핑 / 텍스트 변환', en: 'Voice Typing & Speech to Text' }, color: '#8b5cf6' },
+  { href: '/text-down',   icon: '📝', name: 'Text-Down',   desc: { ko: '글자수 세기 · 공백 정리 · 텍스트 변환', en: 'Word Counter & Text Tools' }, color: '#3b82f6' },
   { href: '/sensor-game', icon: '🎮', name: 'Sensor-Game', desc: { ko: '센서 기반 게임', en: 'Sensor-Based Game' }, color: '#16a34a', coming: true },
 ]
 
