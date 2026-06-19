@@ -15,8 +15,9 @@ export default function CardnewsDown() {
       if (iframeRef.current && e.source !== iframeRef.current.contentWindow) return
       const h = Number(e.data.height)
       if (!h || Number.isNaN(h)) return
-      // 콘텐츠보다 약간 여유를 두어 경계에서 스크롤바가 깜빡이는 것을 방지
-      setIframeHeight(Math.max(2600, h + 24))
+      const newHeight = Math.max(2600, h + 24)
+      // 이전 값과 10px 이상 차이날 때만 업데이트 → 미세 변동으로 인한 무한루프 방지
+      setIframeHeight(prev => Math.abs(prev - newHeight) >= 10 ? newHeight : prev)
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
