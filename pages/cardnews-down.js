@@ -41,7 +41,7 @@ export default function CardnewsDown() {
         )}
       </Head>
 
-      <Header siteName="Unified Tools" siteHref="/" />
+      <Header siteName="CardNews-Down" siteHref="/" />
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
@@ -84,7 +84,7 @@ export default function CardnewsDown() {
         </div>
       )}
 
-      <Footer siteName="Unified Tools" />
+      <Footer siteName="CardNews-Down" />
     </>
   )
 }

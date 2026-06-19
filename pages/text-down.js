@@ -141,7 +141,7 @@ export default function TextDown() {
         )}
       </Head>
 
-      <Header siteName="Unified Tools" siteHref="/" />
+      <Header siteName="Text-Down" siteHref="/" />
 
       <div className="wrap" style={{ paddingTop: 24, paddingBottom: 60, fontFamily: "'Outfit', -apple-system, sans-serif" }}>
         {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} style={{ marginBottom: 24 }} />}
@@ -288,7 +288,7 @@ export default function TextDown() {
         )}
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer siteName="Text-Down" />
     </>
   )
 }

@@ -711,7 +711,7 @@ export default function ClockDown() {
         </div>
       )}
 
-      <Header siteName="Unified Tools" siteHref="/" />
+      <Header siteName="Clock-Down" siteHref="/" />
 
       {adsOn && (
         <div style={{maxWidth:1400,margin:'0 auto',padding:'12px 20px'}}>
@@ -950,7 +950,7 @@ export default function ClockDown() {
         )}
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer siteName="Clock-Down" />
 
       </div>
     </>

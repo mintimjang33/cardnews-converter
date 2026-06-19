@@ -1,15 +1,25 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 
-// 각 페이지 원래 테마 accent 색상 (각 사이트 globals.css :root --accent 기준)
 const PAGE_ACCENTS = {
-  '/':              '#e63946', // cardnews 기본
+  '/':              '#e63946',
   '/cardnews-down': '#FF4B6E',
   '/thumb-down':    '#e63946',
   '/sound-down':    '#00d4aa',
-  '/voice-down':    '#b48ef0', // Voice-Down 원래 테마
+  '/voice-down':    '#b48ef0',
   '/text-down':     '#3b82f6',
-  '/clock-down':    '#c9a84c', // Clock-Down 원래 골드 테마
+  '/clock-down':    '#c9a84c',
+}
+
+// 로고 아이콘: siteName에 따라 매핑
+const LOGO_ICONS = {
+  'DownTools':     '▶',
+  'CardNews-Down': '📰',
+  'Thumb-Down':    '🖼',
+  'Sound-Down':    '🔊',
+  'Voice-Down':    '🎤',
+  'Text-Down':     '📝',
+  'Clock-Down':    '⏱',
 }
 
 const TOOLS = [
@@ -25,11 +35,12 @@ const TOOLS = [
 export default function Header({ lang, onToggleLang, siteName = 'DownTools', siteHref = '/' }) {
   const router = useRouter()
 
-  // 현재 경로의 accent 색상
   const accent = Object.entries(PAGE_ACCENTS)
     .filter(([path]) => path !== '/')
     .find(([path]) => router.pathname.startsWith(path))?.[1]
     || PAGE_ACCENTS['/']
+
+  const icon = LOGO_ICONS[siteName] || '▶'
 
   return (
     <>
@@ -37,8 +48,9 @@ export default function Header({ lang, onToggleLang, siteName = 'DownTools', sit
 
       <header className="header">
         <div className="wrap header-inner">
-          <Link href={siteHref} className="logo">
-            <div className="logo-icon">▶</div>
+          {/* 로고 클릭 → 항상 홈(/) */}
+          <Link href="/" className="logo">
+            <div className="logo-icon">{icon}</div>
             <span className="logo-text">{siteName}</span>
           </Link>
           <div className="header-right">

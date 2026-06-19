@@ -126,7 +126,7 @@ export default function VoiceDown() {
         )}
       </Head>
 
-      <Header siteName="Unified Tools" siteHref="/" />
+      <Header siteName="Voice-Down" siteHref="/" />
 
       <div className="wrap">
         {adsOn && <div style={{ marginTop: 24 }}><AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} /></div>}
@@ -193,7 +193,7 @@ export default function VoiceDown() {
         </section>
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer siteName="Voice-Down" />
     </>
   )
 }

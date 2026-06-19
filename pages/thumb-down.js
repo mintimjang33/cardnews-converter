@@ -169,7 +169,7 @@ export default function ThumbDown() {
         )}
       </Head>
 
-      <Header lang={lang} onToggleLang={toggleLang} siteName="Thumb‑Down" siteHref="/thumb-down" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Thumb-Down" siteHref="/" />
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>

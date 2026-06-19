@@ -215,7 +215,7 @@ export default function SoundDown() {
         )}
       </Head>
 
-      <Header lang={lang} onToggleLang={toggleLang} siteName="Sound‑Down" siteHref="/sound-down" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Sound-Down" siteHref="/" />
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
