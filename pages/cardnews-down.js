@@ -1,10 +1,26 @@
 import Head from 'next/head'
+import { useEffect, useRef, useState } from 'react'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { AdSlot, SidebarAd } from '../components/AdSlot'
 
 export default function CardnewsDown() {
   const adsOn = true
+  const iframeRef = useRef(null)
+  const [iframeHeight, setIframeHeight] = useState(2600)
+
+  useEffect(() => {
+    function handleMessage(e) {
+      if (!e.data || e.data.type !== 'cardnews-height') return
+      if (iframeRef.current && e.source !== iframeRef.current.contentWindow) return
+      const h = Number(e.data.height)
+      if (!h || Number.isNaN(h)) return
+      // 콘텐츠보다 약간 여유를 두어 경계에서 스크롤바가 깜빡이는 것을 방지
+      setIframeHeight(Math.max(2600, h + 24))
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   return (
     <>
@@ -34,10 +50,12 @@ export default function CardnewsDown() {
 
         <main className="main-content" style={{ maxWidth: 760, width: '100%' }}>
           <iframe
+            ref={iframeRef}
             src="/cardnews-down/index.html"
             title="카드뉴스 변환기"
             style={{
               width: '100%',
+              height: iframeHeight + 'px',
               minHeight: '2600px',
               border: 'none',
               borderRadius: 'var(--radius)',
