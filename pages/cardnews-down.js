@@ -16,8 +16,8 @@ export default function CardnewsDown() {
       const h = Number(e.data.height)
       if (!h || Number.isNaN(h)) return
       const newHeight = Math.max(2600, h + 24)
-      // 이전 값과 10px 이상 차이날 때만 업데이트 → 미세 변동으로 인한 무한루프 방지
-      setIframeHeight(prev => Math.abs(prev - newHeight) >= 10 ? newHeight : prev)
+      // 높이가 늘어날 때만 반응 — 절대 줄이지 않음으로써 루프 차단
+      setIframeHeight(prev => newHeight > prev ? newHeight : prev)
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
@@ -57,7 +57,6 @@ export default function CardnewsDown() {
             style={{
               width: '100%',
               height: iframeHeight + 'px',
-              minHeight: '2600px',
               border: 'none',
               borderRadius: 'var(--radius)',
               background: '#0f0f0f',
