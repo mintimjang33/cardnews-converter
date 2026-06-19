@@ -414,7 +414,7 @@
   }
   window.addEventListener('load', reportHeightToParent);
   window.addEventListener('resize', reportHeightToParent);
-  new MutationObserver(reportHeightToParent).observe(document.body, { childList: true, subtree: true, attributes: true });
+  setInterval(reportHeightToParent, 300);
 
   // ── 상태 변수 ──
   let slides = [], currentSlide = 0, isPlaying = false;
