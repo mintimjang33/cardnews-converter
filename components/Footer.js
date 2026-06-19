@@ -9,6 +9,7 @@ export default function Footer({ lang = 'ko', adsOn = true, siteName = 'Unified 
           <AdSlot
             slot={process.env.NEXT_PUBLIC_AD_SLOT_FOOTER || '4444444444'}
             label={lang === 'ko' ? '광고' : 'Ad'}
+            number={6}
           />
         )}
         <p className="footer-text">© 2024 {siteName}. All rights reserved.</p>
