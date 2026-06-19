@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     const post = req.body
     const { data, error } = await supabase.from('blog_posts').insert([{
       ...post,
+      scheduled_at: post.scheduled_at || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }]).select().single()

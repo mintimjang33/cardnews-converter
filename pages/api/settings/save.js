@@ -11,11 +11,14 @@ export default async function handler(req, res) {
   if (!process.env.ADMIN_SECRET_TOKEN || token !== process.env.ADMIN_SECRET_TOKEN) {
     return res.status(401).json({ error: '인증 실패' })
   }
-  const { cooldown, adsOn } = req.body
+  const { cooldown, adsOn, terms, privacy, adSlots } = req.body
   try {
     const rows = []
     if (cooldown !== undefined) rows.push({ key: 'site:cooldown', value: cooldown })
     if (adsOn !== undefined)    rows.push({ key: 'site:ads_on',   value: adsOn })
+    if (terms !== undefined)    rows.push({ key: 'site:terms',    value: terms })
+    if (privacy !== undefined)  rows.push({ key: 'site:privacy',  value: privacy })
+    if (adSlots !== undefined)  rows.push({ key: 'site:ad_slots', value: adSlots })
     if (rows.length === 0) return res.status(400).json({ error: '저장할 데이터 없음' })
     const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key' })
     if (error) throw error
