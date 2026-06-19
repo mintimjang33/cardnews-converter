@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #0f0f0f; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 16px; }
+  body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #0f0f0f; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 16px; overflow-x: hidden; }
   h1 { font-size: 28px; font-weight: 900; background: linear-gradient(90deg, #FF4B6E, #ff8c42); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .sub { font-size: 13px; color: #555; text-align: center; }
 
@@ -151,7 +151,7 @@
   .btn-video { background: #6c5ce7; color: #fff; }
   .btn-again { background: #222; color: #777; }
 
-  #render-area { position: fixed; left: -9999px; top: 0; width: 1080px; }
+  #render-area { position: fixed; left: -9999px; top: -9999px; width: 1080px; max-height: 0; overflow: hidden; }
   label { cursor: pointer; }
 </style>
 </head>
@@ -592,7 +592,7 @@
     setProgress(5, '📄 HTML 렌더링 중...');
 
     const renderArea = document.getElementById('render-area');
-    renderArea.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;';
+    renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
     renderArea.innerHTML = '';
 
     // iframe 없이 현재 DOM에 직접 삽입해서 캡처
@@ -601,7 +601,7 @@
 
     // 스타일 태그 현재 문서에 주입
     const styleContainer = document.createElement('div');
-    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;';
+    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
     parsedDoc.querySelectorAll('style').forEach(s => {
       const st = document.createElement('style');
       st.textContent = s.textContent;
@@ -635,6 +635,7 @@
 
       const canvas = await html2canvas(card, {
         width: 1080, height: 1350, scale: 1,
+        windowWidth: 1080, windowHeight: 1350,
         useCORS: true, allowTaint: true, backgroundColor: null, logging: false
       });
       const wrapper = document.createElement('div');
@@ -1083,7 +1084,7 @@
     setProgress(5, '📄 HTML 렌더링 중...');
 
     const renderArea = document.getElementById('render-area');
-    renderArea.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + outputW + 'px;';
+    renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + outputW + 'px;max-height:0;overflow:hidden;';
     renderArea.innerHTML = '';
 
     // iframe 없이 DOM 직접 삽입
@@ -1117,7 +1118,7 @@
       });
       if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
 
-      const canvas = await html2canvas(card, { width: outputW, height: outputH, scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, logging: false });
+      const canvas = await html2canvas(card, { width: outputW, height: outputH, scale: 1, windowWidth: outputW, windowHeight: outputH, useCORS: true, allowTaint: true, backgroundColor: null, logging: false });
       slides.push({ dataUrl: canvas.toDataURL('image/png'), name: `slide_${String(i+1).padStart(2,'0')}.png`, text: text.trim(), audioUrl: null, audioDuration: 3 });
       log(`  📸 ${i+1}장 완료`);
     }
