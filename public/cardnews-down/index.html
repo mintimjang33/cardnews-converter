@@ -407,7 +407,6 @@
     body.classList.toggle('collapsed', !isCollapsed);
   }
 
-  // ── iframe 높이 보고 (이벤트 기반 — setInterval 제거) ──
   function reportHeightToParent() {
     if (window.parent === window) return;
     window.parent.postMessage({ type: 'cardnews-height', height: document.documentElement.scrollHeight }, '*');
@@ -415,17 +414,22 @@
   window.addEventListener('load', reportHeightToParent);
   window.addEventListener('resize', reportHeightToParent);
 
-  // 스크롤바 길이 디버그
-  let _lastScrollHeight = 0;
+  // 스크롤바 길이 디버그 + 무한루프 방지
+  // scrollHeight === clientHeight 이면 iframe이 콘텐츠를 꽉 채운 상태 → 보고 안 함
+  let _lastReportedHeight = 0;
   setInterval(() => {
     const sh = document.documentElement.scrollHeight;
     const ch = document.documentElement.clientHeight;
     const scrollbarRatio = ch / sh;
-    if (sh !== _lastScrollHeight) {
-      console.log(`[SCROLLBAR DEBUG] scrollHeight: ${sh}px | clientHeight: ${ch}px | 스크롤바 비율: ${(scrollbarRatio * 100).toFixed(1)}% | 변화: ${sh - _lastScrollHeight > 0 ? '+' : ''}${sh - _lastScrollHeight}px`);
-      _lastScrollHeight = sh;
+    if (sh !== _lastReportedHeight) {
+      console.log(`[SCROLLBAR DEBUG] scrollHeight: ${sh}px | clientHeight: ${ch}px | 스크롤바 비율: ${(scrollbarRatio * 100).toFixed(1)}% | 변화: ${sh - _lastReportedHeight > 0 ? '+' : ''}${sh - _lastReportedHeight}px`);
+      _lastReportedHeight = sh;
     }
-    reportHeightToParent();
+    // scrollHeight > clientHeight 일 때만 보고 (콘텐츠가 iframe보다 클 때만)
+    // scrollHeight === clientHeight 면 iframe이 이미 충분히 크므로 보고 불필요
+    if (sh > ch) {
+      reportHeightToParent();
+    }
   }, 300);
 
   // ── 상태 변수 ──
