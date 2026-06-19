@@ -7,6 +7,7 @@ const TOOLS = [
   { href: '/sound-down', label: '🔊 효과음' },
   { href: '/voice-down', label: '🎤 보이스' },
   { href: '/text-down',  label: '📝 텍스트' },
+  { href: '/clock-down', label: '⏱ 클럭' },
 ]
 
 export default function Header({ lang, onToggleLang, siteName = 'Tools', siteHref = '/' }) {
