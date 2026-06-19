@@ -44,10 +44,10 @@
   .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .preview-num { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 
-  /* 모달 — fixed로 변경해 스크롤 끊김 해소 */
-  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; align-items: center; justify-content: center; }
-  .modal-bg.show { display: flex; }
-  .modal-box { position: relative; width: min(380px, 80vw); }
+  /* 모달 */
+  .modal-bg { display: none; position: absolute; left: 0; right: 0; top: 0; background: rgba(0,0,0,0.9); z-index: 9999; }
+  .modal-bg.show { display: block; }
+  .modal-box { position: absolute; left: 50%; transform: translateX(-50%); width: min(380px, 80vw); }
   .modal-box img { width: 100%; border-radius: 14px; display: block; }
   .modal-close { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; background: #FF4B6E; border: none; color: #fff; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -287,7 +287,7 @@
   </div>
 
   <!-- 슬라이드 썸네일 그리드 -->
-  <div class="slides-grid" id="slides-grid"></div>
+  <div class="slides-grid" id="slides-grid" style="display:none;"></div>
 
   <!-- 슬라이드 전환 시간 -->
   <div style="margin-bottom:12px;">
@@ -442,11 +442,25 @@
   }
 
   // ── 모달 ──
-  function openModal(imgs, idx) {
+  function openModal(imgs, idx, anchorEl) {
     modalImgs = imgs; modalIdx = idx;
     document.getElementById('modal-img').src = modalImgs[modalIdx];
     document.getElementById('modal-label').textContent = `${modalIdx+1} / ${modalImgs.length}`;
-    document.getElementById('modal-bg').classList.add('show');
+    const modalBg = document.getElementById('modal-bg');
+    const modalBox = document.getElementById('modal-box');
+    modalBg.style.height = document.documentElement.scrollHeight + 'px';
+    let boxTop = (window.scrollY || 0) + 40;
+    if (anchorEl && anchorEl.getBoundingClientRect) {
+      const rect = anchorEl.getBoundingClientRect();
+      boxTop = (window.scrollY || 0) + rect.top;
+    }
+    if (boxTop < 0) boxTop = 0;
+    modalBox.style.top = boxTop + 'px';
+    modalBg.classList.add('show');
+    requestAnimationFrame(() => {
+      modalBox.scrollIntoView({ block: 'start', behavior: 'auto' });
+      window.scrollBy(0, -30);
+    });
   }
   function modalClose() { document.getElementById('modal-bg').classList.remove('show'); }
   function modalStep(dir) {
@@ -664,7 +678,7 @@
       badge.textContent = i + 1;
       wrapper.appendChild(img);
       wrapper.appendChild(badge);
-      wrapper.onclick = () => openModal(previewCanvasCache.map(c => c.toDataURL('image/png')), i);
+      wrapper.onclick = () => openModal(previewCanvasCache.map(c => c.toDataURL('image/png')), i, wrapper);
       scroll.appendChild(wrapper);
     }
     document.body.removeChild(container);
@@ -830,7 +844,7 @@
       const div = document.createElement('div');
       div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
       div.innerHTML = `<img src="${s.dataUrl}"><span class="slide-num-badge">${i+1}/${slides.length}</span>`;
-      div.onclick = () => openModal(allDataUrls, i);
+      div.onclick = () => openModal(allDataUrls, i, div);
       grid.appendChild(div);
     });
     goToSlide(0);
