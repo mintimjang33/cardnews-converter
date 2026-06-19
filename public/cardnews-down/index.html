@@ -899,6 +899,20 @@
     await processAudioZipFile(file);
   }
 
+  function getAudioMimeType(filename) {
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    const map = {
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      flac: 'audio/flac',
+      webm: 'audio/webm',
+    };
+    return map[ext] || 'audio/mpeg';
+  }
+
   async function processAudioZipFile(file) {
     try {
       const zip = await JSZip.loadAsync(file);
@@ -906,24 +920,30 @@
       if (zip.files['timing.json']) {
         timing = JSON.parse(await zip.files['timing.json'].async('string'));
       }
+      let loadedCount = 0;
       for (const t of timing) {
         const zipFile = zip.files[t.filename];
         if (!zipFile || t.slide >= slides.length) continue;
-        const blob = await zipFile.async('blob');
+        const arrayBuffer = await zipFile.async('arraybuffer');
+        const mimeType = getAudioMimeType(t.filename);
+        const blob = new Blob([arrayBuffer], { type: mimeType });
         const url = URL.createObjectURL(blob);
         slides[t.slide].audioUrl = url;
         slides[t.slide].audioDuration = t.duration;
+        loadedCount++;
       }
       const first = slides.find(s => s.audioUrl);
       if (first) {
         document.getElementById('audio-player').src = first.audioUrl;
         document.getElementById('audio-player').style.display = 'block';
-        showAudioButtons(`✅ ZIP 불러오기 완료 (${timing.length}개)`);
+        showAudioButtons(`✅ ZIP 불러오기 완료 (${loadedCount}개)`);
         // ZIP은 fal.ai 음성이므로 브라우저 TTS 전용 컨트롤 숨김
         if (selectedTTS === 'browser' || selectedTTS === 'none') {
           selectedTTS = 'gemini';
         }
         applyTTSButtonState();
+      } else {
+        alert('ZIP에서 재생 가능한 음성을 찾지 못했습니다.\ntiming.json과 오디오 파일이 올바르게 포함되어 있는지 확인해주세요.');
       }
     } catch(e) {
       alert('ZIP 불러오기 실패: ' + e.message);
@@ -978,8 +998,24 @@
     goToSlide(i);
     const player = document.getElementById('audio-player');
     player.src = slides[i].audioUrl;
-    player.play().catch(()=>{});
-    await new Promise(r => { player.onended = r; player.onerror = r; });
+    let playFailed = false;
+    try {
+      await player.play();
+    } catch (err) {
+      playFailed = true;
+      console.error('오디오 재생 실패:', err);
+    }
+    if (playFailed) {
+      alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)`);
+      return;
+    }
+    await new Promise(r => {
+      player.onended = r;
+      player.onerror = () => {
+        console.error('오디오 재생 중 에러:', player.error);
+        r();
+      };
+    });
     await playApiAudio(i + 1);
   }
 
@@ -991,8 +1027,21 @@
       goToSlide(i);
       const player = document.getElementById('audio-player');
       player.src = slides[i].audioUrl;
-      player.play().catch(()=>{});
-      await new Promise(r => { player.onended = r; player.onerror = r; });
+      try {
+        await player.play();
+      } catch (err) {
+        console.error('오디오 재생 실패:', err);
+        alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)`);
+        videoPlaying = false;
+        break;
+      }
+      await new Promise(r => {
+        player.onended = r;
+        player.onerror = () => {
+          console.error('오디오 재생 중 에러:', player.error);
+          r();
+        };
+      });
     }
     videoPlaying = false;
   }
@@ -1020,7 +1069,10 @@
     const player = document.getElementById('audio-player');
     player.src = url;
     player.style.display = 'block';
-    player.play().catch(()=>{});
+    player.play().catch(err => {
+      console.error('오디오 재생 실패:', err);
+      alert('음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)');
+    });
   }
 
   let videoPlaying = false;
@@ -1062,7 +1114,11 @@
       player.src = slides[0].audioUrl;
       player.style.display = 'block';
       player.currentTime = 0;
-      player.play().catch(()=>{});
+      player.play().catch(err => {
+        console.error('오디오 재생 실패:', err);
+        alert('음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)');
+        videoPlaying = false;
+      });
       player.onended = () => { videoPlaying = false; };
     } else {
       playAllTTS(0, rate).then(() => stopWithVideo());
