@@ -366,7 +366,7 @@ export default function ClockDown() {
   backdrop-filter: blur(12px);
   z-index: 100;
 }
-.header-inner { display:flex; align-items:center; justify-content:space-between; max-width:1400px; margin:0 auto; padding:0 20px; }
+.header-inner { display:flex; align-items:center; justify-content:space-between; max-width:1280px; margin:0 auto; padding:0 20px; }
 .logo { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
 .logo-icon {
   width:34px; height:34px;
@@ -407,7 +407,7 @@ export default function ClockDown() {
 /* ── LAYOUT ── */
 .page-layout {
   display: flex;
-  max-width: 1400px;
+  max-width: 1280px;
   margin: 0 auto;
   min-height: calc(100vh - 60px);
 }
@@ -685,7 +685,7 @@ export default function ClockDown() {
 
 /* ── FOOTER ── */
 .footer { border-top:1px solid var(--border); padding:32px 0 20px; margin-top:0; }
-.footer-inner { max-width:1400px; margin:0 auto; padding:0 20px; }
+.footer-inner { max-width:1280px; margin:0 auto; padding:0 20px; }
 .footer-text { text-align:center; color:var(--text3); font-size:12px; margin:12px 0; }
 .admin-link { display:block; text-align:center; color:var(--surface3); font-size:10px; margin-top:12px; text-decoration:none; }
 .admin-link:hover { color:var(--text3); }
@@ -714,7 +714,7 @@ export default function ClockDown() {
       <Header siteName="Clock-Down" siteHref="/" />
 
       {adsOn && (
-        <div style={{maxWidth:1400,margin:'0 auto',padding:'12px 20px'}}>
+        <div style={{maxWidth:1280,margin:'0 auto',padding:'12px 20px'}}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP||'1111111111'} />
         </div>
       )}
