@@ -30,14 +30,13 @@ const TOOLS = [
   { href: '/clock-down',  icon: '⏱', name: 'Clock-Down',  desc: { ko: '알람·타이머·스탑워치·포모도로', en: 'Alarm · Timer · Stopwatch · Pomodoro' }, color: '#f97316' },
   { href: '/voice-down',  icon: '🎤', name: 'Voice-Down',  desc: { ko: '음성 타이핑 / 텍스트 변환', en: 'Voice Typing & Speech to Text' }, color: '#8b5cf6' },
   { href: '/text-down',   icon: '📝', name: 'Text-Down',   desc: { ko: '글자수 세기 · 공백 정리 · 텍스트 변환', en: 'Word Counter & Text Tools' }, color: '#3b82f6' },
-  { href: '/sensor-game', icon: '🎮', name: 'Sensor-Game', desc: { ko: '센서 기반 게임', en: 'Sensor-Based Game' }, color: '#16a34a', coming: true },
 ]
 
 export default function Home() {
   return (
     <>
       <Head>
-        <title>Unified Tools - 무료 온라인 도구 모음</title>
+        <title>DownTools - 무료 온라인 도구 모음</title>
         <meta name="description" content="YouTube 썸네일 다운로드, CC0 효과음, 타이머 등 무료 온라인 도구를 한 곳에서" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
@@ -45,7 +44,7 @@ export default function Home() {
         )}
       </Head>
 
-      <Header siteName="Unified Tools" siteHref="/" />
+      <Header siteName="DownTools" siteHref="/" />
 
       <div className="wrap">
         {/* 상단 광고 */}
@@ -99,7 +98,7 @@ export default function Home() {
         <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label="광고" />
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer siteName="DownTools" />
     </>
   )
 }
