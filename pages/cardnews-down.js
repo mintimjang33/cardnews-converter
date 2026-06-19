@@ -10,17 +10,24 @@ export default function CardnewsDown() {
   const [iframeHeight, setIframeHeight] = useState(2600)
 
   useEffect(() => {
+    let debounceTimer = null;
     function handleMessage(e) {
       if (!e.data || e.data.type !== 'cardnews-height') return
       if (iframeRef.current && e.source !== iframeRef.current.contentWindow) return
       const h = Number(e.data.height)
       if (!h || Number.isNaN(h)) return
       const newHeight = Math.max(2600, h + 24)
-      // 높이가 늘어날 때만 반응 — 절대 줄이지 않음으로써 루프 차단
-      setIframeHeight(prev => newHeight > prev ? newHeight : prev)
+      // 300ms 디바운스 — 안정된 값이 들어올 때만 반영
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        setIframeHeight(newHeight)
+      }, 300)
     }
     window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
+    return () => {
+      window.removeEventListener('message', handleMessage)
+      clearTimeout(debounceTimer)
+    }
   }, [])
 
   return (
