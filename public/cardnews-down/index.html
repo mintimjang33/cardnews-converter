@@ -16,7 +16,6 @@
   .step-title:hover { opacity: 0.85; }
   .step-chevron { margin-left: auto; font-size: 11px; color: #555; transition: transform 0.2s; }
   .step-title.collapsed .step-chevron { transform: rotate(-90deg); }
-  .step-body { }
   .step-body.collapsed { display: none; }
   .step-num { width: 24px; height: 24px; background: #FF4B6E; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
   .step-num.done { background: #00B894; }
@@ -32,7 +31,7 @@
   .file-name { font-size: 14px; font-weight: 700; color: #00B894; margin-top: 8px; }
   #file-input { display: none; }
 
-  /* 슬라이드 미리보기 스트립 (업로드 직후) */
+  /* 슬라이드 미리보기 스트립 */
   .preview-strip { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
   .preview-strip-title { font-size: 14px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; }
   .preview-empty { font-size: 12px; color: #444; text-align: center; padding: 20px 0; }
@@ -45,10 +44,10 @@
   .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .preview-num { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 
-  /* 모달 */
-  .modal-bg { display: none; position: absolute; left: 0; right: 0; top: 0; background: rgba(0,0,0,0.9); z-index: 9999; }
-  .modal-bg.show { display: block; }
-  .modal-box { position: absolute; left: 50%; transform: translateX(-50%); width: min(380px, 80vw); }
+  /* 모달 — fixed로 변경해 스크롤 끊김 해소 */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal-box { position: relative; width: min(380px, 80vw); }
   .modal-box img { width: 100%; border-radius: 14px; display: block; }
   .modal-close { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; background: #FF4B6E; border: none; color: #fff; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -116,11 +115,11 @@
   .status-log { font-size: 12px; color: #555; line-height: 1.9; max-height: 100px; overflow-y: auto; }
 
   /* 결과 섹션 */
-  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
+  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; display: none; }
   .result-section.show { display: block; }
   .result-title { font-size: 14px; font-weight: 700; color: #00B894; margin-bottom: 16px; }
 
-  /* 슬라이드 썸네일 (변환 후 한 줄) */
+  /* 슬라이드 썸네일 */
   .slides-grid { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px; scrollbar-width: thin; scrollbar-color: #333 #111; }
   .slides-grid::-webkit-scrollbar { height: 4px; }
   .slides-grid::-webkit-scrollbar-track { background: #111; }
@@ -139,7 +138,6 @@
   .ctrl:hover { background: #FF4B6E; }
   .ctrl.play { background: #FF4B6E; width: 52px; height: 52px; font-size: 20px; }
   .slide-info { flex: 1; text-align: center; font-size: 13px; color: #555; }
-  .speed-select { background: #222; border: none; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
   audio { width: 100%; filter: invert(1) hue-rotate(180deg); margin-bottom: 8px; }
 
   /* 다운로드 버튼 */
@@ -151,14 +149,17 @@
   .btn-video { background: #6c5ce7; color: #fff; }
   .btn-again { background: #222; color: #777; }
 
-  #render-area { position: fixed; left: -9999px; top: -9999px; width: 1080px; max-height: 0; overflow: hidden; }
+  /* PNG 품질 배지 */
+  .quality-badge { display: inline-block; background: #1e3a2f; color: #00B894; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; border: 1px solid #00B894; }
+
+  #render-area { position: fixed; left: -9999px; top: -9999px; width: 1080px; pointer-events: none; }
   label { cursor: pointer; }
 </style>
 </head>
 <body>
 
 <h1>🃏 카드뉴스 변환기</h1>
-<p class="sub">HTML → PNG + TTS 음성 + 영상 자동 생성 · 🔒 API 키 세션 저장</p>
+<p class="sub">HTML → PNG 2x 고해상도 + TTS 음성 + 영상 자동 생성 · 🔒 API 키 세션 저장</p>
 
 <!-- STEP 1: 업로드 -->
 <div class="section">
@@ -184,9 +185,9 @@
   <div class="status-log" id="status-log"></div>
 </div>
 
-<!-- 슬라이드 미리보기 스트립 (업로드 직후 표시) -->
+<!-- 슬라이드 미리보기 스트립 -->
 <div class="preview-strip">
-  <div class="preview-strip-title">🖼️ 슬라이드 미리보기</div>
+  <div class="preview-strip-title">🖼️ 슬라이드 미리보기 <span class="quality-badge">2× 고해상도</span></div>
   <div class="preview-scroll" id="preview-scroll">
     <div class="preview-empty">파일을 업로드하면 슬라이드 미리보기가 표시됩니다</div>
   </div>
@@ -285,7 +286,7 @@
     <div class="result-title" id="result-badge" style="color:#888;font-size:12px;"></div>
   </div>
 
-  <!-- 슬라이드 썸네일 그리드 (숨김 - 플레이어 연동용) -->
+  <!-- 슬라이드 썸네일 그리드 -->
   <div class="slides-grid" id="slides-grid" style="display:none;"></div>
 
   <!-- 슬라이드 전환 시간 -->
@@ -365,7 +366,6 @@
 
       <!-- 예상 금액 -->
       <div id="cost-box" style="display:none;margin-top:10px;background:#111;border-radius:10px;padding:12px 14px;font-size:12px;color:#888;line-height:1.9;"></div>
-      </div>
 
       <!-- 생성된 음성 미리듣기 -->
       <div id="slide-audio-box" style="display:none;">
@@ -384,7 +384,7 @@
   </div>
 </div>
 
-<!-- 모달 -->
+<!-- 모달 (fixed 레이아웃) -->
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)modalClose()">
   <div class="modal-box" id="modal-box">
     <button class="modal-close" onclick="modalClose()">✕</button>
@@ -398,7 +398,7 @@
 <div id="render-area"></div>
 
 <script>
-  // 섹션 접기/펼치기
+  // ── 섹션 접기/펼치기 ──
   function toggleSection(titleEl) {
     const body = titleEl.nextElementSibling;
     const isCollapsed = titleEl.classList.contains('collapsed');
@@ -406,54 +406,46 @@
     body.classList.toggle('collapsed', !isCollapsed);
   }
 
-  window.addEventListener('load', () => {});
-
-  // 부모 창(cardnews-down.js)에 실제 콘텐츠 높이를 알려서
-  // 부모가 iframe의 height를 콘텐츠에 맞게 조절하도록 함 → iframe 내부 스크롤바 방지
+  // ── iframe 높이 보고 (이벤트 기반 — setInterval 제거) ──
   function reportHeightToParent() {
-    if (window.parent === window) return; // iframe이 아니면 무시
-    const h = document.documentElement.scrollHeight;
-    window.parent.postMessage({ type: 'cardnews-height', height: h }, '*');
+    if (window.parent === window) return;
+    window.parent.postMessage({ type: 'cardnews-height', height: document.documentElement.scrollHeight }, '*');
   }
   window.addEventListener('load', reportHeightToParent);
   window.addEventListener('resize', reportHeightToParent);
-  // 동적으로 콘텐츠가 바뀌는 시점들(업로드, 섹션 펼침/접힘, 미리보기 생성 등)에 맞춰
-  // 주기적으로도 체크 (가장 단순하고 확실한 방법)
-  setInterval(reportHeightToParent, 300);
+  new MutationObserver(reportHeightToParent).observe(document.body, { childList: true, subtree: true, attributes: true });
 
+  // ── 상태 변수 ──
   let slides = [], currentSlide = 0, isPlaying = false;
-  let previewSrcs = [], previewPlayerIndex = 0;
-  let editedTexts = []; // 슬라이드별 수정본 저장
-
-  // 모달
+  let editedTexts = [];
   let modalImgs = [], modalIdx = 0;
-  function openModal(imgs, idx, anchorEl) {
+  let playTimer = null, syncTimer = null;
+  let falKey = sessionStorage.getItem('fal_key') || '';
+  let selectedTTS = 'browser';
+  let outputW = 1080, outputH = 1350;
+  let loadedHtml = '';
+  let browserVoices = [];
+  let videoPlaying = false, videoPaused = false;
+  // 미리보기에서 캡처한 캔버스 캐시 (재사용해 중복 렌더링 방지)
+  let previewCanvasCache = [];
+
+  const synth = window.speechSynthesis;
+
+  function loadVoices() { browserVoices = synth.getVoices().filter(v => v.lang.startsWith('ko')); }
+  loadVoices();
+  if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+
+  if (falKey) {
+    document.getElementById('api-key').value = falKey;
+    document.getElementById('api-status').textContent = '✅ API 키 저장됨 (세션 유지 중)';
+  }
+
+  // ── 모달 ──
+  function openModal(imgs, idx) {
     modalImgs = imgs; modalIdx = idx;
     document.getElementById('modal-img').src = modalImgs[modalIdx];
     document.getElementById('modal-label').textContent = `${modalIdx+1} / ${modalImgs.length}`;
-    const modalBg = document.getElementById('modal-bg');
-    const modalBox = document.getElementById('modal-box');
-
-    // 배경은 문서 전체를 덮도록 높이를 맞춤 (스크롤해도 어두운 배경이 끊기지 않게)
-    modalBg.style.height = document.documentElement.scrollHeight + 'px';
-
-    // 클릭한 썸네일의 문서상 위치(top) 바로 아래쪽에 모달 박스를 배치
-    // (이 페이지가 iframe으로 길게 통째로 삽입되는 환경에서는 window.innerHeight를
-    //  신뢰할 수 없으므로, 화면 중앙 정렬 대신 클릭 지점 기준 배치를 사용)
-    let boxTop = (window.scrollY || 0) + 40;
-    if (anchorEl && anchorEl.getBoundingClientRect) {
-      const rect = anchorEl.getBoundingClientRect();
-      boxTop = (window.scrollY || 0) + rect.top;
-    }
-    if (boxTop < 0) boxTop = 0;
-    modalBox.style.top = boxTop + 'px';
-
-    modalBg.classList.add('show');
-    // 모달 박스가 화면에 바로 보이도록 그 위치로 스크롤
-    requestAnimationFrame(() => {
-      modalBox.scrollIntoView({ block: 'start', behavior: 'auto' });
-      window.scrollBy(0, -30);
-    });
+    document.getElementById('modal-bg').classList.add('show');
   }
   function modalClose() { document.getElementById('modal-bg').classList.remove('show'); }
   function modalStep(dir) {
@@ -467,23 +459,27 @@
     if (e.key === 'ArrowLeft') modalStep(-1);
     if (e.key === 'ArrowRight') modalStep(1);
   });
-  let playTimer = null, syncTimer = null;
-  let falKey = sessionStorage.getItem('fal_key') || '';
-  let selectedTTS = 'browser';
-  let outputW = 1080, outputH = 1350;
-  let loadedHtml = '';
-  let browserVoices = [];
-  const synth = window.speechSynthesis;
 
-  function loadVoices() { browserVoices = synth.getVoices().filter(v => v.lang.startsWith('ko')); }
-  loadVoices();
-  if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
-
-  if (falKey) {
-    document.getElementById('api-key').value = falKey;
-    document.getElementById('api-status').textContent = '✅ API 키 저장됨 (세션 유지 중)';
+  // ── 유틸 ──
+  function log(msg) { const el = document.getElementById('status-log'); el.innerHTML += msg + '<br>'; el.scrollTop = el.scrollHeight; }
+  function setProgress(pct, title) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    if (title) document.getElementById('status-title').textContent = title;
+    document.getElementById('status-pct').textContent = pct + '%';
   }
 
+  /** 카드에서 TTS 대본 텍스트를 추출 (공통 함수) */
+  function extractCardText(card) {
+    let text = '';
+    const selectors = ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'];
+    selectors.forEach(s => {
+      card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; });
+    });
+    if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
+    return text.trim();
+  }
+
+  // ── API 키 ──
   function saveKey() {
     falKey = document.getElementById('api-key').value.trim();
     if (!falKey) return;
@@ -491,6 +487,7 @@
     document.getElementById('api-status').textContent = '✅ 저장됨 — 탭 닫으면 자동 삭제 🔒';
   }
 
+  // ── TTS 선택 ──
   function selectTTS(type, el) {
     selectedTTS = type;
     document.querySelectorAll('.tts-opt').forEach(o => o.classList.remove('active'));
@@ -499,32 +496,29 @@
   }
 
   function applyTTSButtonState() {
-    var btn = document.getElementById('btn-generate-audio');
-    var playBtn = document.getElementById('btn-play-video');
-    var controls = document.getElementById('browser-tts-controls');
-    // 라디오 옵션 UI도 동기화
+    const btn = document.getElementById('btn-generate-audio');
+    const playBtn = document.getElementById('btn-play-video');
+    const controls = document.getElementById('browser-tts-controls');
     document.querySelectorAll('.tts-opt').forEach(o => {
       o.classList.toggle('active', o.getAttribute('onclick') === `selectTTS('${selectedTTS}',this)`);
     });
     if (!btn) return;
     if (selectedTTS === 'browser') {
-      btn.innerHTML = '🔊 음성 읽기';
-      btn.style.background = '#00B894';
+      btn.innerHTML = '🔊 음성 읽기'; btn.style.background = '#00B894';
       if (playBtn) playBtn.style.display = 'block';
       if (controls) controls.style.display = 'flex';
     } else if (selectedTTS === 'none') {
-      btn.innerHTML = '❌ TTS 없음';
-      btn.style.background = '#444';
+      btn.innerHTML = '❌ TTS 없음'; btn.style.background = '#444';
       if (playBtn) playBtn.style.display = 'none';
       if (controls) controls.style.display = 'none';
     } else {
-      btn.innerHTML = '🎙️ 음성 생성';
-      btn.style.background = '#6c5ce7';
+      btn.innerHTML = '🎙️ 음성 생성'; btn.style.background = '#6c5ce7';
       if (playBtn) playBtn.style.display = 'none';
       if (controls) controls.style.display = 'none';
     }
   }
 
+  // ── 사이즈 선택 ──
   function selectSize(w, h, el) {
     document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
@@ -546,8 +540,6 @@
     updateStartButtonState();
   }
 
-  // 기본값(인스타 세로 1080×1350)이면 업로드 시 미리보기와 동일하므로 버튼 비활성화,
-  // 다른 사이즈를 고르면 실제 변환이 필요하므로 버튼 활성화
   function updateStartButtonState() {
     const btn = document.getElementById('btn-start');
     const hint = document.getElementById('btn-start-hint');
@@ -565,15 +557,14 @@
     }
   }
 
-  // 파일 업로드
+  // ── 파일 업로드 ──
   const uploadZone = document.getElementById('upload-zone');
   const fileInput = document.getElementById('file-input');
 
   uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
   uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
   uploadZone.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadZone.classList.remove('drag');
+    e.preventDefault(); uploadZone.classList.remove('drag');
     if (e.dataTransfer.files[0]) analyzeFile(e.dataTransfer.files[0]);
   });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) analyzeFile(e.target.files[0]); });
@@ -590,13 +581,12 @@
     const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
     const cards = parsedDoc.querySelectorAll('.card');
     const totalCards = cards.length;
-    const origW = 1080, origH = 1350;
     let totalChars = 0;
     cards.forEach(c => { totalChars += (c.textContent || '').replace(/\s/g,'').length; });
 
     document.getElementById('info-slides').textContent = totalCards + '장';
     document.getElementById('info-slides').classList.remove('ready');
-    document.getElementById('info-size').textContent = origW + '×' + origH;
+    document.getElementById('info-size').textContent = '1080×1350';
     document.getElementById('info-chars').textContent = totalChars.toLocaleString() + '자';
     document.getElementById('info-time').textContent = '~' + Math.round(totalChars / 5) + '초';
 
@@ -609,115 +599,94 @@
     document.getElementById('step2-num').classList.add('done');
     document.getElementById('step2-num').textContent = '';
 
-    // 미리보기 스트립 생성 (html2canvas 캡처)
-    buildPreviewStrip(totalCards);
+    // 미리보기 생성 (scale:2 고해상도, 결과를 캐시)
+    await buildPreviewStrip(totalCards);
+  }
+
+  /** HTML을 DOM에 주입하고 card 요소 배열 반환. 호출 후 반드시 cleanup(container) 호출 필요 */
+  function injectCards(w, h, scale) {
+    const parser = new DOMParser();
+    const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
+
+    const container = document.createElement('div');
+    container.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${w}px;pointer-events:none;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;`;
+
+    parsedDoc.querySelectorAll('style').forEach(s => {
+      const st = document.createElement('style');
+      st.textContent = s.textContent;
+      container.appendChild(st);
+    });
+    parsedDoc.querySelectorAll('.card').forEach(card => {
+      card.style.cssText = (card.style.cssText || '') + `;width:${w}px;height:${h}px;overflow:hidden;flex-shrink:0;`;
+      container.appendChild(card);
+    });
+    document.body.appendChild(container);
+    return container;
   }
 
   async function buildPreviewStrip(totalCards) {
     const scroll = document.getElementById('preview-scroll');
-    scroll.innerHTML = '<div class="preview-empty">🔄 미리보기 생성 중...</div>';
+    scroll.innerHTML = '<div class="preview-empty">🔄 2× 고해상도 미리보기 생성 중...</div>';
 
-    // 로딩 상태 표시
     document.getElementById('status-box').classList.add('show');
     setProgress(5, '📄 HTML 렌더링 중...');
 
-    const renderArea = document.getElementById('render-area');
-    renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
-    renderArea.innerHTML = '';
-
-    // iframe 없이 현재 DOM에 직접 삽입해서 캡처
-    const parser = new DOMParser();
-    const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
-
-    // 스타일 태그 현재 문서에 주입
-    const styleContainer = document.createElement('div');
-    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;';
-    parsedDoc.querySelectorAll('style').forEach(s => {
-      const st = document.createElement('style');
-      st.textContent = s.textContent;
-      styleContainer.appendChild(st);
-    });
-
-    // card 요소들 현재 DOM에 삽입
-    const parsedCards = Array.from(parsedDoc.querySelectorAll('.card'));
-    parsedCards.forEach(card => {
-      card.style.cssText = (card.style.cssText || '') + ';width:1080px;height:1350px;overflow:hidden;flex-shrink:0;';
-      styleContainer.appendChild(card);
-    });
-    document.body.appendChild(styleContainer);
+    const container = injectCards(1080, 1350, 2);
     await new Promise(r => setTimeout(r, 800));
 
-    const cards = Array.from(styleContainer.querySelectorAll('.card'));
+    const cards = Array.from(container.querySelectorAll('.card'));
     const cardTexts = [];
+    previewCanvasCache = [];
     scroll.innerHTML = '';
 
     for (let i = 0; i < cards.length; i++) {
       setProgress(10 + Math.round((i / cards.length) * 85), `🖼️ 미리보기 ${i+1}/${cards.length}장 생성 중...`);
-      const card = cards[i];
       await new Promise(r => setTimeout(r, 200));
 
-      let text = '';
-      ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'].forEach(s => {
-        card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; });
-      });
-      if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
-      cardTexts.push(text.trim());
+      cardTexts.push(extractCardText(cards[i]));
 
-      const canvas = await html2canvas(card, {
-        width: 1080, height: 1350, scale: 1,
+      // scale:2 → 실제 2160×2700px 캔버스, PNG 품질 대폭 향상
+      const canvas = await html2canvas(cards[i], {
+        width: 1080, height: 1350, scale: 2,
         windowWidth: 1080, windowHeight: 1350,
         useCORS: true, allowTaint: true, backgroundColor: null, logging: false
       });
+      previewCanvasCache.push(canvas);
+
+      const dataUrl = canvas.toDataURL('image/png');
       const wrapper = document.createElement('div');
       wrapper.className = 'preview-thumb';
       const img = document.createElement('img');
-      img.src = canvas.toDataURL('image/png');
+      img.src = dataUrl;
       const badge = document.createElement('div');
       badge.className = 'preview-num';
       badge.textContent = i + 1;
       wrapper.appendChild(img);
       wrapper.appendChild(badge);
+      wrapper.onclick = () => openModal(previewCanvasCache.map(c => c.toDataURL('image/png')), i);
       scroll.appendChild(wrapper);
     }
-    document.body.removeChild(styleContainer);
+    document.body.removeChild(container);
 
     setProgress(100, '✅ 미리보기 완료!');
     setTimeout(() => document.getElementById('status-box').classList.remove('show'), 600);
 
-    // 모달 연결
-    const srcs = Array.from(scroll.querySelectorAll('.preview-thumb img')).map(el => el.src);
-    scroll.querySelectorAll('.preview-thumb').forEach((el, i) => {
-      el.onclick = () => openModal(srcs, i, el);
-    });
-
-    // 미리보기 이미지를 slides에 채워서 플레이어 완전 작동
-    previewSrcs = srcs;
-    slides = srcs.map((src, i) => ({
-      dataUrl: src,
+    // 미리보기 캐시로 슬라이드 데이터도 바로 구성 (기본 1080×1350)
+    slides = previewCanvasCache.map((canvas, i) => ({
+      dataUrl: canvas.toDataURL('image/png'),
       name: `slide_${String(i+1).padStart(2,'0')}.png`,
-      text: cardTexts[i] || '',
+      text: cardTexts[i],
       audioUrl: null,
       audioDuration: 3
     }));
-    editedTexts = slides.map(s => s.text);
-    currentSlide = 0;
 
-    // 썸네일 그리드 표시
-    const grid = document.getElementById('slides-grid');
-    grid.innerHTML = '';
-    srcs.forEach((src, i) => {
-      const div = document.createElement('div');
-      div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
-      div.innerHTML = `<img src="${src}"><span class="slide-num-badge">${i+1}/${srcs.length}</span>`;
-      div.onclick = () => openModal(srcs, i, div);
-      grid.appendChild(div);
-    });
-
-    // 플레이어 표시
-    goToSlide(0);
+    renderResult();
+    document.getElementById('result-section').classList.add('show');
+    document.getElementById('result-badge').textContent = slides.length + '장 완료';
     updateCostBox();
   }
 
+  // ── 비용 계산 ──
   function updateCostBox() {
     const choice = document.querySelector('input[name="script-choice"]:checked')?.value;
     let totalChars;
@@ -728,25 +697,17 @@
     }
     const label = choice === 'edited' ? '수정본' : '원본';
     const kChars = totalChars / 1000;
-    const gemini  = (kChars * 0.15).toFixed(4);
-    const minimax = (kChars * 0.1).toFixed(4);
-    const eleven  = (kChars * 0.1).toFixed(4);
     const box = document.getElementById('cost-box');
     box.style.display = 'block';
     box.innerHTML = `
-      💬 ${label} 대본 <span style="color:#FF4B6E;font-weight:700;">${totalChars.toLocaleString()}자</span> 기준 예상 비용 (fal.ai 1000자당 단가 기준)<br>
-      ⭐ Gemini TTS &nbsp;&nbsp;&nbsp; <span style="color:#fff;">~$${gemini}</span><br>
-      🎵 MiniMax HD &nbsp; <span style="color:#fff;">~$${minimax}</span><br>
-      🎭 ElevenLabs v3 <span style="color:#fff;">~$${eleven}</span>
+      💬 ${label} 대본 <span style="color:#FF4B6E;font-weight:700;">${totalChars.toLocaleString()}자</span> 기준 예상 비용<br>
+      ⭐ Gemini TTS &nbsp;&nbsp;&nbsp; <span style="color:#fff;">~$${(kChars * 0.15).toFixed(4)}</span><br>
+      🎵 MiniMax HD &nbsp; <span style="color:#fff;">~$${(kChars * 0.1).toFixed(4)}</span><br>
+      🎭 ElevenLabs v3 <span style="color:#fff;">~$${(kChars * 0.1).toFixed(4)}</span>
     `;
   }
 
-  // 라디오 변경 시 금액 업데이트
-  document.addEventListener('change', e => {
-    if (e.target.name === 'script-choice') updateCostBox();
-  });
-
-  // 수정본 텍스트 변경 시 금액 업데이트
+  document.addEventListener('change', e => { if (e.target.name === 'script-choice') updateCostBox(); });
   document.addEventListener('input', e => {
     if (e.target.id === 'script-edited') {
       editedTexts[currentSlide] = e.target.textContent;
@@ -757,486 +718,59 @@
   function getScriptText(i) {
     const choice = document.querySelector('input[name="script-choice"]:checked')?.value;
     if (choice === 'edited') {
-      // 현재 슬라이드면 DOM에서, 아니면 저장된 배열에서
-      if (i === currentSlide) {
-        return document.getElementById('script-edited').textContent.trim() || slides[i].text;
-      }
+      if (i === currentSlide) return document.getElementById('script-edited').textContent.trim() || slides[i].text;
       return editedTexts[i] !== undefined ? editedTexts[i] : slides[i].text;
     }
     return slides[i].text;
   }
 
-  // 브라우저 TTS로 현재 슬라이드 음성 생성 후 저장
-  async function generateSlideAudio() {
-    const i = currentSlide;
-    const text = getScriptText(i);
-    if (!text) { alert('대본이 없습니다.'); return; }
-
-    const btn = event.target;
-    btn.textContent = '⏳ 생성 중...'; btn.disabled = true;
-
-    const rate = parseFloat(document.getElementById('tts-rate').value);
-
-    // fal.ai 키가 있으면 Gemini TTS로 생성
-    if (falKey && selectedTTS !== 'browser' && selectedTTS !== 'none') {
-      const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
-      try {
-        const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
-          method: 'POST',
-          headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.substring(0, 500), language: 'ko' })
-        });
-        const data = await res.json();
-        const audioUrl = data.audio?.url || data.audio_url || null;
-        if (audioUrl) {
-          slides[i].audioUrl = audioUrl;
-          slides[i].audioDuration = await getAudioDuration(audioUrl);
-          document.getElementById('slide-audio-preview').src = audioUrl;
-          document.getElementById('slide-audio-box').style.display = 'block';
-          document.getElementById('audio-player').src = audioUrl;
-          document.getElementById('audio-player').style.display = 'block';
-        }
-      } catch(e) { alert('TTS 생성 실패'); }
-    } else {
-      // 브라우저 TTS — 텍스트 저장 + 즉시 읽기
-      slides[i].ttsText = text;
-      slides[i].ttsRate = rate;
-      slides[i].audioDuration = text.length / 5; // 대략 추정
-
-      document.getElementById('slide-audio-box').style.display = 'block';
-      document.getElementById('slide-audio-box').innerHTML = `
-        <div style="font-size:11px;color:#555;margin-bottom:6px;">✅ 브라우저 TTS 설정됨</div>
-        <button onclick="previewBrowserTTS(${i})" style="background:#333;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">▶ 미리 듣기</button>
-        <button onclick="synth.cancel()" style="background:#444;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;margin-left:6px;">■ 정지</button>
-      `;
-      // 바로 읽어주기
-      previewBrowserTTS(i);
-    }
-    btn.textContent = '🎙️ 이 슬라이드 음성 생성'; btn.disabled = false;
-  }
-
-  function previewBrowserTTS(i) {
-    const text = slides[i].ttsText || slides[i].text;
-    const rate = slides[i].ttsRate || 1.0;
-    synth.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'ko-KR'; utt.rate = rate;
-    if (browserVoices[0]) utt.voice = browserVoices[0];
-    synth.speak(utt);
-  }
-
-  async function generateAllAudio(e) {
-    const btn = e.target;
-    btn.disabled = true;
-    const rate = parseFloat(document.getElementById('tts-rate').value);
-    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
-    for (let i = 0; i < slides.length; i++) {
-      slides[i].ttsText = getScriptText(i);
-      slides[i].ttsRate = rate;
-    }
-
-    if (selectedTTS === 'browser' || selectedTTS === 'none') {
-      // 브라우저 TTS — 그냥 읽기
-      btn.textContent = '⏳ 읽는 중...';
-      videoPlaying = true;
-      await playAllTTS(0, rate);
-      videoPlaying = false;
-      btn.textContent = '🔊 음성 읽기';
-      btn.disabled = false;
-    } else {
-      // fal.ai TTS — 슬라이드별 생성
-      const origText = btn.textContent;
-      const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
-      const listBox = document.getElementById('audio-list-box');
-      const listEl = document.getElementById('audio-list');
-      listBox.style.display = 'block';
-      let successCount = 0;
-
-      for (let i = 0; i < slides.length; i++) {
-        btn.textContent = `⏳ ${i+1}/${slides.length} 생성 중...`;
-        listEl.innerHTML = `<span style="font-size:11px;color:#888;">⏳ ${i+1}/${slides.length} 생성 중...</span>`;
-        const text = getScriptText(i).substring(0, 500);
-        try {
-          const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
-            method: 'POST',
-            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify(selectedTTS === 'gemini' ? { prompt: text } : { text, language: 'ko' })
-          });
-          const data = await res.json();
-          const audioUrl = data.audio?.url || data.audio_url || null;
-          if (audioUrl) {
-            const blob = await (await fetch(audioUrl)).blob();
-            const localUrl = URL.createObjectURL(blob);
-            slides[i].audioUrl = localUrl;
-            slides[i].audioBlob = blob;
-            slides[i].audioDuration = await getAudioDuration(localUrl);
-            successCount++;
-          } else {
-            const errMsg = data.detail || data.error || data.message || JSON.stringify(data);
-            listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${errMsg}</span>`;
-          }
-        } catch(e) {
-          listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${e.message}</span>`;
-        }
-      }
-
-      if (successCount > 0) {
-        document.getElementById('audio-player').src = slides.find(s => s.audioUrl).audioUrl;
-        document.getElementById('audio-player').style.display = 'block';
-        showAudioButtons(`✅ ${successCount}/${slides.length} 완료`);
-        btn.textContent = '🔄 다시 생성';
-        btn.style.background = '#636e72';
-      } else {
-        btn.textContent = origText;
-      }
-      btn.disabled = false;
-    }
-  }
-
-  async function loadAudioZip(input) {
-    const file = input.files[0];
-    if (!file) return;
-    await processAudioZipFile(file);
-  }
-
-  function getAudioMimeType(filename) {
-    const ext = (filename.split('.').pop() || '').toLowerCase();
-    const map = {
-      mp3: 'audio/mpeg',
-      wav: 'audio/wav',
-      ogg: 'audio/ogg',
-      m4a: 'audio/mp4',
-      aac: 'audio/aac',
-      flac: 'audio/flac',
-      webm: 'audio/webm',
-    };
-    return map[ext] || 'audio/mpeg';
-  }
-
-  async function processAudioZipFile(file) {
-    try {
-      const zip = await JSZip.loadAsync(file);
-      let timing = [];
-      if (zip.files['timing.json']) {
-        timing = JSON.parse(await zip.files['timing.json'].async('string'));
-      }
-      let loadedCount = 0;
-      for (const t of timing) {
-        const zipFile = zip.files[t.filename];
-        if (!zipFile || t.slide >= slides.length) continue;
-        const arrayBuffer = await zipFile.async('arraybuffer');
-        const mimeType = getAudioMimeType(t.filename);
-        const blob = new Blob([arrayBuffer], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        slides[t.slide].audioUrl = url;
-        slides[t.slide].audioDuration = t.duration;
-        loadedCount++;
-      }
-      const first = slides.find(s => s.audioUrl);
-      if (first) {
-        document.getElementById('audio-player').src = first.audioUrl;
-        document.getElementById('audio-player').style.display = 'block';
-        showAudioButtons(`✅ ZIP 불러오기 완료 (${loadedCount}개)`);
-        // ZIP은 fal.ai 음성이므로 브라우저 TTS 전용 컨트롤 숨김
-        if (selectedTTS === 'browser' || selectedTTS === 'none') {
-          selectedTTS = 'gemini';
-        }
-        applyTTSButtonState();
-      } else {
-        alert('ZIP에서 재생 가능한 음성을 찾지 못했습니다.\ntiming.json과 오디오 파일이 올바르게 포함되어 있는지 확인해주세요.');
-      }
-    } catch(e) {
-      alert('ZIP 불러오기 실패: ' + e.message);
-    }
-  }
-
-  function handleAudioDrop(e) {
-    e.preventDefault();
-    document.getElementById('audio-drop-zone').style.borderColor = '#2a2a2a';
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const isZip = file.type === 'application/zip'
-      || file.type === 'application/x-zip-compressed'
-      || file.name.toLowerCase().endsWith('.zip');
-    if (isZip) {
-      processAudioZipFile(file);
-    } else if (file.type.startsWith('audio/')) {
-      const url = URL.createObjectURL(file);
-      setAudioSource(url);
-    }
-  }
-
-  function setAudioSource(url) {
-    slides.forEach(s => s.audioUrl = url);
-    const player = document.getElementById('audio-player');
-    player.src = url;
-    player.style.display = 'block';
-    showAudioButtons();
-    if (selectedTTS === 'browser' || selectedTTS === 'none') {
-      selectedTTS = 'gemini';
-    }
-    applyTTSButtonState();
-  }
-
-  function showAudioButtons(extraMsg) {
-    const listBox = document.getElementById('audio-list-box');
-    const listEl = document.getElementById('audio-list');
-    listEl.innerHTML = `
-      <div style="display:flex;gap:6px;">
-        <button onclick="playApiAudio(0)" style="flex:1;background:#6c5ce7;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 재생</button>
-        <button onclick="playApiWithVideo()" style="flex:1;background:#FF4B6E;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 영상과 함께</button>
-        <button onclick="downloadAudioZip()" style="flex:1;background:#00B894;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">⬇ ZIP 저장</button>
-      </div>
-      ${extraMsg ? `<span style="font-size:10px;color:#00B894;margin-top:4px;display:block;">${extraMsg}</span>` : ''}
-    `;
-    listBox.style.display = 'block';
-  }
-
-  async function playApiAudio(i) {
-    if (i >= slides.length) return;
-    if (!slides[i].audioUrl) { await playApiAudio(i + 1); return; }
-    goToSlide(i);
-    const player = document.getElementById('audio-player');
-    player.src = slides[i].audioUrl;
-    let playFailed = false;
-    try {
-      await player.play();
-    } catch (err) {
-      playFailed = true;
-      console.error('오디오 재생 실패:', err);
-    }
-    if (playFailed) {
-      alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)`);
-      return;
-    }
-    await new Promise(r => {
-      player.onended = r;
-      player.onerror = () => {
-        console.error('오디오 재생 중 에러:', player.error);
-        r();
-      };
-    });
-    await playApiAudio(i + 1);
-  }
-
-  async function playApiWithVideo() {
-    videoPlaying = true;
-    for (let i = 0; i < slides.length; i++) {
-      if (!videoPlaying) break;
-      if (!slides[i].audioUrl) continue;
-      goToSlide(i);
-      const player = document.getElementById('audio-player');
-      player.src = slides[i].audioUrl;
-      try {
-        await player.play();
-      } catch (err) {
-        console.error('오디오 재생 실패:', err);
-        alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)`);
-        videoPlaying = false;
-        break;
-      }
-      await new Promise(r => {
-        player.onended = r;
-        player.onerror = () => {
-          console.error('오디오 재생 중 에러:', player.error);
-          r();
-        };
-      });
-    }
-    videoPlaying = false;
-  }
-
-  async function downloadAudioZip() {
-    const zip = new JSZip();
-    const timing = [];
-    for (let i = 0; i < slides.length; i++) {
-      if (!slides[i].audioUrl) continue;
-      const res = await fetch(slides[i].audioUrl);
-      const blob = await res.blob();
-      const filename = `slide_${String(i+1).padStart(2,'0')}.mp3`;
-      zip.file(filename, blob);
-      timing.push({ slide: i, filename, duration: slides[i].audioDuration || 0 });
-    }
-    zip.file('timing.json', JSON.stringify(timing, null, 2));
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(zipBlob);
-    a.download = `audio_${Date.now()}.zip`;
-    a.click();
-  }
-
-  function playAudioRow(url) {
-    const player = document.getElementById('audio-player');
-    player.src = url;
-    player.style.display = 'block';
-    player.play().catch(err => {
-      console.error('오디오 재생 실패:', err);
-      alert('음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)');
-    });
-  }
-
-  let videoPlaying = false;
-  let videoPaused = false;
-
-  function playAllTTS(i, rate) {
-    return new Promise(resolve => {
-      if (i >= slides.length || !videoPlaying) { resolve(); return; }
-      goToSlide(i);
-      synth.cancel();
-      const text = slides[i].ttsText || slides[i].text;
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = 'ko-KR'; utt.rate = rate;
-      if (browserVoices[0]) utt.voice = browserVoices[0];
-      utt.onend = () => {
-        if (!videoPlaying) { resolve(); return; }
-        playAllTTS(i + 1, rate).then(resolve);
-      };
-      utt.onerror = () => playAllTTS(i + 1, rate).then(resolve);
-      synth.speak(utt);
-    });
-  }
-
-  function playWithVideo() {
-    const rate = parseFloat(document.getElementById('tts-rate').value);
-    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
-    for (let i = 0; i < slides.length; i++) {
-      slides[i].ttsText = getScriptText(i);
-      slides[i].ttsRate = rate;
-    }
-    videoPlaying = true;
-    videoPaused = false;
-    goToSlide(0);
-
-    // fal.ai 음성 있으면 그걸 재생, 없으면 브라우저 TTS
-    const hasApiAudio = slides.some(s => s.audioUrl);
-    if (hasApiAudio) {
-      const player = document.getElementById('audio-player');
-      player.src = slides[0].audioUrl;
-      player.style.display = 'block';
-      player.currentTime = 0;
-      player.play().catch(err => {
-        console.error('오디오 재생 실패:', err);
-        alert('음성 재생에 실패했습니다.\n(오디오 파일이 손상되었거나 형식이 맞지 않을 수 있어요)');
-        videoPlaying = false;
-      });
-      player.onended = () => { videoPlaying = false; };
-    } else {
-      playAllTTS(0, rate).then(() => stopWithVideo());
-    }
-  }
-
-  function pauseWithVideo() {
-    if (!videoPaused) {
-      synth.pause();
-      videoPaused = true;
-      document.getElementById('btn-pause-video').textContent = '▶ 계속';
-    } else {
-      synth.resume();
-      videoPaused = false;
-      document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
-    }
-  }
-
-  function stopWithVideo() {
-    videoPlaying = false;
-    videoPaused = false;
-    synth.cancel();
-    document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
-  }
-
-  function log(msg) { const el = document.getElementById('status-log'); el.innerHTML += msg + '<br>'; el.scrollTop = el.scrollHeight; }
-  function setProgress(pct, title) {
-    document.getElementById('progress-fill').style.width = pct + '%';
-    if (title) document.getElementById('status-title').textContent = title;
-    document.getElementById('status-pct').textContent = pct + '%';
-  }
-
+  // ── startProcess: 기본값이 아닌 사이즈로 재캡처 ──
   async function startProcess() {
     if (!loadedHtml) { alert('먼저 HTML 파일을 업로드해주세요!'); return; }
-    slides = [];
 
     if (document.querySelector('.size-btn.active')?.textContent.includes('직접')) {
       outputW = parseInt(document.getElementById('custom-w').value) || 1080;
       outputH = parseInt(document.getElementById('custom-h').value) || 1350;
     }
 
+    slides = [];
     document.getElementById('status-box').classList.add('show');
     document.getElementById('result-section').classList.remove('show');
     document.getElementById('status-log').innerHTML = '';
     document.getElementById('btn-start').disabled = true;
     setProgress(5, '📄 HTML 렌더링 중...');
 
-    const renderArea = document.getElementById('render-area');
-    renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + outputW + 'px;max-height:0;overflow:hidden;';
-    renderArea.innerHTML = '';
-
-    // iframe 없이 DOM 직접 삽입
-    const spParser = new DOMParser();
-    const spDoc = spParser.parseFromString(loadedHtml, 'text/html');
-    spDoc.querySelectorAll('style').forEach(s => {
-      const st = document.createElement('style');
-      st.textContent = s.textContent;
-      renderArea.appendChild(st);
-    });
-    const spAllCards = Array.from(spDoc.querySelectorAll('.card'));
-    spAllCards.forEach(card => {
-      card.style.cssText = (card.style.cssText || '') + `;width:${outputW}px;height:${outputH}px;overflow:hidden;flex-shrink:0;`;
-      renderArea.appendChild(card);
-    });
+    const container = injectCards(outputW, outputH, 2);
     await new Promise(r => setTimeout(r, 800));
 
-    let cards = Array.from(renderArea.querySelectorAll('.card'));
-    if (!cards.length) { setProgress(0, '❌ 슬라이드를 찾지 못했어요'); log('class="card" 요소가 없어요.'); updateStartButtonState(); return; }
+    let cards = Array.from(container.querySelectorAll('.card'));
+    if (!cards.length) {
+      setProgress(0, '❌ 슬라이드를 찾지 못했어요');
+      log('class="card" 요소가 없어요.');
+      document.body.removeChild(container);
+      updateStartButtonState();
+      return;
+    }
 
     const limitVal = document.getElementById('slide-limit').value;
     cards = limitVal === 'all' ? cards : cards.slice(0, parseInt(limitVal));
-    log(`✅ ${cards.length}장 처리 (${outputW}×${outputH}px)`);
+    log(`✅ ${cards.length}장 처리 (${outputW}×${outputH}px, scale:2)`);
 
     for (let i = 0; i < cards.length; i++) {
       setProgress(10 + Math.round((i / cards.length) * 45), `🖼️ ${i+1}/${cards.length}장 캡처 중...`);
-      const card = cards[i];
-      let text = '';
-      ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'].forEach(s => {
-        card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; });
+      const text = extractCardText(cards[i]);
+      const canvas = await html2canvas(cards[i], {
+        width: outputW, height: outputH, scale: 2,
+        windowWidth: outputW, windowHeight: outputH,
+        useCORS: true, allowTaint: true, backgroundColor: null, logging: false
       });
-      if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
-
-      const canvas = await html2canvas(card, { width: outputW, height: outputH, scale: 1, windowWidth: outputW, windowHeight: outputH, useCORS: true, allowTaint: true, backgroundColor: null, logging: false });
-      slides.push({ dataUrl: canvas.toDataURL('image/png'), name: `slide_${String(i+1).padStart(2,'0')}.png`, text: text.trim(), audioUrl: null, audioDuration: 3 });
+      slides.push({ dataUrl: canvas.toDataURL('image/png'), name: `slide_${String(i+1).padStart(2,'0')}.png`, text, audioUrl: null, audioDuration: 3 });
       log(`  📸 ${i+1}장 완료`);
     }
-    renderArea.innerHTML = '';
+    document.body.removeChild(container);
 
     // TTS 처리
-    if (selectedTTS === 'browser') {
-      log('🎙️ 브라우저 TTS 길이 측정 중...');
-      for (let i = 0; i < slides.length; i++) {
-        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 음성 측정 중...`);
-        const dur = await measureBrowserTTS(getScriptText(i));
-        slides[i].audioDuration = dur;
-        log(`  ✅ ${i+1}장 (${dur.toFixed(1)}초)`);
-      }
-    } else if (['gemini','minimax','elevenlabs'].includes(selectedTTS) && falKey) {
-      const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
-      for (let i = 0; i < slides.length; i++) {
-        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 TTS 생성 중...`);
-        try {
-          const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
-            method: 'POST',
-            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: getScriptText(i).substring(0, 500), language: 'ko' })
-          });
-          const data = await res.json();
-          const audioUrl = data.audio?.url || data.audio_url || null;
-          if (audioUrl) {
-            slides[i].audioUrl = audioUrl;
-            const dur = await getAudioDuration(audioUrl);
-            slides[i].audioDuration = dur;
-          }
-          log(`  ✅ ${i+1}장 TTS 완료`);
-        } catch(e) { log(`  ⚠️ ${i+1}장 TTS 실패 — 기본값 사용`); }
-      }
-    }
+    await processTTS();
 
     setProgress(100, '✅ 완료!');
     setTimeout(() => {
@@ -1248,6 +782,44 @@
     }, 600);
   }
 
+  // ── TTS 처리 (공통) ──
+  async function processTTS() {
+    const FAL_MODEL = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
+    if (selectedTTS === 'browser') {
+      log('🎙️ 브라우저 TTS — 음성 시간 추정 중...');
+      for (let i = 0; i < slides.length; i++) {
+        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 음성 측정 중...`);
+        // 글자 수 기반 추정 (실제 TTS를 재생하지 않아 소음 없음)
+        slides[i].audioDuration = Math.max(slides[i].text.length / 7, 2);
+        log(`  ✅ ${i+1}장 (~${slides[i].audioDuration.toFixed(1)}초 추정)`);
+      }
+    } else if (['gemini','minimax','elevenlabs'].includes(selectedTTS) && falKey) {
+      for (let i = 0; i < slides.length; i++) {
+        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 TTS 생성 중...`);
+        try {
+          const text = getScriptText(i).substring(0, 500);
+          // Gemini는 'prompt', 나머지는 'text' 필드 사용
+          const body = selectedTTS === 'gemini'
+            ? { prompt: text }
+            : { text, language: 'ko' };
+          const res = await fetch('https://fal.run/' + FAL_MODEL[selectedTTS], {
+            method: 'POST',
+            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json();
+          const audioUrl = data.audio?.url || data.audio_url || null;
+          if (audioUrl) {
+            slides[i].audioUrl = audioUrl;
+            slides[i].audioDuration = await getAudioDuration(audioUrl);
+          }
+          log(`  ✅ ${i+1}장 TTS 완료`);
+        } catch(e) { log(`  ⚠️ ${i+1}장 TTS 실패 — 기본값 사용`); }
+      }
+    }
+  }
+
+  // ── 결과 렌더 ──
   function renderResult() {
     const grid = document.getElementById('slides-grid');
     grid.innerHTML = '';
@@ -1256,7 +828,7 @@
       const div = document.createElement('div');
       div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
       div.innerHTML = `<img src="${s.dataUrl}"><span class="slide-num-badge">${i+1}/${slides.length}</span>`;
-      div.onclick = () => openModal(allDataUrls, i, div);
+      div.onclick = () => openModal(allDataUrls, i);
       grid.appendChild(div);
     });
     goToSlide(0);
@@ -1266,32 +838,24 @@
   }
 
   function goToSlide(i) {
-    // 현재 슬라이드 수정본 저장
     const scriptEdited = document.getElementById('script-edited');
     if (scriptEdited) editedTexts[currentSlide] = scriptEdited.textContent;
-
     currentSlide = i;
     document.getElementById('player-img').src = slides[i].dataUrl;
     document.getElementById('slide-info').textContent = `${i+1} / ${slides.length}`;
     document.getElementById('sync-bar').style.width = '0%';
     const audioEl = document.getElementById('audio-player');
     if (slides[i].audioUrl) { audioEl.src = slides[i].audioUrl; audioEl.style.display = 'block'; }
-    // 썸네일 하이라이트
-    document.querySelectorAll('.slide-thumb').forEach((t, idx) => {
-      t.classList.toggle('active', idx === i);
-    });
-    // 대본 표시
+    document.querySelectorAll('.slide-thumb').forEach((t, idx) => t.classList.toggle('active', idx === i));
     const scriptBox = document.getElementById('script-original');
     const scriptEditedEl = document.getElementById('script-edited');
     const text = slides[i].text || '';
     scriptBox.textContent = text;
-    // 수정본: 저장된 게 있으면 그걸 쓰고, 없으면 원본으로 초기화
     scriptEditedEl.textContent = (editedTexts[i] !== undefined && editedTexts[i] !== '') ? editedTexts[i] : text;
   }
 
   function prevSlide() { if (slides.length) goToSlide(currentSlide > 0 ? currentSlide - 1 : slides.length - 1); }
   function nextSlide() { if (slides.length) goToSlide(currentSlide < slides.length - 1 ? currentSlide + 1 : 0); }
-
   function clearTimers() { if (playTimer) clearTimeout(playTimer); if (syncTimer) clearInterval(syncTimer); }
 
   function startSyncBar(duration) {
@@ -1319,11 +883,10 @@
     const audio = document.getElementById('audio-player');
     const durSetting = document.getElementById('slide-duration').value;
     const ms = durSetting === 'auto' ? (slide.audioDuration > 0 ? slide.audioDuration * 1000 + 400 : 3000) : parseInt(durSetting);
-
     startSyncBar(ms / 1000);
 
     if (selectedTTS === 'browser') {
-      const utt = new SpeechSynthesisUtterance((slide.ttsText || getScriptText(currentSlide)));
+      const utt = new SpeechSynthesisUtterance(slide.ttsText || getScriptText(currentSlide));
       utt.lang = 'ko-KR'; utt.rate = 0.95;
       if (browserVoices[0]) utt.voice = browserVoices[0];
       synth.speak(utt);
@@ -1354,16 +917,229 @@
     }
   }
 
-  async function measureBrowserTTS(text) {
+  // ── 브라우저 TTS 관련 ──
+  async function generateAllAudio(e) {
+    const btn = e.target;
+    btn.disabled = true;
+    const rate = parseFloat(document.getElementById('tts-rate').value);
+    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
+    for (let i = 0; i < slides.length; i++) {
+      slides[i].ttsText = getScriptText(i);
+      slides[i].ttsRate = rate;
+    }
+
+    if (selectedTTS === 'browser' || selectedTTS === 'none') {
+      btn.textContent = '⏳ 읽는 중...';
+      videoPlaying = true;
+      await playAllTTS(0, rate);
+      videoPlaying = false;
+      btn.textContent = '🔊 음성 읽기';
+      btn.disabled = false;
+    } else {
+      const FAL_MODEL = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
+      const origText = btn.textContent;
+      const listBox = document.getElementById('audio-list-box');
+      const listEl = document.getElementById('audio-list');
+      listBox.style.display = 'block';
+      let successCount = 0;
+
+      for (let i = 0; i < slides.length; i++) {
+        btn.textContent = `⏳ ${i+1}/${slides.length} 생성 중...`;
+        listEl.innerHTML = `<span style="font-size:11px;color:#888;">⏳ ${i+1}/${slides.length} 생성 중...</span>`;
+        const text = getScriptText(i).substring(0, 500);
+        try {
+          const body = selectedTTS === 'gemini' ? { prompt: text } : { text, language: 'ko' };
+          const res = await fetch('https://fal.run/' + FAL_MODEL[selectedTTS], {
+            method: 'POST',
+            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json();
+          const audioUrl = data.audio?.url || data.audio_url || null;
+          if (audioUrl) {
+            const blob = await (await fetch(audioUrl)).blob();
+            const localUrl = URL.createObjectURL(blob);
+            slides[i].audioUrl = localUrl;
+            slides[i].audioBlob = blob;
+            slides[i].audioDuration = await getAudioDuration(localUrl);
+            successCount++;
+          } else {
+            listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${data.detail || data.error || JSON.stringify(data)}</span>`;
+          }
+        } catch(e) {
+          listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${e.message}</span>`;
+        }
+      }
+
+      if (successCount > 0) {
+        document.getElementById('audio-player').src = slides.find(s => s.audioUrl).audioUrl;
+        document.getElementById('audio-player').style.display = 'block';
+        showAudioButtons(`✅ ${successCount}/${slides.length} 완료`);
+        btn.textContent = '🔄 다시 생성';
+        btn.style.background = '#636e72';
+      } else {
+        btn.textContent = origText;
+      }
+      btn.disabled = false;
+    }
+  }
+
+  async function loadAudioZip(input) {
+    const file = input.files[0];
+    if (!file) return;
+    await processAudioZipFile(file);
+  }
+
+  function getAudioMimeType(filename) {
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    return { mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', m4a:'audio/mp4', aac:'audio/aac', flac:'audio/flac', webm:'audio/webm' }[ext] || 'audio/mpeg';
+  }
+
+  async function processAudioZipFile(file) {
+    try {
+      const zip = await JSZip.loadAsync(file);
+      let timing = [];
+      if (zip.files['timing.json']) timing = JSON.parse(await zip.files['timing.json'].async('string'));
+      let loadedCount = 0;
+      for (const t of timing) {
+        const zipFile = zip.files[t.filename];
+        if (!zipFile || t.slide >= slides.length) continue;
+        const blob = new Blob([await zipFile.async('arraybuffer')], { type: getAudioMimeType(t.filename) });
+        slides[t.slide].audioUrl = URL.createObjectURL(blob);
+        slides[t.slide].audioDuration = t.duration;
+        loadedCount++;
+      }
+      const first = slides.find(s => s.audioUrl);
+      if (first) {
+        document.getElementById('audio-player').src = first.audioUrl;
+        document.getElementById('audio-player').style.display = 'block';
+        showAudioButtons(`✅ ZIP 불러오기 완료 (${loadedCount}개)`);
+        if (selectedTTS === 'browser' || selectedTTS === 'none') selectedTTS = 'gemini';
+        applyTTSButtonState();
+      } else {
+        alert('ZIP에서 재생 가능한 음성을 찾지 못했습니다.\ntiming.json과 오디오 파일이 올바르게 포함되어 있는지 확인해주세요.');
+      }
+    } catch(e) { alert('ZIP 불러오기 실패: ' + e.message); }
+  }
+
+  function handleAudioDrop(e) {
+    e.preventDefault();
+    document.getElementById('audio-drop-zone').style.borderColor = '#2a2a2a';
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const isZip = file.type.includes('zip') || file.name.toLowerCase().endsWith('.zip');
+    if (isZip) processAudioZipFile(file);
+    else if (file.type.startsWith('audio/')) setAudioSource(URL.createObjectURL(file));
+  }
+
+  function setAudioSource(url) {
+    slides.forEach(s => s.audioUrl = url);
+    const player = document.getElementById('audio-player');
+    player.src = url; player.style.display = 'block';
+    showAudioButtons();
+    if (selectedTTS === 'browser' || selectedTTS === 'none') selectedTTS = 'gemini';
+    applyTTSButtonState();
+  }
+
+  function showAudioButtons(extraMsg) {
+    const listEl = document.getElementById('audio-list');
+    listEl.innerHTML = `
+      <div style="display:flex;gap:6px;">
+        <button onclick="playApiAudio(0)" style="flex:1;background:#6c5ce7;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 재생</button>
+        <button onclick="playApiWithVideo()" style="flex:1;background:#FF4B6E;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 영상과 함께</button>
+        <button onclick="downloadAudioZip()" style="flex:1;background:#00B894;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">⬇ ZIP 저장</button>
+      </div>
+      ${extraMsg ? `<span style="font-size:10px;color:#00B894;margin-top:4px;display:block;">${extraMsg}</span>` : ''}
+    `;
+    document.getElementById('audio-list-box').style.display = 'block';
+  }
+
+  async function playApiAudio(i) {
+    if (i >= slides.length) return;
+    if (!slides[i].audioUrl) { await playApiAudio(i + 1); return; }
+    goToSlide(i);
+    const player = document.getElementById('audio-player');
+    player.src = slides[i].audioUrl;
+    try { await player.play(); } catch(err) { alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.`); return; }
+    await new Promise(r => { player.onended = r; player.onerror = r; });
+    await playApiAudio(i + 1);
+  }
+
+  async function playApiWithVideo() {
+    videoPlaying = true;
+    for (let i = 0; i < slides.length; i++) {
+      if (!videoPlaying) break;
+      if (!slides[i].audioUrl) continue;
+      goToSlide(i);
+      const player = document.getElementById('audio-player');
+      player.src = slides[i].audioUrl;
+      try { await player.play(); } catch(err) { alert(`${i+1}번 슬라이드 음성 재생에 실패했습니다.`); videoPlaying = false; break; }
+      await new Promise(r => { player.onended = r; player.onerror = r; });
+    }
+    videoPlaying = false;
+  }
+
+  async function downloadAudioZip() {
+    const zip = new JSZip();
+    const timing = [];
+    for (let i = 0; i < slides.length; i++) {
+      if (!slides[i].audioUrl) continue;
+      const blob = await (await fetch(slides[i].audioUrl)).blob();
+      const filename = `slide_${String(i+1).padStart(2,'0')}.mp3`;
+      zip.file(filename, blob);
+      timing.push({ slide: i, filename, duration: slides[i].audioDuration || 0 });
+    }
+    zip.file('timing.json', JSON.stringify(timing, null, 2));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }));
+    a.download = `audio_${Date.now()}.zip`;
+    a.click();
+  }
+
+  function playAllTTS(i, rate) {
     return new Promise(resolve => {
-      const utt = new SpeechSynthesisUtterance(text.substring(0, 300));
-      utt.lang = 'ko-KR'; utt.rate = 0.95;
+      if (i >= slides.length || !videoPlaying) { resolve(); return; }
+      goToSlide(i);
+      synth.cancel();
+      const utt = new SpeechSynthesisUtterance(slides[i].ttsText || slides[i].text);
+      utt.lang = 'ko-KR'; utt.rate = rate;
       if (browserVoices[0]) utt.voice = browserVoices[0];
-      const start = Date.now();
-      utt.onend = () => resolve((Date.now() - start) / 1000);
-      utt.onerror = () => resolve(3);
+      utt.onend = () => { if (!videoPlaying) { resolve(); return; } playAllTTS(i + 1, rate).then(resolve); };
+      utt.onerror = () => playAllTTS(i + 1, rate).then(resolve);
       synth.speak(utt);
     });
+  }
+
+  function playWithVideo() {
+    const rate = parseFloat(document.getElementById('tts-rate').value);
+    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
+    for (let i = 0; i < slides.length; i++) { slides[i].ttsText = getScriptText(i); slides[i].ttsRate = rate; }
+    videoPlaying = true; videoPaused = false;
+    goToSlide(0);
+    const hasApiAudio = slides.some(s => s.audioUrl);
+    if (hasApiAudio) {
+      const player = document.getElementById('audio-player');
+      player.src = slides[0].audioUrl; player.style.display = 'block'; player.currentTime = 0;
+      player.play().catch(err => { alert('음성 재생에 실패했습니다.'); videoPlaying = false; });
+      player.onended = () => { videoPlaying = false; };
+    } else {
+      playAllTTS(0, rate).then(() => stopWithVideo());
+    }
+  }
+
+  function pauseWithVideo() {
+    if (!videoPaused) {
+      synth.pause(); videoPaused = true;
+      document.getElementById('btn-pause-video').textContent = '▶ 계속';
+    } else {
+      synth.resume(); videoPaused = false;
+      document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
+    }
+  }
+
+  function stopWithVideo() {
+    videoPlaying = false; videoPaused = false; synth.cancel();
+    document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
   }
 
   async function getAudioDuration(url) {
@@ -1374,27 +1150,28 @@
     });
   }
 
+  // ── 다운로드 ──
   async function downloadZip() {
     if (!slides.length) { alert('먼저 변환을 완료해주세요!'); return; }
     const zip = new JSZip();
     slides.forEach(s => zip.file(s.name, s.dataUrl.split(',')[1], { base64: true }));
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cardnews_${outputW}x${outputH}.zip`; a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }));
+    a.download = `cardnews_${outputW}x${outputH}.zip`;
+    a.click();
   }
 
   async function downloadVideo() {
     if (!slides.length) { alert('먼저 변환을 완료해주세요!'); return; }
     const btn = document.getElementById('btn-video');
-
     const hasAnyAudio = slides.some(s => s.audioUrl);
     if (!hasAnyAudio && selectedTTS !== 'none') {
       const proceed = confirm(
         '⚠️ 브라우저 내장 TTS는 영상 파일에 음성을 직접 녹음할 수 없어요 (브라우저 보안 정책).\n\n' +
         '음성이 있는 영상을 원하면:\n' +
-        '1) "5. TTS 음성 선택"에서 Gemini/MiniMax/ElevenLabs 중 하나를 고르고\n' +
-        '2) fal.ai API 키를 입력한 뒤\n' +
-        '3) "🔊 음성 읽기" 또는 "🎙️ 음성 생성"으로 음성을 먼저 생성하세요.\n\n' +
-        '지금처럼 진행하면 음성 없는 무음 영상이 만들어집니다. 계속할까요?'
+        '1) TTS 선택에서 Gemini/MiniMax/ElevenLabs 중 하나를 고르고\n' +
+        '2) fal.ai API 키를 입력한 뒤 음성을 먼저 생성하세요.\n\n' +
+        '지금처럼 진행하면 무음 영상이 만들어집니다. 계속할까요?'
       );
       if (!proceed) return;
     }
@@ -1413,54 +1190,39 @@
 
     let webmBlob = null;
     const recordingDone = new Promise(resolve => {
-      recorder.onstop = () => {
-        webmBlob = new Blob(chunks, { type: 'video/webm' });
-        resolve();
-      };
+      recorder.onstop = () => { webmBlob = new Blob(chunks, { type: 'video/webm' }); resolve(); };
     });
 
     recorder.start(100);
-    const fps = 30;
-    const frameInterval = 1000 / fps;
+    const fps = 30, frameInterval = 1000 / fps;
     const durSetting = document.getElementById('slide-duration').value;
 
-    // 모든 이미지를 미리 디코드해서 캡처 루프 중 지연이 생기지 않게 함
     const preloadedImgs = await Promise.all(slides.map(s => new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.src = s.dataUrl;
+      const img = new Image(); img.onload = () => resolve(img); img.src = s.dataUrl;
     })));
 
-    // 오디오 컨텍스트 시계를 기준으로 절대 시각을 잡아 드리프트 누적을 방지
     const t0 = actx.currentTime;
     let cursor = t0;
 
     for (let s = 0; s < slides.length; s++) {
       const slide = slides[s];
       const img = preloadedImgs[s];
-      btn.textContent = `⏳ 녹화 중... (${s + 1}/${slides.length})`;
+      btn.textContent = `⏳ 녹화 중... (${s+1}/${slides.length})`;
       const duration = durSetting === 'auto'
         ? (slide.audioDuration > 0 ? Math.ceil(slide.audioDuration * 1000) + 300 : 3000)
         : parseInt(durSetting);
       const durationSec = duration / 1000;
 
-      // 오디오를 슬라이드 시작 시각(cursor)에 정확히 예약
       if (slide.audioUrl) {
         try {
           const buf = await (await fetch(slide.audioUrl)).arrayBuffer();
           const audioBuf = await actx.decodeAudioData(buf);
           const src = actx.createBufferSource();
-          src.buffer = audioBuf; src.connect(dest);
-          src.start(cursor);
-        } catch (e) {}
+          src.buffer = audioBuf; src.connect(dest); src.start(cursor);
+        } catch(e) {}
       }
 
-      // 이 슬라이드의 시작/끝 절대 시각 (AudioContext 시계 기준)
-      const slideStart = cursor;
-      const slideEnd = cursor + durationSec;
-
-      // 프레임을 실제 경과시간에 맞춰 그림 — setTimeout 누적 오차 대신
-      // actx.currentTime(오디오와 동일한 시계)을 기준으로 다음 프레임 시각까지 대기
+      const slideStart = cursor, slideEnd = cursor + durationSec;
       while (actx.currentTime < slideEnd) {
         const elapsed = actx.currentTime - slideStart;
         const p = Math.min(elapsed / durationSec, 1);
@@ -1468,10 +1230,8 @@
         ctx.globalAlpha = p < 0.05 ? p / 0.05 : p > 0.95 ? (1 - p) / 0.05 : 1;
         ctx.drawImage(img, 0, 0, outputW, outputH);
         const nextFrameAt = slideStart + (Math.floor(elapsed / (frameInterval / 1000)) + 1) * (frameInterval / 1000);
-        const waitMs = Math.max(0, (nextFrameAt - actx.currentTime) * 1000);
-        await new Promise(r => setTimeout(r, Math.min(waitMs, frameInterval)));
+        await new Promise(r => setTimeout(r, Math.max(0, Math.min((nextFrameAt - actx.currentTime) * 1000, frameInterval))));
       }
-
       cursor = slideEnd;
     }
 
@@ -1479,13 +1239,11 @@
     recorder.stop();
     await recordingDone;
     actx.close();
-
     await finalizeVideoDownload(webmBlob, btn);
   }
 
-  // ── MP4 변환 (ffmpeg.wasm, 싱글스레드 코어를 blob으로 로드해 CORS/COOP-COEP 제약 우회) ──
-  let ffmpegInstance = null;
-  let ffmpegLoadFailed = false;
+  // ── MP4 변환 ──
+  let ffmpegInstance = null, ffmpegLoadFailed = false;
 
   async function getFFmpeg() {
     if (ffmpegInstance) return ffmpegInstance;
@@ -1501,7 +1259,7 @@
       });
       ffmpegInstance = ffmpeg;
       return ffmpeg;
-    } catch (e) {
+    } catch(e) {
       console.error('ffmpeg.wasm 로드 실패', e);
       ffmpegLoadFailed = true;
       return null;
@@ -1513,12 +1271,11 @@
     const ffmpeg = await getFFmpeg();
 
     if (!ffmpeg) {
-      // mp4 변환 불가 — webm으로 폴백
       const a = document.createElement('a');
       a.href = URL.createObjectURL(webmBlob);
       a.download = `cardnews_${outputW}x${outputH}.webm`;
       a.click();
-      alert('⚠️ MP4 변환 엔진을 불러오지 못해 webm으로 저장했어요. (네트워크 또는 브라우저 제약일 수 있어요)');
+      alert('⚠️ MP4 변환 엔진을 불러오지 못해 webm으로 저장했어요.');
       btn.textContent = '🎬 영상 다운로드 (MP4)'; btn.disabled = false;
       return;
     }
@@ -1526,17 +1283,14 @@
     try {
       const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
       await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
-      await ffmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', 'output.mp4']);
+      await ffmpeg.exec(['-i','input.webm','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','output.mp4']);
       const data = await ffmpeg.readFile('output.mp4');
-      const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(mp4Blob);
+      a.href = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
       a.download = `cardnews_${outputW}x${outputH}.mp4`;
       a.click();
-      // 메모리 정리
-      try { await ffmpeg.deleteFile('input.webm'); await ffmpeg.deleteFile('output.mp4'); } catch (e) {}
-    } catch (e) {
-      console.error('mp4 변환 실패', e);
+      try { await ffmpeg.deleteFile('input.webm'); await ffmpeg.deleteFile('output.mp4'); } catch(e) {}
+    } catch(e) {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(webmBlob);
       a.download = `cardnews_${outputW}x${outputH}.webm`;
@@ -1546,8 +1300,9 @@
     btn.textContent = '🎬 영상 다운로드 (MP4)'; btn.disabled = false;
   }
 
+  // ── 초기화 ──
   function resetAll() {
-    slides = []; currentSlide = 0; isPlaying = false;
+    slides = []; currentSlide = 0; isPlaying = false; previewCanvasCache = [];
     clearTimers(); synth.cancel();
     document.getElementById('audio-player').pause();
     document.getElementById('slides-grid').innerHTML = '';
@@ -1557,8 +1312,10 @@
     document.getElementById('file-name').textContent = '';
     document.getElementById('play-btn').textContent = '▶';
     document.getElementById('sync-bar').style.width = '0%';
-    document.getElementById('info-slides').textContent = '-'; document.getElementById('info-slides').classList.add('ready');
-    document.getElementById('info-size').textContent = '-'; document.getElementById('info-chars').textContent = '-'; document.getElementById('info-time').textContent = '-';
+    ['info-slides','info-size','info-chars','info-time'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+      document.getElementById(id).classList.add('ready');
+    });
     document.getElementById('slide-limit').innerHTML = '<option value="all">파일 업로드 후 자동 감지됩니다</option>';
     uploadZone.classList.remove('done');
     loadedHtml = '';
