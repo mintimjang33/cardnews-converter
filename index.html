@@ -12,21 +12,50 @@
   .sub { font-size: 13px; color: #555; text-align: center; }
 
   .section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
-  .section.disabled { opacity: 0.4; pointer-events: none; }
-  .step-title { font-size: 14px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .step-title { font-size: 14px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .step-title:hover { opacity: 0.85; }
+  .step-chevron { margin-left: auto; font-size: 11px; color: #555; transition: transform 0.2s; }
+  .step-title.collapsed .step-chevron { transform: rotate(-90deg); }
+  .step-body { }
+  .step-body.collapsed { display: none; }
   .step-num { width: 24px; height: 24px; background: #FF4B6E; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
   .step-num.done { background: #00B894; }
   .step-num.done::after { content: '✓'; }
 
   /* 업로드 */
-  .upload-zone { width: 100%; border: 2px dashed #2a2a2a; border-radius: 14px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; background: #111; }
+  .upload-zone { width: 100%; border: 2px dashed #2a2a2a; border-radius: 14px; padding: 16px 32px; text-align: center; cursor: pointer; transition: all 0.2s; background: #111; }
   .upload-zone:hover, .upload-zone.drag { border-color: #FF4B6E; background: #1a0d0d; }
-  .upload-zone.done { border-color: #00B894; background: #0a1a12; cursor: default; }
+  .upload-zone.done { border-color: #00B894; background: #0a1a12; }
   .upload-icon { font-size: 36px; margin-bottom: 8px; }
   .upload-text { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .upload-sub { font-size: 12px; color: #555; }
   .file-name { font-size: 14px; font-weight: 700; color: #00B894; margin-top: 8px; }
   #file-input { display: none; }
+
+  /* 슬라이드 미리보기 스트립 (업로드 직후) */
+  .preview-strip { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
+  .preview-strip-title { font-size: 14px; font-weight: 700; color: #FF4B6E; margin-bottom: 14px; }
+  .preview-empty { font-size: 12px; color: #444; text-align: center; padding: 20px 0; }
+  .preview-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #333 #111; }
+  .preview-scroll::-webkit-scrollbar { height: 4px; }
+  .preview-scroll::-webkit-scrollbar-track { background: #111; }
+  .preview-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .preview-thumb { flex: 0 0 130px; height: 163px; border-radius: 10px; overflow: hidden; background: #222; border: 2px solid #2a2a2a; position: relative; cursor: pointer; transition: border-color 0.2s; }
+  .preview-thumb:hover { border-color: #FF4B6E; }
+  .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .preview-num { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+
+  /* 모달 */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal-box { position: relative; width: min(380px, 80vw); }
+  .modal-box img { width: 100%; border-radius: 14px; display: block; }
+  .modal-close { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; background: #FF4B6E; border: none; color: #fff; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-nav:hover { background: #FF4B6E; }
+  .modal-prev { left: -46px; }
+  .modal-next { right: -46px; }
+  .modal-label { text-align: center; color: #666; font-size: 12px; margin-top: 8px; }
 
   /* 분석 결과 */
   .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -42,14 +71,12 @@
   .size-btn.active { border-color: #FF4B6E; background: #1a0d0d; color: #FF4B6E; }
   .size-btn .size-px { font-size: 13px; font-weight: 900; display: block; color: #fff; }
   .size-btn.active .size-px { color: #FF4B6E; }
-  .custom-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; display: none; }
+  .custom-row { display: none; gap: 8px; align-items: center; margin-top: 10px; }
   .custom-row input { background: #111; border: 1.5px solid #2a2a2a; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 14px; outline: none; width: 90px; text-align: center; }
-  .custom-row input:focus { border-color: #FF4B6E; }
   .custom-row span { color: #555; }
 
   /* 장수 */
   .slide-select { width: 100%; background: #111; border: 1.5px solid #2a2a2a; border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; }
-  .slide-select:focus { border-color: #FF4B6E; }
 
   /* TTS */
   .tts-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -68,7 +95,6 @@
   /* API 키 */
   .api-row { display: flex; gap: 8px; margin-top: 12px; }
   .api-input { flex: 1; background: #111; border: 1.5px solid #2a2a2a; border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 13px; outline: none; }
-  .api-input:focus { border-color: #FF4B6E; }
   .api-input::placeholder { color: #444; }
   .btn-save { background: #FF4B6E; border: none; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .api-hint { font-size: 11px; color: #555; margin-top: 6px; }
@@ -89,39 +115,43 @@
   .progress-fill { height: 100%; background: linear-gradient(90deg, #FF4B6E, #ff8c42); border-radius: 3px; transition: width 0.3s; width: 0%; }
   .status-log { font-size: 12px; color: #555; line-height: 1.9; max-height: 100px; overflow-y: auto; }
 
-  /* 결과 미리보기 */
-  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; display: none; }
+  /* 결과 섹션 */
+  .result-section { width: 100%; max-width: 700px; background: #1a1a1a; border-radius: 20px; padding: 22px 26px; }
   .result-section.show { display: block; }
-  .result-title { font-size: 14px; font-weight: 700; color: #00B894; margin-bottom: 14px; }
-  .thumbs-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
-  .thumb { aspect-ratio: 4/5; border-radius: 8px; overflow: hidden; background: #222; position: relative; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
-  .thumb:hover { border-color: #FF4B6E; }
-  .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .thumb-badge { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
-  .thumb-sound { position: absolute; top: 4px; right: 4px; font-size: 11px; }
+  .result-title { font-size: 14px; font-weight: 700; color: #00B894; margin-bottom: 16px; }
+
+  /* 슬라이드 썸네일 (변환 후 한 줄) */
+  .slides-grid { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px; scrollbar-width: thin; scrollbar-color: #333 #111; }
+  .slides-grid::-webkit-scrollbar { height: 4px; }
+  .slides-grid::-webkit-scrollbar-track { background: #111; }
+  .slides-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .slide-thumb { flex: 0 0 130px; height: 163px; border-radius: 10px; overflow: hidden; background: #222; position: relative; cursor: pointer; border: 2px solid #2a2a2a; transition: border-color 0.2s; }
+  .slide-thumb:hover, .slide-thumb.active { border-color: #FF4B6E; }
+  .slide-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .slide-num-badge { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; }
 
   /* 플레이어 */
-  .player-screen { width: 100%; aspect-ratio: 4/5; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; position: relative; }
+  .player-screen { width: 100%; margin: 0 0 12px; aspect-ratio: 4/5; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
   .player-screen img { width: 100%; height: 100%; object-fit: contain; }
-  .sync-bar { position: absolute; bottom: 0; left: 0; height: 4px; background: #FF4B6E; width: 0%; }
+  .sync-bar { position: absolute; bottom: 0; left: 0; height: 4px; background: #FF4B6E; width: 0%; transition: width 0.1s linear; }
   .player-ctrls { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .ctrl { background: #252525; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+  .ctrl { background: #252525; border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
   .ctrl:hover { background: #FF4B6E; }
-  .ctrl.play { background: #FF4B6E; width: 48px; height: 48px; font-size: 18px; }
+  .ctrl.play { background: #FF4B6E; width: 52px; height: 52px; font-size: 20px; }
   .slide-info { flex: 1; text-align: center; font-size: 13px; color: #555; }
-  audio { width: 100%; filter: invert(1) hue-rotate(180deg); }
+  .speed-select { background: #222; border: none; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  audio { width: 100%; filter: invert(1) hue-rotate(180deg); margin-bottom: 8px; }
 
   /* 다운로드 버튼 */
-  .dl-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-  .btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
+  .dl-btns { display: flex; flex-direction: row; gap: 10px; margin-top: 14px; max-width: 700px; width: 100%; }
+  .btn { flex: 1; padding: 15px 10px; border-radius: 14px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; white-space: nowrap; }
   .btn:hover { opacity: 0.85; }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .btn-png { background: #FF4B6E; color: #fff; }
   .btn-video { background: #6c5ce7; color: #fff; }
-  .btn-again { background: #222; color: #777; font-size: 13px; padding: 12px; }
+  .btn-again { background: #222; color: #777; }
 
-  #render-area { position: fixed; left: -9999px; top: 0; }
-  .divider { width: 100%; max-width: 700px; height: 1px; background: #1e1e1e; }
+  #render-area { position: fixed; left: -9999px; top: 0; width: 1080px; }
   label { cursor: pointer; }
 </style>
 </head>
@@ -132,172 +162,282 @@
 
 <!-- STEP 1: 업로드 -->
 <div class="section">
-  <div class="step-title"><span class="step-num" id="step1-num">1</span> HTML 파일 업로드</div>
-  <label for="file-input">
-    <div class="upload-zone" id="upload-zone">
-      <div class="upload-icon">📂</div>
-      <div class="upload-text">파일을 드래그하거나 클릭하세요</div>
-      <div class="upload-sub">Claude가 만들어준 카드뉴스 HTML 파일</div>
-      <div class="file-name" id="file-name"></div>
-    </div>
-  </label>
-  <input type="file" id="file-input" accept=".html">
-</div>
-
-<!-- STEP 2: 파일 분석 -->
-<div class="section" id="step2">
-  <div class="step-title"><span class="step-num" id="step2-num">2</span> 파일 분석 결과</div>
-  <div class="info-grid">
-    <div class="info-card"><div class="val ready" id="info-slides">-</div><div class="key">슬라이드 수</div></div>
-    <div class="info-card"><div class="val ready" id="info-size">-</div><div class="key">원본 사이즈</div></div>
-    <div class="info-card"><div class="val ready" id="info-chars">-</div><div class="key">총 글자수</div></div>
-    <div class="info-card"><div class="val ready" id="info-time">-</div><div class="key">예상 음성 시간</div></div>
+  <div class="step-title" onclick="toggleSection(this)"><span class="step-num" id="step1-num">1</span> HTML 파일 업로드<span class="step-chevron">▼</span></div>
+  <div class="step-body">
+    <label for="file-input">
+      <div class="upload-zone" id="upload-zone">
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">파일을 드래그하거나 클릭하세요</div>
+        <div class="upload-sub">Claude가 만들어준 카드뉴스 HTML 파일</div>
+        <div class="file-name" id="file-name"></div>
+      </div>
+    </label>
+    <input type="file" id="file-input" accept=".html">
   </div>
 </div>
-
-<!-- STEP 3: 출력 사이즈 -->
-<div class="section" id="step3">
-  <div class="step-title"><span class="step-num">3</span> 출력 사이즈 선택</div>
-  <div class="size-grid">
-    <div class="size-btn active" onclick="selectSize(1080,1350,this)">
-      <span class="size-px">1080×1350</span>인스타 세로
-    </div>
-    <div class="size-btn" onclick="selectSize(1080,1920,this)">
-      <span class="size-px">1080×1920</span>틱톡 / 쇼츠
-    </div>
-    <div class="size-btn" onclick="selectSize(1080,1080,this)">
-      <span class="size-px">1080×1080</span>인스타 정방형
-    </div>
-    <div class="size-btn" onclick="selectSize(0,0,this)">
-      <span class="size-px">직접 입력</span>커스텀
-    </div>
-  </div>
-  <div class="custom-row" id="custom-row">
-    <input type="number" id="custom-w" placeholder="가로" value="1080">
-    <span>×</span>
-    <input type="number" id="custom-h" placeholder="세로" value="1350">
-    <span style="font-size:12px;color:#555">px</span>
-  </div>
-</div>
-
-<!-- STEP 4: 장수 선택 -->
-<div class="section" id="step4">
-  <div class="step-title"><span class="step-num">4</span> 처리할 장수</div>
-  <select class="slide-select" id="slide-limit">
-    <option value="all">파일 업로드 후 자동 감지됩니다</option>
-  </select>
-</div>
-
-<!-- STEP 5: TTS 선택 -->
-<div class="section" id="step5">
-  <div class="step-title"><span class="step-num">5</span> TTS 음성 선택</div>
-  <div class="tts-grid">
-    <div class="tts-opt active" onclick="selectTTS('browser',this)">
-      <div class="tts-dot"></div>
-      <div>
-        <div class="tts-name">🌐 브라우저 내장 TTS</div>
-        <div class="tts-desc">설치 불필요 · API 키 없이 바로 사용 · 한국어 지원</div>
-      </div>
-      <div class="tts-price price-free">무료</div>
-    </div>
-    <div class="tts-opt" onclick="selectTTS('gemini',this)">
-      <div class="tts-dot"></div>
-      <div>
-        <div class="tts-name">⭐ Gemini TTS <span style="font-size:10px;background:#0984e3;color:#fff;padding:1px 6px;border-radius:10px;font-weight:700">한국어 추천</span></div>
-        <div class="tts-desc">자연스러운 한국어 · fal.ai API 키 필요</div>
-      </div>
-      <div class="tts-price price-paid">~$0.003/슬라이드</div>
-    </div>
-    <div class="tts-opt" onclick="selectTTS('minimax',this)">
-      <div class="tts-dot"></div>
-      <div>
-        <div class="tts-name">🎵 MiniMax HD</div>
-        <div class="tts-desc">감정 풍부 · 자연스러운 발음 · fal.ai API 키 필요</div>
-      </div>
-      <div class="tts-price price-paid">~$0.005/슬라이드</div>
-    </div>
-    <div class="tts-opt" onclick="selectTTS('elevenlabs',this)">
-      <div class="tts-dot"></div>
-      <div>
-        <div class="tts-name">🎭 ElevenLabs v3</div>
-        <div class="tts-desc">감정표현 최고급 · 70개 언어 · fal.ai API 키 필요</div>
-      </div>
-      <div class="tts-price price-paid">~$0.008/슬라이드</div>
-    </div>
-    <div class="tts-opt" onclick="selectTTS('none',this)">
-      <div class="tts-dot"></div>
-      <div>
-        <div class="tts-name">❌ TTS 없이 PNG만</div>
-        <div class="tts-desc">음성 없이 이미지만 추출</div>
-      </div>
-      <div class="tts-price price-free">무료</div>
-    </div>
-  </div>
-
-  <!-- fal API 키 (fal 선택 시 강조) -->
-  <div id="fal-key-box" style="margin-top:14px;padding-top:14px;border-top:1px solid #222;">
-    <div style="font-size:12px;color:#888;margin-bottom:8px;">fal.ai API 키 (Gemini·MiniMax·ElevenLabs 선택 시 필요)</div>
-    <div class="api-row">
-      <input class="api-input" type="password" id="api-key" placeholder="fal_...">
-      <button class="btn-save" onclick="saveKey()">저장</button>
-    </div>
-    <div class="api-hint" id="api-status">🔒 세션에만 저장 — 탭 닫으면 자동 삭제</div>
-  </div>
-</div>
-
-<!-- STEP 6: 슬라이드 전환 시간 -->
-<div class="section" id="step6">
-  <div class="step-title"><span class="step-num">6</span> 슬라이드 전환 시간</div>
-  <select class="dur-select" id="slide-duration">
-    <option value="auto">음성 끝나면 자동 넘김 (권장)</option>
-    <option value="2000">2초 고정</option>
-    <option value="3000">3초 고정</option>
-    <option value="5000">5초 고정</option>
-  </select>
-</div>
-
-<!-- 변환 시작 버튼 -->
-<button class="btn-start" id="btn-start" onclick="startProcess()">🚀 변환 시작!</button>
 
 <!-- 진행 상태 -->
 <div class="status-box" id="status-box">
   <div class="status-title" id="status-title">처리 중...</div>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div id="status-pct" style="font-size:12px;color:#888;margin-bottom:4px;"></div>
   <div class="status-log" id="status-log"></div>
 </div>
 
-<!-- 결과 -->
-<div class="result-section" id="result-section">
-  <div class="result-title">✅ 변환 완료! <span id="result-badge" style="font-size:12px;background:#00B894;color:#fff;padding:2px 8px;border-radius:20px;font-weight:700"></span></div>
-
-  <!-- 썸네일 -->
-  <div class="thumbs-grid" id="thumbs-grid"></div>
-
-  <!-- 플레이어 -->
-  <div class="player-screen">
-    <img id="player-img" src="" alt="">
-    <div class="sync-bar" id="sync-bar"></div>
-  </div>
-  <div class="player-ctrls">
-    <button class="ctrl" onclick="prevSlide()">◀</button>
-    <button class="ctrl play" id="play-btn" onclick="togglePlay()">▶</button>
-    <button class="ctrl" onclick="nextSlide()">▶▶</button>
-    <div class="slide-info" id="slide-info">- / -</div>
-  </div>
-  <audio id="audio-player" controls style="width:100%;filter:invert(1) hue-rotate(180deg);display:none;"></audio>
-
-  <!-- 다운로드 -->
-  <div class="dl-btns">
-    <button class="btn btn-png" onclick="downloadZip()">📦 PNG 전체 다운로드 (ZIP)</button>
-    <button class="btn btn-video" id="btn-video" onclick="downloadVideo()">🎬 음성 싱크 영상 다운로드 (WebM)</button>
-    <button class="btn btn-again" onclick="resetAll()">🔄 처음부터 다시</button>
+<!-- 슬라이드 미리보기 스트립 (업로드 직후 표시) -->
+<div class="preview-strip">
+  <div class="preview-strip-title">🖼️ 슬라이드 미리보기</div>
+  <div class="preview-scroll" id="preview-scroll">
+    <div class="preview-empty">파일을 업로드하면 슬라이드 미리보기가 표시됩니다</div>
   </div>
 </div>
 
-<div id="render-area" style="position:fixed;left:-9999px;top:0;"></div>
+<!-- STEP 2: 파일 분석 -->
+<div class="section">
+  <div class="step-title" onclick="toggleSection(this)"><span class="step-num" id="step2-num">2</span> 파일 분석 결과<span class="step-chevron">▼</span></div>
+  <div class="step-body">
+    <div class="info-grid">
+      <div class="info-card"><div class="val ready" id="info-slides">-</div><div class="key">슬라이드 수</div></div>
+      <div class="info-card"><div class="val ready" id="info-size">-</div><div class="key">원본 사이즈</div></div>
+      <div class="info-card"><div class="val ready" id="info-chars">-</div><div class="key">총 글자수</div></div>
+      <div class="info-card"><div class="val ready" id="info-time">-</div><div class="key">예상 음성 시간</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: 출력 사이즈 -->
+<div class="section">
+  <div class="step-title" onclick="toggleSection(this)"><span class="step-num">3</span> 출력 사이즈 선택<span class="step-chevron">▼</span></div>
+  <div class="step-body">
+    <div class="size-grid">
+      <div class="size-btn active" onclick="selectSize(1080,1350,this)"><span class="size-px">1080×1350</span>인스타 세로</div>
+      <div class="size-btn" onclick="selectSize(1080,1920,this)"><span class="size-px">1080×1920</span>틱톡 / 쇼츠</div>
+      <div class="size-btn" onclick="selectSize(1080,1080,this)"><span class="size-px">1080×1080</span>인스타 정방형</div>
+      <div class="size-btn" onclick="selectSize(0,0,this)"><span class="size-px">직접 입력</span>커스텀</div>
+    </div>
+    <div class="custom-row" id="custom-row">
+      <input type="number" id="custom-w" placeholder="가로" value="1080">
+      <span>×</span>
+      <input type="number" id="custom-h" placeholder="세로" value="1350">
+      <span style="font-size:12px;color:#555">px</span>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4: 장수 선택 -->
+<div class="section">
+  <div class="step-title" onclick="toggleSection(this)"><span class="step-num">4</span> 처리할 장수<span class="step-chevron">▼</span></div>
+  <div class="step-body">
+    <select class="slide-select" id="slide-limit">
+      <option value="all">파일 업로드 후 자동 감지됩니다</option>
+    </select>
+  </div>
+</div>
+
+<!-- STEP 5: TTS 선택 -->
+<div class="section">
+  <div class="step-title" onclick="toggleSection(this)"><span class="step-num">5</span> TTS 음성 선택<span class="step-chevron">▼</span></div>
+  <div class="step-body">
+    <div class="tts-grid">
+      <div class="tts-opt active" onclick="selectTTS('browser',this)">
+        <div class="tts-dot"></div>
+        <div><div class="tts-name">🌐 브라우저 내장 TTS</div><div class="tts-desc">설치 불필요 · API 키 없이 바로 사용 · 한국어 지원</div></div>
+        <div class="tts-price price-free">무료</div>
+      </div>
+      <div class="tts-opt" onclick="selectTTS('gemini',this)">
+        <div class="tts-dot"></div>
+        <div><div class="tts-name">⭐ Gemini TTS <span style="font-size:10px;background:#0984e3;color:#fff;padding:1px 6px;border-radius:10px;font-weight:700">한국어 추천</span></div><div class="tts-desc">자연스러운 한국어 · fal.ai API 키 필요</div></div>
+        <div class="tts-price price-paid">~$0.15/1000자</div>
+      </div>
+      <div class="tts-opt" onclick="selectTTS('minimax',this)">
+        <div class="tts-dot"></div>
+        <div><div class="tts-name">🎵 MiniMax HD</div><div class="tts-desc">감정 풍부 · 자연스러운 발음 · fal.ai API 키 필요</div></div>
+        <div class="tts-price price-paid">~$0.1/1000자</div>
+      </div>
+      <div class="tts-opt" onclick="selectTTS('elevenlabs',this)">
+        <div class="tts-dot"></div>
+        <div><div class="tts-name">🎭 ElevenLabs v3</div><div class="tts-desc">감정표현 최고급 · 70개 언어 · fal.ai API 키 필요</div></div>
+        <div class="tts-price price-paid">~$0.1/1000자</div>
+      </div>
+      <div class="tts-opt" onclick="selectTTS('none',this)">
+        <div class="tts-dot"></div>
+        <div><div class="tts-name">❌ TTS 없이 PNG만</div><div class="tts-desc">음성 없이 이미지만 추출</div></div>
+        <div class="tts-price price-free">무료</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #222;">
+      <div style="font-size:12px;color:#888;margin-bottom:8px;">fal.ai API 키 (Gemini·MiniMax·ElevenLabs 선택 시 필요)</div>
+      <div class="api-row">
+        <input class="api-input" type="password" id="api-key" placeholder="fal_...">
+        <button class="btn-save" onclick="saveKey()">저장</button>
+      </div>
+      <div class="api-hint" id="api-status">🔒 세션에만 저장 — 탭 닫으면 자동 삭제</div>
+    </div>
+  </div>
+</div>
+
+<!-- 변환 시작 -->
+<button class="btn-start" id="btn-start" onclick="startProcess()">🚀 변환 시작 (PNG + 음성 생성)</button>
+
+<!-- 결과 섹션 -->
+<div class="result-section" id="result-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+    <div class="result-title">✅ 변환 완료</div>
+    <div class="result-title" id="result-badge" style="color:#888;font-size:12px;"></div>
+  </div>
+
+  <!-- 슬라이드 썸네일 그리드 (숨김 - 플레이어 연동용) -->
+  <div class="slides-grid" id="slides-grid" style="display:none;"></div>
+
+  <!-- 슬라이드 전환 시간 -->
+  <div style="margin-bottom:12px;">
+    <select class="dur-select" id="slide-duration">
+      <option value="auto">음성 끝나면 자동 넘김 (권장)</option>
+      <option value="2000">2초 고정</option>
+      <option value="3000">3초 고정</option>
+      <option value="5000">5초 고정</option>
+    </select>
+  </div>
+
+  <!-- 플레이어 + 대본 좌우 레이아웃 -->
+  <div style="display:flex;gap:16px;align-items:flex-start;">
+    <!-- 왼쪽: 플레이어 -->
+    <div style="flex:0 0 60%;">
+      <div class="player-screen">
+        <img id="player-img" src="" alt="">
+        <div class="sync-bar" id="sync-bar"></div>
+      </div>
+      <div class="player-ctrls">
+        <button class="ctrl" onclick="prevSlide()">◀</button>
+        <button class="ctrl play" id="play-btn" onclick="togglePlay()">▶</button>
+        <button class="ctrl" onclick="nextSlide()">▶▶</button>
+        <div class="slide-info" id="slide-info">- / -</div>
+      </div>
+      <audio id="audio-player" controls style="width:100%;filter:invert(1) hue-rotate(180deg);display:none;"></audio>
+    </div>
+    <!-- 오른쪽: 대본 -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+
+      <!-- 원본 대본 -->
+      <div>
+        <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;">
+          <input type="radio" name="script-choice" value="original" checked style="accent-color:#FF4B6E;"> 원본 사용
+        </label>
+        <div id="script-original" style="background:#111;border-radius:10px;padding:14px;font-size:12px;color:#888;line-height:1.8;white-space:pre-wrap;min-height:120px;">대본이 여기 표시됩니다</div>
+      </div>
+
+      <!-- 수정 대본 -->
+      <div>
+        <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;">
+          <input type="radio" name="script-choice" value="edited" style="accent-color:#FF4B6E;"> 수정본 사용
+        </label>
+        <div id="script-edited" contenteditable="true" style="background:#1a1a1a;border:1.5px solid #2a2a2a;border-radius:10px;padding:14px;font-size:12px;color:#ccc;line-height:1.8;white-space:pre-wrap;min-height:120px;outline:none;"></div>
+      </div>
+
+      <!-- 음성 생성 -->
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+        <input type="number" id="tts-rate" value="1.0" min="0.5" max="2.0" step="0.1" style="background:#222;border:1.5px solid #2a2a2a;border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;outline:none;width:70px;text-align:center;">
+        <button id="btn-generate-audio" onclick="generateAllAudio(event)" style="flex:1;background:#00B894;border:none;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔊 음성 읽기</button>
+      </div>
+      <!-- 생성된 음성 목록 -->
+      <div id="audio-list-box" style="display:none;margin-top:6px;">
+        <div id="audio-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+      </div>
+
+      <!-- 기존 음성 불러오기 -->
+      <div style="margin-top:8px;border:1.5px dashed #2a2a2a;border-radius:10px;padding:10px 12px;"
+        id="audio-drop-zone"
+        ondragover="event.preventDefault();this.style.borderColor='#6c5ce7';"
+        ondragleave="this.style.borderColor='#2a2a2a';"
+        ondrop="handleAudioDrop(event)">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">📂 기존 음성 불러오기</div>
+        <input id="audio-url-input" type="text" placeholder="URL 입력..." style="width:100%;background:#111;border:1.5px solid #2a2a2a;border-radius:8px;padding:6px 10px;color:#fff;font-size:11px;outline:none;box-sizing:border-box;">
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button onclick="loadAudioFromUrl()" style="flex:1;background:#6c5ce7;border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">불러오기</button>
+          <label style="flex:1;text-align:center;background:#333;color:#aaa;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
+            파일 첨부<input type="file" accept="audio/*" style="display:none;" onchange="loadAudioFromFile(this)">
+          </label>
+          <label style="flex:1;text-align:center;background:#2d3436;color:#aaa;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
+            ZIP<input type="file" accept=".zip" style="display:none;" onchange="loadAudioZip(this)">
+          </label>
+        </div>
+        <div style="font-size:10px;color:#444;margin-top:4px;">또는 오디오 파일을 여기에 드래그</div>
+      </div>
+      <button onclick="playWithVideo()" id="btn-play-video" style="width:100%;background:#FF4B6E;border:none;color:#fff;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;">▶ 영상과 함께 플레이</button>
+      <div id="browser-tts-controls" style="display:flex;gap:8px;margin-top:6px;">
+        <button onclick="pauseWithVideo()" id="btn-pause-video" style="flex:1;background:#444;border:none;color:#fff;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">⏸ 일시정지</button>
+        <button onclick="stopWithVideo()" id="btn-stop-video" style="flex:1;background:#222;border:none;color:#aaa;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">■ 중지</button>
+      </div>
+
+      <!-- 예상 금액 -->
+      <div id="cost-box" style="display:none;margin-top:10px;background:#111;border-radius:10px;padding:12px 14px;font-size:12px;color:#888;line-height:1.9;"></div>
+      </div>
+
+      <!-- 생성된 음성 미리듣기 -->
+      <div id="slide-audio-box" style="display:none;">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">✅ 생성된 음성</div>
+        <audio id="slide-audio-preview" controls style="width:100%;filter:invert(1) hue-rotate(180deg);"></audio>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 다운로드 -->
+  <div class="dl-btns">
+    <button class="btn btn-png" onclick="downloadZip()">📦 PNG 다운로드</button>
+    <button class="btn btn-video" id="btn-video" onclick="downloadVideo()">🎬 영상 다운로드 (MP4)</button>
+    <button class="btn btn-again" onclick="resetAll()">🔄 처음부터</button>
+  </div>
+</div>
+
+<!-- 모달 -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)modalClose()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="modalClose()">✕</button>
+    <button class="modal-nav modal-prev" onclick="modalStep(-1)">◀</button>
+    <img id="modal-img" src="" alt="">
+    <button class="modal-nav modal-next" onclick="modalStep(1)">▶</button>
+    <div class="modal-label" id="modal-label"></div>
+  </div>
+</div>
+
+<div id="render-area"></div>
 
 <script>
+  // 섹션 접기/펼치기
+  function toggleSection(titleEl) {
+    const body = titleEl.nextElementSibling;
+    const isCollapsed = titleEl.classList.contains('collapsed');
+    titleEl.classList.toggle('collapsed', !isCollapsed);
+    body.classList.toggle('collapsed', !isCollapsed);
+  }
+
+  window.addEventListener('load', () => {});
+
   let slides = [], currentSlide = 0, isPlaying = false;
+  let previewSrcs = [], previewPlayerIndex = 0;
+  let editedTexts = []; // 슬라이드별 수정본 저장
+
+  // 모달
+  let modalImgs = [], modalIdx = 0;
+  function openModal(imgs, idx) {
+    modalImgs = imgs; modalIdx = idx;
+    document.getElementById('modal-img').src = modalImgs[modalIdx];
+    document.getElementById('modal-label').textContent = `${modalIdx+1} / ${modalImgs.length}`;
+    document.getElementById('modal-bg').classList.add('show');
+  }
+  function modalClose() { document.getElementById('modal-bg').classList.remove('show'); }
+  function modalStep(dir) {
+    modalIdx = (modalIdx + dir + modalImgs.length) % modalImgs.length;
+    document.getElementById('modal-img').src = modalImgs[modalIdx];
+    document.getElementById('modal-label').textContent = `${modalIdx+1} / ${modalImgs.length}`;
+  }
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('modal-bg').classList.contains('show')) return;
+    if (e.key === 'Escape') modalClose();
+    if (e.key === 'ArrowLeft') modalStep(-1);
+    if (e.key === 'ArrowRight') modalStep(1);
+  });
   let playTimer = null, syncTimer = null;
   let falKey = sessionStorage.getItem('fal_key') || '';
   let selectedTTS = 'browser';
@@ -326,6 +466,34 @@
     selectedTTS = type;
     document.querySelectorAll('.tts-opt').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
+    applyTTSButtonState();
+  }
+
+  function applyTTSButtonState() {
+    var btn = document.getElementById('btn-generate-audio');
+    var playBtn = document.getElementById('btn-play-video');
+    var controls = document.getElementById('browser-tts-controls');
+    // 라디오 옵션 UI도 동기화
+    document.querySelectorAll('.tts-opt').forEach(o => {
+      o.classList.toggle('active', o.getAttribute('onclick') === `selectTTS('${selectedTTS}',this)`);
+    });
+    if (!btn) return;
+    if (selectedTTS === 'browser') {
+      btn.innerHTML = '🔊 음성 읽기';
+      btn.style.background = '#00B894';
+      if (playBtn) playBtn.style.display = 'block';
+      if (controls) controls.style.display = 'flex';
+    } else if (selectedTTS === 'none') {
+      btn.innerHTML = '❌ TTS 없음';
+      btn.style.background = '#444';
+      if (playBtn) playBtn.style.display = 'none';
+      if (controls) controls.style.display = 'none';
+    } else {
+      btn.innerHTML = '🎙️ 음성 생성';
+      btn.style.background = '#6c5ce7';
+      if (playBtn) playBtn.style.display = 'none';
+      if (controls) controls.style.display = 'none';
+    }
   }
 
   function selectSize(w, h, el) {
@@ -348,7 +516,11 @@
 
   uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
   uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
-  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag'); if (e.dataTransfer.files[0]) analyzeFile(e.dataTransfer.files[0]); });
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) analyzeFile(e.dataTransfer.files[0]);
+  });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) analyzeFile(e.target.files[0]); });
 
   async function analyzeFile(file) {
@@ -358,23 +530,16 @@
     document.getElementById('info-slides').classList.remove('ready');
     loadedHtml = await file.text();
 
-    const tmp = document.createElement('iframe');
-    tmp.style.cssText = 'position:fixed;left:-9999px;width:1080px;height:9999px;border:none;';
-    document.body.appendChild(tmp);
-    tmp.srcdoc = loadedHtml;
-    await new Promise(r => tmp.addEventListener('load', r));
-    await new Promise(r => setTimeout(r, 1500));
-
-    const iDoc = tmp.contentDocument;
-    const cards = iDoc.querySelectorAll('.card');
+    const parser = new DOMParser();
+    const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
+    const cards = parsedDoc.querySelectorAll('.card');
     const totalCards = cards.length;
-    let origW = 1080, origH = 1350;
-    if (cards[0]) { origW = cards[0].offsetWidth || 1080; origH = cards[0].offsetHeight || 1350; }
+    const origW = 1080, origH = 1350;
     let totalChars = 0;
-    cards.forEach(c => { totalChars += c.innerText.replace(/\s/g,'').length; });
-    document.body.removeChild(tmp);
+    cards.forEach(c => { totalChars += (c.textContent || '').replace(/\s/g,'').length; });
 
     document.getElementById('info-slides').textContent = totalCards + '장';
+    document.getElementById('info-slides').classList.remove('ready');
     document.getElementById('info-size').textContent = origW + '×' + origH;
     document.getElementById('info-chars').textContent = totalChars.toLocaleString() + '자';
     document.getElementById('info-time').textContent = '~' + Math.round(totalChars / 5) + '초';
@@ -387,10 +552,494 @@
     document.getElementById('step1-num').textContent = '';
     document.getElementById('step2-num').classList.add('done');
     document.getElementById('step2-num').textContent = '';
+
+    // 미리보기 스트립 생성 (html2canvas 캡처)
+    buildPreviewStrip(totalCards);
+  }
+
+  async function buildPreviewStrip(totalCards) {
+    const scroll = document.getElementById('preview-scroll');
+    scroll.innerHTML = '<div class="preview-empty">🔄 미리보기 생성 중...</div>';
+
+    // 로딩 상태 표시
+    document.getElementById('status-box').classList.add('show');
+    setProgress(5, '📄 HTML 렌더링 중...');
+
+    const renderArea = document.getElementById('render-area');
+    renderArea.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;';
+    renderArea.innerHTML = '';
+
+    // iframe 없이 현재 DOM에 직접 삽입해서 캡처
+    const parser = new DOMParser();
+    const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
+
+    // 스타일 태그 현재 문서에 주입
+    const styleContainer = document.createElement('div');
+    styleContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;';
+    parsedDoc.querySelectorAll('style').forEach(s => {
+      const st = document.createElement('style');
+      st.textContent = s.textContent;
+      styleContainer.appendChild(st);
+    });
+
+    // card 요소들 현재 DOM에 삽입
+    const parsedCards = Array.from(parsedDoc.querySelectorAll('.card'));
+    parsedCards.forEach(card => {
+      card.style.cssText = (card.style.cssText || '') + ';width:1080px;height:1350px;overflow:hidden;flex-shrink:0;';
+      styleContainer.appendChild(card);
+    });
+    document.body.appendChild(styleContainer);
+    await new Promise(r => setTimeout(r, 800));
+
+    const cards = Array.from(styleContainer.querySelectorAll('.card'));
+    const cardTexts = [];
+    scroll.innerHTML = '';
+
+    for (let i = 0; i < cards.length; i++) {
+      setProgress(10 + Math.round((i / cards.length) * 85), `🖼️ 미리보기 ${i+1}/${cards.length}장 생성 중...`);
+      const card = cards[i];
+      await new Promise(r => setTimeout(r, 200));
+
+      let text = '';
+      ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'].forEach(s => {
+        card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; });
+      });
+      if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
+      cardTexts.push(text.trim());
+
+      const canvas = await html2canvas(card, {
+        width: 1080, height: 1350, scale: 1,
+        useCORS: true, allowTaint: true, backgroundColor: null, logging: false
+      });
+      const wrapper = document.createElement('div');
+      wrapper.className = 'preview-thumb';
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/png');
+      const badge = document.createElement('div');
+      badge.className = 'preview-num';
+      badge.textContent = i + 1;
+      wrapper.appendChild(img);
+      wrapper.appendChild(badge);
+      scroll.appendChild(wrapper);
+    }
+    document.body.removeChild(styleContainer);
+
+    setProgress(100, '✅ 미리보기 완료!');
+    setTimeout(() => document.getElementById('status-box').classList.remove('show'), 600);
+
+    // 모달 연결
+    const srcs = Array.from(scroll.querySelectorAll('.preview-thumb img')).map(el => el.src);
+    scroll.querySelectorAll('.preview-thumb').forEach((el, i) => {
+      el.onclick = () => openModal(srcs, i);
+    });
+
+    // 미리보기 이미지를 slides에 채워서 플레이어 완전 작동
+    previewSrcs = srcs;
+    slides = srcs.map((src, i) => ({
+      dataUrl: src,
+      name: `slide_${String(i+1).padStart(2,'0')}.png`,
+      text: cardTexts[i] || '',
+      audioUrl: null,
+      audioDuration: 3
+    }));
+    editedTexts = slides.map(s => s.text);
+    currentSlide = 0;
+
+    // 썸네일 그리드 표시
+    const grid = document.getElementById('slides-grid');
+    grid.innerHTML = '';
+    srcs.forEach((src, i) => {
+      const div = document.createElement('div');
+      div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<img src="${src}"><span class="slide-num-badge">${i+1}/${srcs.length}</span>`;
+      div.onclick = () => openModal(srcs, i);
+      grid.appendChild(div);
+    });
+
+    // 플레이어 표시
+    goToSlide(0);
+    updateCostBox();
+  }
+
+  function updateCostBox() {
+    const choice = document.querySelector('input[name="script-choice"]:checked')?.value;
+    let totalChars;
+    if (choice === 'edited') {
+      totalChars = editedTexts.reduce((sum, t) => sum + (t || '').length, 0);
+    } else {
+      totalChars = slides.reduce((sum, s) => sum + (s.text || '').length, 0);
+    }
+    const label = choice === 'edited' ? '수정본' : '원본';
+    const kChars = totalChars / 1000;
+    const gemini  = (kChars * 0.15).toFixed(4);
+    const minimax = (kChars * 0.1).toFixed(4);
+    const eleven  = (kChars * 0.1).toFixed(4);
+    const box = document.getElementById('cost-box');
+    box.style.display = 'block';
+    box.innerHTML = `
+      💬 ${label} 대본 <span style="color:#FF4B6E;font-weight:700;">${totalChars.toLocaleString()}자</span> 기준 예상 비용 (fal.ai 1000자당 단가 기준)<br>
+      ⭐ Gemini TTS &nbsp;&nbsp;&nbsp; <span style="color:#fff;">~$${gemini}</span><br>
+      🎵 MiniMax HD &nbsp; <span style="color:#fff;">~$${minimax}</span><br>
+      🎭 ElevenLabs v3 <span style="color:#fff;">~$${eleven}</span>
+    `;
+  }
+
+  // 라디오 변경 시 금액 업데이트
+  document.addEventListener('change', e => {
+    if (e.target.name === 'script-choice') updateCostBox();
+  });
+
+  // 수정본 텍스트 변경 시 금액 업데이트
+  document.addEventListener('input', e => {
+    if (e.target.id === 'script-edited') {
+      editedTexts[currentSlide] = e.target.textContent;
+      updateCostBox();
+    }
+  });
+
+  function getScriptText(i) {
+    const choice = document.querySelector('input[name="script-choice"]:checked')?.value;
+    if (choice === 'edited') {
+      // 현재 슬라이드면 DOM에서, 아니면 저장된 배열에서
+      if (i === currentSlide) {
+        return document.getElementById('script-edited').textContent.trim() || slides[i].text;
+      }
+      return editedTexts[i] !== undefined ? editedTexts[i] : slides[i].text;
+    }
+    return slides[i].text;
+  }
+
+  // 브라우저 TTS로 현재 슬라이드 음성 생성 후 저장
+  async function generateSlideAudio() {
+    const i = currentSlide;
+    const text = getScriptText(i);
+    if (!text) { alert('대본이 없습니다.'); return; }
+
+    const btn = event.target;
+    btn.textContent = '⏳ 생성 중...'; btn.disabled = true;
+
+    const rate = parseFloat(document.getElementById('tts-rate').value);
+
+    // fal.ai 키가 있으면 Gemini TTS로 생성
+    if (falKey && selectedTTS !== 'browser' && selectedTTS !== 'none') {
+      const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
+      try {
+        const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
+          method: 'POST',
+          headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.substring(0, 500), language: 'ko' })
+        });
+        const data = await res.json();
+        const audioUrl = data.audio?.url || data.audio_url || null;
+        if (audioUrl) {
+          slides[i].audioUrl = audioUrl;
+          slides[i].audioDuration = await getAudioDuration(audioUrl);
+          document.getElementById('slide-audio-preview').src = audioUrl;
+          document.getElementById('slide-audio-box').style.display = 'block';
+          document.getElementById('audio-player').src = audioUrl;
+          document.getElementById('audio-player').style.display = 'block';
+        }
+      } catch(e) { alert('TTS 생성 실패'); }
+    } else {
+      // 브라우저 TTS — 텍스트 저장 + 즉시 읽기
+      slides[i].ttsText = text;
+      slides[i].ttsRate = rate;
+      slides[i].audioDuration = text.length / 5; // 대략 추정
+
+      document.getElementById('slide-audio-box').style.display = 'block';
+      document.getElementById('slide-audio-box').innerHTML = `
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">✅ 브라우저 TTS 설정됨</div>
+        <button onclick="previewBrowserTTS(${i})" style="background:#333;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">▶ 미리 듣기</button>
+        <button onclick="synth.cancel()" style="background:#444;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;margin-left:6px;">■ 정지</button>
+      `;
+      // 바로 읽어주기
+      previewBrowserTTS(i);
+    }
+    btn.textContent = '🎙️ 이 슬라이드 음성 생성'; btn.disabled = false;
+  }
+
+  function previewBrowserTTS(i) {
+    const text = slides[i].ttsText || slides[i].text;
+    const rate = slides[i].ttsRate || 1.0;
+    synth.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'ko-KR'; utt.rate = rate;
+    if (browserVoices[0]) utt.voice = browserVoices[0];
+    synth.speak(utt);
+  }
+
+  async function generateAllAudio(e) {
+    const btn = e.target;
+    btn.disabled = true;
+    const rate = parseFloat(document.getElementById('tts-rate').value);
+    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
+    for (let i = 0; i < slides.length; i++) {
+      slides[i].ttsText = getScriptText(i);
+      slides[i].ttsRate = rate;
+    }
+
+    if (selectedTTS === 'browser' || selectedTTS === 'none') {
+      // 브라우저 TTS — 그냥 읽기
+      btn.textContent = '⏳ 읽는 중...';
+      videoPlaying = true;
+      await playAllTTS(0, rate);
+      videoPlaying = false;
+      btn.textContent = '🔊 음성 읽기';
+      btn.disabled = false;
+    } else {
+      // fal.ai TTS — 슬라이드별 생성
+      const origText = btn.textContent;
+      const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
+      const listBox = document.getElementById('audio-list-box');
+      const listEl = document.getElementById('audio-list');
+      listBox.style.display = 'block';
+      let successCount = 0;
+
+      for (let i = 0; i < slides.length; i++) {
+        btn.textContent = `⏳ ${i+1}/${slides.length} 생성 중...`;
+        listEl.innerHTML = `<span style="font-size:11px;color:#888;">⏳ ${i+1}/${slides.length} 생성 중...</span>`;
+        const text = getScriptText(i).substring(0, 500);
+        try {
+          const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
+            method: 'POST',
+            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(selectedTTS === 'gemini' ? { prompt: text } : { text, language: 'ko' })
+          });
+          const data = await res.json();
+          const audioUrl = data.audio?.url || data.audio_url || null;
+          if (audioUrl) {
+            const blob = await (await fetch(audioUrl)).blob();
+            const localUrl = URL.createObjectURL(blob);
+            slides[i].audioUrl = localUrl;
+            slides[i].audioBlob = blob;
+            slides[i].audioDuration = await getAudioDuration(localUrl);
+            successCount++;
+          } else {
+            const errMsg = data.detail || data.error || data.message || JSON.stringify(data);
+            listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${errMsg}</span>`;
+          }
+        } catch(e) {
+          listEl.innerHTML = `<span style="font-size:11px;color:#e17055;">⚠️ ${i+1}번 실패: ${e.message}</span>`;
+        }
+      }
+
+      if (successCount > 0) {
+        document.getElementById('audio-player').src = slides.find(s => s.audioUrl).audioUrl;
+        document.getElementById('audio-player').style.display = 'block';
+        showAudioButtons(`✅ ${successCount}/${slides.length} 완료`);
+        btn.textContent = '🔄 다시 생성';
+        btn.style.background = '#636e72';
+      } else {
+        btn.textContent = origText;
+      }
+      btn.disabled = false;
+    }
+  }
+
+  async function loadAudioZip(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const zip = await JSZip.loadAsync(file);
+      let timing = [];
+      if (zip.files['timing.json']) {
+        timing = JSON.parse(await zip.files['timing.json'].async('string'));
+      }
+      for (const t of timing) {
+        const zipFile = zip.files[t.filename];
+        if (!zipFile || t.slide >= slides.length) continue;
+        const blob = await zipFile.async('blob');
+        const url = URL.createObjectURL(blob);
+        slides[t.slide].audioUrl = url;
+        slides[t.slide].audioDuration = t.duration;
+      }
+      const first = slides.find(s => s.audioUrl);
+      if (first) {
+        document.getElementById('audio-player').src = first.audioUrl;
+        document.getElementById('audio-player').style.display = 'block';
+        showAudioButtons(`✅ ZIP 불러오기 완료 (${timing.length}개)`);
+        // ZIP은 fal.ai 음성이므로 브라우저 TTS 전용 컨트롤 숨김
+        if (selectedTTS === 'browser' || selectedTTS === 'none') {
+          selectedTTS = 'gemini';
+        }
+        applyTTSButtonState();
+      }
+    } catch(e) {
+      alert('ZIP 불러오기 실패: ' + e.message);
+    }
+  }
+
+  function loadAudioFromUrl() {
+    const url = document.getElementById('audio-url-input').value.trim();
+    if (!url) return;
+    setAudioSource(url);
+  }
+
+  function loadAudioFromFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setAudioSource(url);
+  }
+
+  function handleAudioDrop(e) {
+    e.preventDefault();
+    document.getElementById('audio-drop-zone').style.borderColor = '#2a2a2a';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('audio/')) {
+      const url = URL.createObjectURL(file);
+      setAudioSource(url);
+    }
+  }
+
+  function setAudioSource(url) {
+    slides.forEach(s => s.audioUrl = url);
+    const player = document.getElementById('audio-player');
+    player.src = url;
+    player.style.display = 'block';
+    showAudioButtons();
+    if (selectedTTS === 'browser' || selectedTTS === 'none') {
+      selectedTTS = 'gemini';
+    }
+    applyTTSButtonState();
+  }
+
+  function showAudioButtons(extraMsg) {
+    const listBox = document.getElementById('audio-list-box');
+    const listEl = document.getElementById('audio-list');
+    listEl.innerHTML = `
+      <div style="display:flex;gap:6px;">
+        <button onclick="playApiAudio(0)" style="flex:1;background:#6c5ce7;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 재생</button>
+        <button onclick="playApiWithVideo()" style="flex:1;background:#FF4B6E;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ 영상과 함께</button>
+        <button onclick="downloadAudioZip()" style="flex:1;background:#00B894;border:none;color:#fff;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">⬇ ZIP 저장</button>
+      </div>
+      ${extraMsg ? `<span style="font-size:10px;color:#00B894;margin-top:4px;display:block;">${extraMsg}</span>` : ''}
+    `;
+    listBox.style.display = 'block';
+  }
+
+  async function playApiAudio(i) {
+    if (i >= slides.length) return;
+    if (!slides[i].audioUrl) { await playApiAudio(i + 1); return; }
+    goToSlide(i);
+    const player = document.getElementById('audio-player');
+    player.src = slides[i].audioUrl;
+    player.play();
+    await new Promise(r => { player.onended = r; player.onerror = r; });
+    await playApiAudio(i + 1);
+  }
+
+  async function playApiWithVideo() {
+    videoPlaying = true;
+    for (let i = 0; i < slides.length; i++) {
+      if (!videoPlaying) break;
+      if (!slides[i].audioUrl) continue;
+      goToSlide(i);
+      const player = document.getElementById('audio-player');
+      player.src = slides[i].audioUrl;
+      player.play();
+      await new Promise(r => { player.onended = r; player.onerror = r; });
+    }
+    videoPlaying = false;
+  }
+
+  async function downloadAudioZip() {
+    const zip = new JSZip();
+    const timing = [];
+    for (let i = 0; i < slides.length; i++) {
+      if (!slides[i].audioUrl) continue;
+      const res = await fetch(slides[i].audioUrl);
+      const blob = await res.blob();
+      const filename = `slide_${String(i+1).padStart(2,'0')}.mp3`;
+      zip.file(filename, blob);
+      timing.push({ slide: i, filename, duration: slides[i].audioDuration || 0 });
+    }
+    zip.file('timing.json', JSON.stringify(timing, null, 2));
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `audio_${Date.now()}.zip`;
+    a.click();
+  }
+
+  function playAudioRow(url) {
+    const player = document.getElementById('audio-player');
+    player.src = url;
+    player.style.display = 'block';
+    player.play();
+  }
+
+  let videoPlaying = false;
+  let videoPaused = false;
+
+  function playAllTTS(i, rate) {
+    return new Promise(resolve => {
+      if (i >= slides.length || !videoPlaying) { resolve(); return; }
+      goToSlide(i);
+      synth.cancel();
+      const text = slides[i].ttsText || slides[i].text;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'ko-KR'; utt.rate = rate;
+      if (browserVoices[0]) utt.voice = browserVoices[0];
+      utt.onend = () => {
+        if (!videoPlaying) { resolve(); return; }
+        playAllTTS(i + 1, rate).then(resolve);
+      };
+      utt.onerror = () => playAllTTS(i + 1, rate).then(resolve);
+      synth.speak(utt);
+    });
+  }
+
+  function playWithVideo() {
+    const rate = parseFloat(document.getElementById('tts-rate').value);
+    editedTexts[currentSlide] = document.getElementById('script-edited').textContent;
+    for (let i = 0; i < slides.length; i++) {
+      slides[i].ttsText = getScriptText(i);
+      slides[i].ttsRate = rate;
+    }
+    videoPlaying = true;
+    videoPaused = false;
+    goToSlide(0);
+
+    // fal.ai 음성 있으면 그걸 재생, 없으면 브라우저 TTS
+    const hasApiAudio = slides.some(s => s.audioUrl);
+    if (hasApiAudio) {
+      const player = document.getElementById('audio-player');
+      player.src = slides[0].audioUrl;
+      player.style.display = 'block';
+      player.currentTime = 0;
+      player.play();
+      player.onended = () => { videoPlaying = false; };
+    } else {
+      playAllTTS(0, rate).then(() => stopWithVideo());
+    }
+  }
+
+  function pauseWithVideo() {
+    if (!videoPaused) {
+      synth.pause();
+      videoPaused = true;
+      document.getElementById('btn-pause-video').textContent = '▶ 계속';
+    } else {
+      synth.resume();
+      videoPaused = false;
+      document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
+    }
+  }
+
+  function stopWithVideo() {
+    videoPlaying = false;
+    videoPaused = false;
+    synth.cancel();
+    document.getElementById('btn-pause-video').textContent = '⏸ 일시정지';
   }
 
   function log(msg) { const el = document.getElementById('status-log'); el.innerHTML += msg + '<br>'; el.scrollTop = el.scrollHeight; }
-  function setProgress(pct, title) { document.getElementById('progress-fill').style.width = pct + '%'; if (title) document.getElementById('status-title').textContent = title; }
+  function setProgress(pct, title) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    if (title) document.getElementById('status-title').textContent = title;
+    document.getElementById('status-pct').textContent = pct + '%';
+  }
 
   async function startProcess() {
     if (!loadedHtml) { alert('먼저 HTML 파일을 업로드해주세요!'); return; }
@@ -408,17 +1057,25 @@
     setProgress(5, '📄 HTML 렌더링 중...');
 
     const renderArea = document.getElementById('render-area');
-    renderArea.style.width = outputW + 'px';
+    renderArea.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + outputW + 'px;';
     renderArea.innerHTML = '';
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = `width:${outputW}px;height:9999px;border:none;`;
-    renderArea.appendChild(iframe);
-    iframe.srcdoc = loadedHtml;
-    await new Promise(r => iframe.addEventListener('load', r));
-    await new Promise(r => setTimeout(r, 2000));
 
-    const iDoc = iframe.contentDocument;
-    let cards = Array.from(iDoc.querySelectorAll('.card'));
+    // iframe 없이 DOM 직접 삽입
+    const spParser = new DOMParser();
+    const spDoc = spParser.parseFromString(loadedHtml, 'text/html');
+    spDoc.querySelectorAll('style').forEach(s => {
+      const st = document.createElement('style');
+      st.textContent = s.textContent;
+      renderArea.appendChild(st);
+    });
+    const spAllCards = Array.from(spDoc.querySelectorAll('.card'));
+    spAllCards.forEach(card => {
+      card.style.cssText = (card.style.cssText || '') + `;width:${outputW}px;height:${outputH}px;overflow:hidden;flex-shrink:0;`;
+      renderArea.appendChild(card);
+    });
+    await new Promise(r => setTimeout(r, 800));
+
+    let cards = Array.from(renderArea.querySelectorAll('.card'));
     if (!cards.length) { setProgress(0, '❌ 슬라이드를 찾지 못했어요'); log('class="card" 요소가 없어요.'); document.getElementById('btn-start').disabled = false; return; }
 
     const limitVal = document.getElementById('slide-limit').value;
@@ -429,7 +1086,9 @@
       setProgress(10 + Math.round((i / cards.length) * 45), `🖼️ ${i+1}/${cards.length}장 캡처 중...`);
       const card = cards[i];
       let text = '';
-      ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'].forEach(s => { card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; }); });
+      ['.hook','.title','.body','.fact-text','.vs-content','.tl-text','.quote-text','.cta-main','.cta-sub'].forEach(s => {
+        card.querySelectorAll(s).forEach(n => { text += n.innerText.trim() + ' '; });
+      });
       if (!text.trim()) text = card.innerText.replace(/\s+/g,' ').trim().substring(0, 400);
 
       const canvas = await html2canvas(card, { width: outputW, height: outputH, scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, logging: false });
@@ -438,103 +1097,94 @@
     }
     renderArea.innerHTML = '';
 
+    // TTS 처리
     if (selectedTTS === 'browser') {
       log('🎙️ 브라우저 TTS 길이 측정 중...');
       for (let i = 0; i < slides.length; i++) {
         setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 음성 측정 중...`);
-        const dur = await measureBrowserTTS(slides[i].text);
+        const dur = await measureBrowserTTS(getScriptText(i));
         slides[i].audioDuration = dur;
         log(`  ✅ ${i+1}장 (${dur.toFixed(1)}초)`);
       }
     } else if (['gemini','minimax','elevenlabs'].includes(selectedTTS) && falKey) {
       const modelMap = { gemini: 'fal-ai/gemini-tts', minimax: 'fal-ai/minimax/speech-02-hd', elevenlabs: 'fal-ai/elevenlabs/tts/eleven-v3' };
       for (let i = 0; i < slides.length; i++) {
-        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 fal.ai TTS 중...`);
+        setProgress(55 + Math.round((i / slides.length) * 35), `🎙️ ${i+1}/${slides.length}장 TTS 생성 중...`);
         try {
-          const url = await falTTS(slides[i].text, modelMap[selectedTTS]);
-          slides[i].audioUrl = url;
-          slides[i].audioDuration = await getAudioDuration(url);
-          log(`  ✅ ${i+1}장 (${slides[i].audioDuration.toFixed(1)}초)`);
-        } catch(e) { log(`  ⚠️ ${i+1}장 실패: ${e.message}`); }
+          const res = await fetch('https://fal.run/' + modelMap[selectedTTS], {
+            method: 'POST',
+            headers: { 'Authorization': 'Key ' + falKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: getScriptText(i).substring(0, 500), language: 'ko' })
+          });
+          const data = await res.json();
+          const audioUrl = data.audio?.url || data.audio_url || null;
+          if (audioUrl) {
+            slides[i].audioUrl = audioUrl;
+            const dur = await getAudioDuration(audioUrl);
+            slides[i].audioDuration = dur;
+          }
+          log(`  ✅ ${i+1}장 TTS 완료`);
+        } catch(e) { log(`  ⚠️ ${i+1}장 TTS 실패 — 기본값 사용`); }
       }
-    } else {
-      log('TTS 없이 PNG만 생성');
     }
 
-    setProgress(100, '🎉 완성!');
-    document.getElementById('result-badge').textContent = slides.length + '장 완료';
-    renderThumbs();
-    goToSlide(0);
-    document.getElementById('btn-start').disabled = false;
+    setProgress(100, '✅ 완료!');
     setTimeout(() => {
       document.getElementById('status-box').classList.remove('show');
+      renderResult();
       document.getElementById('result-section').classList.add('show');
-      document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
-    }, 500);
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('result-badge').textContent = slides.length + '장 완료';
+    }, 600);
   }
 
-  function measureBrowserTTS(text) {
-    return new Promise(resolve => {
-      const utt = new SpeechSynthesisUtterance(text.substring(0, 300));
-      utt.lang = 'ko-KR'; utt.rate = 0.95;
-      if (browserVoices[0]) utt.voice = browserVoices[0];
-      const start = Date.now();
-      utt.onend = () => resolve((Date.now() - start) / 1000);
-      utt.onerror = () => resolve(3);
-      synth.speak(utt);
-    });
-  }
-
-  async function falTTS(text, model) {
-    const t = text.replace(/\n/g,' ').replace(/\s+/g,' ').trim().substring(0, 500);
-    let body = model.includes('gemini') ? { prompt: t, voice: 'Kore', language: 'Korean (South Korea)', model: 'gemini-2.5-flash-tts' }
-      : model.includes('minimax') ? { text: t, voice_id: 'Korean_GirlFriend', speed: 1.0 }
-      : model.includes('elevenlabs') ? { text: t, voice_id: 'pNInz6obpgDQGcFmaJgB', language_code: 'ko' }
-      : { text: t };
-    const resp = await fetch(`https://fal.run/${model}`, { method: 'POST', headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!resp.ok) throw new Error(resp.status);
-    const data = await resp.json();
-    return data.audio?.url || data.audio_url || data.url || data.audio;
-  }
-
-  function getAudioDuration(url) {
-    return new Promise(resolve => {
-      const a = new Audio(url);
-      a.addEventListener('loadedmetadata', () => resolve(a.duration));
-      a.addEventListener('error', () => resolve(3));
-      setTimeout(() => resolve(3), 5000);
-    });
-  }
-
-  function renderThumbs() {
-    const grid = document.getElementById('thumbs-grid');
+  function renderResult() {
+    const grid = document.getElementById('slides-grid');
     grid.innerHTML = '';
+    const allDataUrls = slides.map(s => s.dataUrl);
     slides.forEach((s, i) => {
       const div = document.createElement('div');
-      div.className = 'thumb';
-      div.innerHTML = `<img src="${s.dataUrl}"><span class="thumb-badge">${i+1}</span>${s.audioUrl ? '<span class="thumb-sound">🔊</span>' : ''}`;
-      div.onclick = () => { clearTimers(); goToSlide(i); };
+      div.className = 'slide-thumb' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<img src="${s.dataUrl}"><span class="slide-num-badge">${i+1}/${slides.length}</span>`;
+      div.onclick = () => openModal(allDataUrls, i);
       grid.appendChild(div);
     });
+    goToSlide(0);
+    applyTTSButtonState();
+    const audioEl = document.getElementById('audio-player');
+    audioEl.style.display = slides.some(s => s.audioUrl) ? 'block' : 'none';
   }
 
   function goToSlide(i) {
-    if (!slides.length) return;
+    // 현재 슬라이드 수정본 저장
+    const scriptEdited = document.getElementById('script-edited');
+    if (scriptEdited) editedTexts[currentSlide] = scriptEdited.textContent;
+
     currentSlide = i;
     document.getElementById('player-img').src = slides[i].dataUrl;
     document.getElementById('slide-info').textContent = `${i+1} / ${slides.length}`;
     document.getElementById('sync-bar').style.width = '0%';
-    const audio = document.getElementById('audio-player');
-    if (slides[i].audioUrl) { audio.src = slides[i].audioUrl; audio.style.display = 'block'; }
-    else { audio.src = ''; audio.style.display = 'none'; }
+    const audioEl = document.getElementById('audio-player');
+    if (slides[i].audioUrl) { audioEl.src = slides[i].audioUrl; audioEl.style.display = 'block'; }
+    // 썸네일 하이라이트
+    document.querySelectorAll('.slide-thumb').forEach((t, idx) => {
+      t.classList.toggle('active', idx === i);
+    });
+    // 대본 표시
+    const scriptBox = document.getElementById('script-original');
+    const scriptEditedEl = document.getElementById('script-edited');
+    const text = slides[i].text || '';
+    scriptBox.textContent = text;
+    // 수정본: 저장된 게 있으면 그걸 쓰고, 없으면 원본으로 초기화
+    scriptEditedEl.textContent = (editedTexts[i] !== undefined && editedTexts[i] !== '') ? editedTexts[i] : text;
   }
 
-  function clearTimers() { clearTimeout(playTimer); clearInterval(syncTimer); synth.cancel(); }
-  function prevSlide() { clearTimers(); isPlaying = false; document.getElementById('play-btn').textContent = '▶'; goToSlide(currentSlide > 0 ? currentSlide - 1 : slides.length - 1); }
-  function nextSlide() { clearTimers(); isPlaying = false; document.getElementById('play-btn').textContent = '▶'; goToSlide(currentSlide < slides.length - 1 ? currentSlide + 1 : 0); }
+  function prevSlide() { if (slides.length) goToSlide(currentSlide > 0 ? currentSlide - 1 : slides.length - 1); }
+  function nextSlide() { if (slides.length) goToSlide(currentSlide < slides.length - 1 ? currentSlide + 1 : 0); }
+
+  function clearTimers() { if (playTimer) clearTimeout(playTimer); if (syncTimer) clearInterval(syncTimer); }
 
   function startSyncBar(duration) {
-    clearInterval(syncTimer);
     const bar = document.getElementById('sync-bar');
     bar.style.width = '0%';
     let pct = 0;
@@ -549,7 +1199,7 @@
   function togglePlay() {
     isPlaying = !isPlaying;
     document.getElementById('play-btn').textContent = isPlaying ? '⏸' : '▶';
-    if (!isPlaying) { clearTimers(); document.getElementById('audio-player').pause(); return; }
+    if (!isPlaying) { clearTimers(); synth.cancel(); document.getElementById('audio-player').pause(); return; }
     playSlide();
   }
 
@@ -563,7 +1213,7 @@
     startSyncBar(ms / 1000);
 
     if (selectedTTS === 'browser') {
-      const utt = new SpeechSynthesisUtterance(slide.text.substring(0, 300));
+      const utt = new SpeechSynthesisUtterance((slide.ttsText || getScriptText(currentSlide)));
       utt.lang = 'ko-KR'; utt.rate = 0.95;
       if (browserVoices[0]) utt.voice = browserVoices[0];
       synth.speak(utt);
@@ -594,15 +1244,28 @@
     }
   }
 
-  async function downloadZip() {
-    const { default: JSZip } = await Promise.resolve({ default: JSZip });
-    const zip = new JSZip();
-    slides.forEach(s => zip.file(s.name, s.dataUrl.split(',')[1], { base64: true }));
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cardnews_${outputW}x${outputH}.zip`; a.click();
+  async function measureBrowserTTS(text) {
+    return new Promise(resolve => {
+      const utt = new SpeechSynthesisUtterance(text.substring(0, 300));
+      utt.lang = 'ko-KR'; utt.rate = 0.95;
+      if (browserVoices[0]) utt.voice = browserVoices[0];
+      const start = Date.now();
+      utt.onend = () => resolve((Date.now() - start) / 1000);
+      utt.onerror = () => resolve(3);
+      synth.speak(utt);
+    });
+  }
+
+  async function getAudioDuration(url) {
+    return new Promise(resolve => {
+      const a = new Audio(url);
+      a.onloadedmetadata = () => resolve(a.duration);
+      a.onerror = () => resolve(3);
+    });
   }
 
   async function downloadZip() {
+    if (!slides.length) { alert('먼저 변환을 완료해주세요!'); return; }
     const zip = new JSZip();
     slides.forEach(s => zip.file(s.name, s.dataUrl.split(',')[1], { base64: true }));
     const blob = await zip.generateAsync({ type: 'blob' });
@@ -610,7 +1273,22 @@
   }
 
   async function downloadVideo() {
+    if (!slides.length) { alert('먼저 변환을 완료해주세요!'); return; }
     const btn = document.getElementById('btn-video');
+
+    const hasAnyAudio = slides.some(s => s.audioUrl);
+    if (!hasAnyAudio && selectedTTS !== 'none') {
+      const proceed = confirm(
+        '⚠️ 브라우저 내장 TTS는 영상 파일에 음성을 직접 녹음할 수 없어요 (브라우저 보안 정책).\n\n' +
+        '음성이 있는 영상을 원하면:\n' +
+        '1) "5. TTS 음성 선택"에서 Gemini/MiniMax/ElevenLabs 중 하나를 고르고\n' +
+        '2) fal.ai API 키를 입력한 뒤\n' +
+        '3) "🔊 음성 읽기" 또는 "🎙️ 음성 생성"으로 음성을 먼저 생성하세요.\n\n' +
+        '지금처럼 진행하면 음성 없는 무음 영상이 만들어집니다. 계속할까요?'
+      );
+      if (!proceed) return;
+    }
+
     btn.textContent = '⏳ 영상 생성 중...'; btn.disabled = true;
     const canvas = document.createElement('canvas');
     canvas.width = outputW; canvas.height = outputH;
@@ -622,44 +1300,147 @@
     const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 });
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cardnews_${outputW}x${outputH}.webm`; a.click();
-      btn.textContent = '🎬 음성 싱크 영상 다운로드 (WebM)'; btn.disabled = false; actx.close();
-    };
+
+    let webmBlob = null;
+    const recordingDone = new Promise(resolve => {
+      recorder.onstop = () => {
+        webmBlob = new Blob(chunks, { type: 'video/webm' });
+        resolve();
+      };
+    });
+
     recorder.start(100);
     const fps = 30;
+    const frameInterval = 1000 / fps;
     const durSetting = document.getElementById('slide-duration').value;
+
+    // 모든 이미지를 미리 디코드해서 캡처 루프 중 지연이 생기지 않게 함
+    const preloadedImgs = await Promise.all(slides.map(s => new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = s.dataUrl;
+    })));
+
+    // 오디오 컨텍스트 시계를 기준으로 절대 시각을 잡아 드리프트 누적을 방지
+    const t0 = actx.currentTime;
+    let cursor = t0;
+
     for (let s = 0; s < slides.length; s++) {
       const slide = slides[s];
-      const duration = durSetting === 'auto' ? (slide.audioDuration > 0 ? Math.ceil(slide.audioDuration * 1000) + 300 : 3000) : parseInt(durSetting);
-      const img = new Image(); img.src = slide.dataUrl;
-      await new Promise(r => img.onload = r);
+      const img = preloadedImgs[s];
+      btn.textContent = `⏳ 녹화 중... (${s + 1}/${slides.length})`;
+      const duration = durSetting === 'auto'
+        ? (slide.audioDuration > 0 ? Math.ceil(slide.audioDuration * 1000) + 300 : 3000)
+        : parseInt(durSetting);
+      const durationSec = duration / 1000;
+
+      // 오디오를 슬라이드 시작 시각(cursor)에 정확히 예약
       if (slide.audioUrl) {
         try {
           const buf = await (await fetch(slide.audioUrl)).arrayBuffer();
           const audioBuf = await actx.decodeAudioData(buf);
-          const src = actx.createBufferSource(); src.buffer = audioBuf; src.connect(dest); src.start(actx.currentTime);
-        } catch(e) {}
+          const src = actx.createBufferSource();
+          src.buffer = audioBuf; src.connect(dest);
+          src.start(cursor);
+        } catch (e) {}
       }
-      const totalFrames = Math.ceil((duration / 1000) * fps);
-      for (let f = 0; f < totalFrames; f++) {
-        const p = f / totalFrames;
+
+      // 이 슬라이드의 시작/끝 절대 시각 (AudioContext 시계 기준)
+      const slideStart = cursor;
+      const slideEnd = cursor + durationSec;
+
+      // 프레임을 실제 경과시간에 맞춰 그림 — setTimeout 누적 오차 대신
+      // actx.currentTime(오디오와 동일한 시계)을 기준으로 다음 프레임 시각까지 대기
+      while (actx.currentTime < slideEnd) {
+        const elapsed = actx.currentTime - slideStart;
+        const p = Math.min(elapsed / durationSec, 1);
         ctx.clearRect(0, 0, outputW, outputH);
-        ctx.globalAlpha = p < 0.05 ? p / 0.05 : p > 0.95 ? (1-p) / 0.05 : 1;
+        ctx.globalAlpha = p < 0.05 ? p / 0.05 : p > 0.95 ? (1 - p) / 0.05 : 1;
         ctx.drawImage(img, 0, 0, outputW, outputH);
-        await new Promise(r => setTimeout(r, 1000 / fps));
+        const nextFrameAt = slideStart + (Math.floor(elapsed / (frameInterval / 1000)) + 1) * (frameInterval / 1000);
+        const waitMs = Math.max(0, (nextFrameAt - actx.currentTime) * 1000);
+        await new Promise(r => setTimeout(r, Math.min(waitMs, frameInterval)));
       }
+
+      cursor = slideEnd;
     }
+
     await new Promise(r => setTimeout(r, 200));
     recorder.stop();
+    await recordingDone;
+    actx.close();
+
+    await finalizeVideoDownload(webmBlob, btn);
+  }
+
+  // ── MP4 변환 (ffmpeg.wasm, 싱글스레드 코어를 blob으로 로드해 CORS/COOP-COEP 제약 우회) ──
+  let ffmpegInstance = null;
+  let ffmpegLoadFailed = false;
+
+  async function getFFmpeg() {
+    if (ffmpegInstance) return ffmpegInstance;
+    if (ffmpegLoadFailed) return null;
+    try {
+      const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+      const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      ffmpegInstance = ffmpeg;
+      return ffmpeg;
+    } catch (e) {
+      console.error('ffmpeg.wasm 로드 실패', e);
+      ffmpegLoadFailed = true;
+      return null;
+    }
+  }
+
+  async function finalizeVideoDownload(webmBlob, btn) {
+    btn.textContent = '🎞️ MP4로 변환 중...';
+    const ffmpeg = await getFFmpeg();
+
+    if (!ffmpeg) {
+      // mp4 변환 불가 — webm으로 폴백
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(webmBlob);
+      a.download = `cardnews_${outputW}x${outputH}.webm`;
+      a.click();
+      alert('⚠️ MP4 변환 엔진을 불러오지 못해 webm으로 저장했어요. (네트워크 또는 브라우저 제약일 수 있어요)');
+      btn.textContent = '🎬 영상 다운로드 (MP4)'; btn.disabled = false;
+      return;
+    }
+
+    try {
+      const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+      await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+      await ffmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', 'output.mp4']);
+      const data = await ffmpeg.readFile('output.mp4');
+      const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(mp4Blob);
+      a.download = `cardnews_${outputW}x${outputH}.mp4`;
+      a.click();
+      // 메모리 정리
+      try { await ffmpeg.deleteFile('input.webm'); await ffmpeg.deleteFile('output.mp4'); } catch (e) {}
+    } catch (e) {
+      console.error('mp4 변환 실패', e);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(webmBlob);
+      a.download = `cardnews_${outputW}x${outputH}.webm`;
+      a.click();
+      alert('⚠️ MP4 변환에 실패해 webm으로 저장했어요.');
+    }
+    btn.textContent = '🎬 영상 다운로드 (MP4)'; btn.disabled = false;
   }
 
   function resetAll() {
     slides = []; currentSlide = 0; isPlaying = false;
-    clearTimers();
+    clearTimers(); synth.cancel();
     document.getElementById('audio-player').pause();
-    document.getElementById('thumbs-grid').innerHTML = '';
+    document.getElementById('slides-grid').innerHTML = '';
     document.getElementById('result-section').classList.remove('show');
     document.getElementById('status-box').classList.remove('show');
     document.getElementById('file-input').value = '';
@@ -672,6 +1453,7 @@
     document.getElementById('slide-limit').innerHTML = '<option value="all">파일 업로드 후 자동 감지됩니다</option>';
     uploadZone.classList.remove('done');
     loadedHtml = '';
+    document.getElementById('preview-scroll').innerHTML = '<div class="preview-empty">파일을 업로드하면 슬라이드 미리보기가 표시됩니다</div>';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
