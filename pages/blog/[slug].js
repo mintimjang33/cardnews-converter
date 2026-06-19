@@ -28,6 +28,8 @@ function parseMd(md) {
 export default function BlogPost() {
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [lang, setLang] = useState('ko')
+  const [adsOn, setAdsOn] = useState(true)
 
   useEffect(() => {
     const slug = window.location.pathname.split('/blog/')[1]
@@ -37,6 +39,22 @@ export default function BlogPost() {
       .then(data => { setPost(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('dt_lang')
+    if (saved === 'en' || saved === 'ko') setLang(saved)
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+    }).catch(() => {})
+  }, [])
+
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
+  const adLabel = lang === 'en' ? 'Ad' : '광고'
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>
@@ -63,11 +81,13 @@ export default function BlogPost() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <Header siteName="Blog" siteHref="/blog" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Blog" siteHref="/blog" />
 
-      <div className="wrap" style={{ marginTop: 24 }}>
-        <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label="광고" />
-      </div>
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={adLabel} />
+        </div>
+      )}
 
       <div className="wrap" style={{ paddingTop: 40, paddingBottom: 60, maxWidth: 760 }}>
         <Link href="/blog" style={{ color: 'var(--text3)', fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 24 }}>
@@ -99,9 +119,11 @@ export default function BlogPost() {
         )}
 
         {/* 본문 중간 광고 */}
-        <div style={{ marginBottom: 28 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label="광고" />
-        </div>
+        {adsOn && (
+          <div style={{ marginBottom: 28 }}>
+            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={3} label={adLabel} />
+          </div>
+        )}
 
         <div className="md-body" dangerouslySetInnerHTML={{ __html: parseMd(post.content) }} />
 
@@ -116,7 +138,7 @@ export default function BlogPost() {
         )}
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} />
     </>
   )
 }

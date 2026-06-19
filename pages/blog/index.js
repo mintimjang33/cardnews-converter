@@ -19,6 +19,8 @@ export default function BlogIndex() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
+  const [lang, setLang] = useState('ko')
+  const [adsOn, setAdsOn] = useState(true)
 
   const loadPosts = async (category) => {
     setLoading(true)
@@ -34,6 +36,22 @@ export default function BlogIndex() {
 
   useEffect(() => { loadPosts(activeCategory) }, [activeCategory])
 
+  useEffect(() => {
+    const saved = localStorage.getItem('dt_lang')
+    if (saved === 'en' || saved === 'ko') setLang(saved)
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+    }).catch(() => {})
+  }, [])
+
+  const toggleLang = () => {
+    const next = lang === 'ko' ? 'en' : 'ko'
+    setLang(next)
+    localStorage.setItem('dt_lang', next)
+  }
+
+  const adLabel = lang === 'en' ? 'Ad' : '광고'
+
   return (
     <>
       <Head>
@@ -42,11 +60,13 @@ export default function BlogIndex() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <Header siteName="Blog" siteHref="/blog" />
+      <Header lang={lang} onToggleLang={toggleLang} siteName="Blog" siteHref="/blog" />
 
-      <div className="wrap" style={{ marginTop: 24 }}>
-        <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} label="광고" />
-      </div>
+      {adsOn && (
+        <div className="wrap" style={{ marginTop: 24 }}>
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={adLabel} />
+        </div>
+      )}
 
       <div className="wrap" style={{ paddingTop: 40 }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>📝 블로그</h1>
@@ -111,12 +131,14 @@ export default function BlogIndex() {
           ))}
         </div>
 
-        <div style={{ marginTop: 40 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} label="광고" />
-        </div>
+        {adsOn && (
+          <div style={{ marginTop: 40 }}>
+            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={3} label={adLabel} />
+          </div>
+        )}
       </div>
 
-      <Footer siteName="Unified Tools" />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} />
     </>
   )
 }
