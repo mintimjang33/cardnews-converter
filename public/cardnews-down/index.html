@@ -414,7 +414,19 @@
   }
   window.addEventListener('load', reportHeightToParent);
   window.addEventListener('resize', reportHeightToParent);
-  setInterval(reportHeightToParent, 300);
+
+  // 스크롤바 길이 디버그
+  let _lastScrollHeight = 0;
+  setInterval(() => {
+    const sh = document.documentElement.scrollHeight;
+    const ch = document.documentElement.clientHeight;
+    const scrollbarRatio = ch / sh;
+    if (sh !== _lastScrollHeight) {
+      console.log(`[SCROLLBAR DEBUG] scrollHeight: ${sh}px | clientHeight: ${ch}px | 스크롤바 비율: ${(scrollbarRatio * 100).toFixed(1)}% | 변화: ${sh - _lastScrollHeight > 0 ? '+' : ''}${sh - _lastScrollHeight}px`);
+      _lastScrollHeight = sh;
+    }
+    reportHeightToParent();
+  }, 300);
 
   // ── 상태 변수 ──
   let slides = [], currentSlide = 0, isPlaying = false;
@@ -620,30 +632,28 @@
 
   /** HTML을 DOM에 주입하고 card 요소 배열 반환. 호출 후 반드시 cleanup(container) 호출 필요 */
   function injectCards(w, h) {
-    const styleContainer = document.createElement('div');
-    // position:fixed + visibility:hidden → scrollHeight에 전혀 영향 없음
-    // max-height 제한 없이 두어야 html2canvas가 정상 캡처
-    styleContainer.style.cssText = `position:fixed;left:-9999px;top:0;width:${w}px;visibility:hidden;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;`;
+    const renderArea = document.getElementById('render-area');
+    renderArea.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${w}px;max-height:0;overflow:hidden;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;`;
+    renderArea.innerHTML = '';
 
     const parser = new DOMParser();
     const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
     parsedDoc.querySelectorAll('style').forEach(s => {
       const st = document.createElement('style');
       st.textContent = s.textContent;
-      styleContainer.appendChild(st);
+      renderArea.appendChild(st);
     });
     parsedDoc.querySelectorAll('.card').forEach(card => {
       card.style.cssText = (card.style.cssText || '') + `;width:${w}px;height:${h}px;overflow:hidden;flex-shrink:0;`;
-      styleContainer.appendChild(card);
+      renderArea.appendChild(card);
     });
-    document.body.appendChild(styleContainer);
-    return styleContainer;
+    return renderArea;
   }
 
-  function cleanupCards(container) {
-    if (container && container.parentNode) {
-      document.body.removeChild(container);
-    }
+  function cleanupCards() {
+    const renderArea = document.getElementById('render-area');
+    renderArea.innerHTML = '';
+    renderArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1080px;max-height:0;overflow:hidden;';
   }
 
   async function buildPreviewStrip(totalCards) {
@@ -688,7 +698,7 @@
       wrapper.onclick = () => openModal(previewCanvasCache.map(c => c.toDataURL('image/png')), i, wrapper);
       scroll.appendChild(wrapper);
     }
-    cleanupCards(container);
+    cleanupCards();
 
     setProgress(100, '✅ 미리보기 완료!');
     setTimeout(() => document.getElementById('status-box').classList.remove('show'), 600);
@@ -769,7 +779,7 @@
     if (!cards.length) {
       setProgress(0, '❌ 슬라이드를 찾지 못했어요');
       log('class="card" 요소가 없어요.');
-      cleanupCards(container);
+      cleanupCards();
       updateStartButtonState();
       return;
     }
@@ -789,7 +799,7 @@
       slides.push({ dataUrl: canvas.toDataURL('image/png'), name: `slide_${String(i+1).padStart(2,'0')}.png`, text, audioUrl: null, audioDuration: 3 });
       log(`  📸 ${i+1}장 완료`);
     }
-    cleanupCards(container);
+    cleanupCards();
 
     // TTS 처리
     await processTTS();
