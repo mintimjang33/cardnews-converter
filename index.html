@@ -103,7 +103,7 @@
   .dur-select { width: 100%; background: #111; border: 1.5px solid #2a2a2a; border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; }
 
   /* 변환 버튼 */
-  .btn-start { width: 100%; max-width: 700px; padding: 18px; background: linear-gradient(90deg, #FF4B6E, #ff8c42); border: none; border-radius: 16px; color: #fff; font-size: 18px; font-weight: 900; cursor: pointer; transition: opacity 0.2s; }
+  .btn-start { width: 100%; max-width: 700px; padding: 18px; background: linear-gradient(90deg, #FF4B6E, #ff8c42); border: none; border-radius: 16px; color: #fff; font-size: 18px; font-weight: 900; cursor: pointer; transition: opacity 0.2s; margin-top: 14px; }
   .btn-start:hover { opacity: 0.85; }
   .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -216,11 +216,13 @@
       <div class="size-btn" onclick="selectSize(0,0,this)"><span class="size-px">직접 입력</span>커스텀</div>
     </div>
     <div class="custom-row" id="custom-row">
-      <input type="number" id="custom-w" placeholder="가로" value="1080">
+      <input type="number" id="custom-w" placeholder="가로" value="1080" oninput="onCustomSizeInput()">
       <span>×</span>
-      <input type="number" id="custom-h" placeholder="세로" value="1350">
+      <input type="number" id="custom-h" placeholder="세로" value="1350" oninput="onCustomSizeInput()">
       <span style="font-size:12px;color:#555">px</span>
     </div>
+    <button class="btn-start" id="btn-start" onclick="startProcess()" disabled>🚀 변환 시작 (PNG 추출)</button>
+    <div id="btn-start-hint" style="font-size:11px;color:#555;margin-top:6px;text-align:center;">인스타 세로(기본)는 업로드 시 자동 생성됩니다 — 다른 사이즈를 고르면 버튼이 활성화돼요</div>
   </div>
 </div>
 
@@ -275,9 +277,6 @@
     </div>
   </div>
 </div>
-
-<!-- 변환 시작 -->
-<button class="btn-start" id="btn-start" onclick="startProcess()">🚀 변환 시작 (PNG + 음성 생성)</button>
 
 <!-- 결과 섹션 -->
 <div class="result-section" id="result-section">
@@ -508,6 +507,32 @@
       customRow.style.display = 'none';
       outputW = w; outputH = h;
     }
+    updateStartButtonState();
+  }
+
+  function onCustomSizeInput() {
+    outputW = parseInt(document.getElementById('custom-w').value) || 1080;
+    outputH = parseInt(document.getElementById('custom-h').value) || 1350;
+    updateStartButtonState();
+  }
+
+  // 기본값(인스타 세로 1080×1350)이면 업로드 시 미리보기와 동일하므로 버튼 비활성화,
+  // 다른 사이즈를 고르면 실제 변환이 필요하므로 버튼 활성화
+  function updateStartButtonState() {
+    const btn = document.getElementById('btn-start');
+    const hint = document.getElementById('btn-start-hint');
+    if (!btn) return;
+    const isDefaultSize = (outputW === 1080 && outputH === 1350);
+    if (!loadedHtml) {
+      btn.disabled = true;
+      if (hint) hint.textContent = '먼저 1단계에서 HTML 파일을 업로드해주세요';
+    } else if (isDefaultSize) {
+      btn.disabled = true;
+      if (hint) hint.textContent = '인스타 세로(기본)는 업로드 시 자동 생성됩니다 — 다른 사이즈를 고르면 버튼이 활성화돼요';
+    } else {
+      btn.disabled = false;
+      if (hint) hint.textContent = `선택한 사이즈(${outputW}×${outputH})로 추출하려면 버튼을 눌러주세요`;
+    }
   }
 
   // 파일 업로드
@@ -529,6 +554,7 @@
     document.getElementById('info-slides').textContent = '분석중...';
     document.getElementById('info-slides').classList.remove('ready');
     loadedHtml = await file.text();
+    updateStartButtonState();
 
     const parser = new DOMParser();
     const parsedDoc = parser.parseFromString(loadedHtml, 'text/html');
@@ -1076,7 +1102,7 @@
     await new Promise(r => setTimeout(r, 800));
 
     let cards = Array.from(renderArea.querySelectorAll('.card'));
-    if (!cards.length) { setProgress(0, '❌ 슬라이드를 찾지 못했어요'); log('class="card" 요소가 없어요.'); document.getElementById('btn-start').disabled = false; return; }
+    if (!cards.length) { setProgress(0, '❌ 슬라이드를 찾지 못했어요'); log('class="card" 요소가 없어요.'); updateStartButtonState(); return; }
 
     const limitVal = document.getElementById('slide-limit').value;
     cards = limitVal === 'all' ? cards : cards.slice(0, parseInt(limitVal));
@@ -1133,7 +1159,7 @@
       document.getElementById('status-box').classList.remove('show');
       renderResult();
       document.getElementById('result-section').classList.add('show');
-      document.getElementById('btn-start').disabled = false;
+      updateStartButtonState();
       document.getElementById('result-badge').textContent = slides.length + '장 완료';
     }, 600);
   }
@@ -1447,12 +1473,12 @@
     document.getElementById('file-name').textContent = '';
     document.getElementById('play-btn').textContent = '▶';
     document.getElementById('sync-bar').style.width = '0%';
-    document.getElementById('btn-start').disabled = false;
     document.getElementById('info-slides').textContent = '-'; document.getElementById('info-slides').classList.add('ready');
     document.getElementById('info-size').textContent = '-'; document.getElementById('info-chars').textContent = '-'; document.getElementById('info-time').textContent = '-';
     document.getElementById('slide-limit').innerHTML = '<option value="all">파일 업로드 후 자동 감지됩니다</option>';
     uploadZone.classList.remove('done');
     loadedHtml = '';
+    updateStartButtonState();
     document.getElementById('preview-scroll').innerHTML = '<div class="preview-empty">파일을 업로드하면 슬라이드 미리보기가 표시됩니다</div>';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

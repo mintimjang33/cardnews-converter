@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유병재 채용 논란 카드뉴스</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    gap: 24px;
+  }
+  .card {
+    width: 1080px;
+    height: 1350px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px;
+    overflow: hidden;
+  }
+  .slide-num {
+    position: absolute;
+    bottom: 48px;
+    right: 60px;
+    font-size: 22px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 2px;
+  }
+  .tag {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    opacity: 0.7;
+  }
+
+  /* 1장 - 훅 */
+  .card-1 {
+    background: #111;
+  }
+  .card-1::before {
+    content: '';
+    position: absolute;
+    top: -200px; left: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, #FF4B6E44 0%, transparent 70%);
+  }
+  .card-1::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #FF4B6E22 0%, transparent 70%);
+  }
+  .card-1 .tag { color: #FF4B6E; }
+  .card-1 .hook {
+    font-size: 72px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.2;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .card-1 .hook em {
+    color: #FF4B6E;
+    font-style: normal;
+  }
+  .card-1 .sub {
+    margin-top: 40px;
+    font-size: 28px;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 2장 - 사건 소개 */
+  .card-2 {
+    background: #fff;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-bottom: 100px;
+  }
+  .card-2 .big-label {
+    position: absolute;
+    top: 60px; left: 80px;
+    font-size: 200px;
+    font-weight: 900;
+    color: #FF4B6E;
+    opacity: 0.08;
+    line-height: 1;
+  }
+  .card-2 .tag { color: #FF4B6E; }
+  .card-2 .title {
+    font-size: 56px;
+    font-weight: 900;
+    color: #111;
+    line-height: 1.3;
+    margin-bottom: 36px;
+  }
+  .card-2 .body {
+    font-size: 32px;
+    color: #444;
+    line-height: 1.7;
+  }
+  .card-2 .body strong { color: #FF4B6E; }
+
+  /* 3장 - 팩트 1 */
+  .card-3 {
+    background: #FF4B6E;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .card-3 .tag { color: rgba(255,255,255,0.6); }
+  .card-3 .title {
+    font-size: 52px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.3;
+    margin-bottom: 60px;
+  }
+  .fact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    width: 100%;
+  }
+  .fact-item {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 32px 40px;
+  }
+  .fact-icon {
+    font-size: 48px;
+    flex-shrink: 0;
+  }
+  .fact-text {
+    font-size: 34px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.4;
+  }
+
+  /* 4장 - 팩트 2 */
+  .card-4 {
+    background: #111;
+    align-items: flex-start;
+  }
+  .card-4 .tag { color: #FF4B6E; }
+  .card-4 .title {
+    font-size: 48px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.3;
+    margin-bottom: 50px;
+  }
+  .quote-box {
+    background: #1e1e1e;
+    border-left: 8px solid #FF4B6E;
+    border-radius: 0 20px 20px 0;
+    padding: 48px;
+    margin-bottom: 40px;
+    width: 100%;
+  }
+  .quote-text {
+    font-size: 38px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.5;
+    font-style: italic;
+  }
+  .quote-source {
+    margin-top: 20px;
+    font-size: 24px;
+    color: rgba(255,255,255,0.4);
+  }
+  .card-4 .body {
+    font-size: 30px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.7;
+  }
+  .card-4 .body strong { color: #FF4B6E; }
+
+  /* 5장 - 다양한 시각 */
+  .card-5 {
+    background: #f5f5f5;
+    align-items: flex-start;
+  }
+  .card-5 .tag { color: #FF4B6E; }
+  .card-5 .title {
+    font-size: 52px;
+    font-weight: 900;
+    color: #111;
+    margin-bottom: 50px;
+  }
+  .vs-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    width: 100%;
+  }
+  .vs-box {
+    border-radius: 20px;
+    padding: 44px;
+  }
+  .vs-box.red {
+    background: #FF4B6E;
+  }
+  .vs-box.gray {
+    background: #e0e0e0;
+  }
+  .vs-label {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+  .vs-box.red .vs-label { color: rgba(255,255,255,0.7); }
+  .vs-box.gray .vs-label { color: #888; }
+  .vs-content {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .vs-box.red .vs-content { color: #fff; }
+  .vs-box.gray .vs-content { color: #333; }
+
+  /* 6장 - 현황 */
+  .card-6 {
+    background: #fff;
+    align-items: flex-start;
+  }
+  .card-6 .tag { color: #FF4B6E; }
+  .card-6 .title {
+    font-size: 52px;
+    font-weight: 900;
+    color: #111;
+    margin-bottom: 50px;
+  }
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+  }
+  .tl-item {
+    display: flex;
+    gap: 32px;
+    position: relative;
+  }
+  .tl-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20px;
+    flex-shrink: 0;
+  }
+  .tl-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #FF4B6E;
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+  .tl-line {
+    width: 3px;
+    flex: 1;
+    background: #eee;
+    margin: 4px 0;
+    min-height: 40px;
+  }
+  .tl-content {
+    padding-bottom: 48px;
+  }
+  .tl-date {
+    font-size: 22px;
+    color: #FF4B6E;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .tl-text {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1.5;
+  }
+  .tl-sub {
+    font-size: 26px;
+    color: #888;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* 7장 - CTA */
+  .card-7 {
+    background: #FF4B6E;
+  }
+  .card-7 .cta-main {
+    font-size: 80px;
+    font-weight: 900;
+    color: #fff;
+    text-align: center;
+    line-height: 1.2;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .card-7 .cta-sub {
+    font-size: 34px;
+    color: rgba(255,255,255,0.75);
+    text-align: center;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+  .card-7 .cta-icons {
+    display: flex;
+    gap: 40px;
+    margin-top: 60px;
+    position: relative;
+    z-index: 1;
+  }
+  .cta-icon-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .cta-icon-circle {
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+  .cta-icon-label {
+    font-size: 24px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 700;
+  }
+  .card-7::before {
+    content: '';
+    position: absolute;
+    top: -150px; right: -150px;
+    width: 600px; height: 600px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .card-7::after {
+    content: '';
+    position: absolute;
+    bottom: -200px; left: -100px;
+    width: 500px; height: 500px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<!-- 1장: 훅 -->
+<div class="card card-1">
+  <div class="tag">🎬 연예 논란</div>
+  <div class="hook">
+    매출 <em>100억</em> 회사가<br>이걸 인턴한테<br>시킨다고?
+  </div>
+  <div class="sub">유병재 제작사 채용 공고 논란</div>
+  <div class="slide-num">1 / 7</div>
+</div>
+
+<!-- 2장: 사건 소개 -->
+<div class="card card-2">
+  <div class="big-label">?</div>
+  <div class="tag">무슨 일이냐면</div>
+  <div class="title">유병재 공동 설립<br>제작사 블랙페이퍼가<br>인턴 채용 공고를 올렸다</div>
+  <div class="body">
+    직무명은 <strong>PM(프로젝트 매니저)</strong><br>
+    기간은 <strong>6개월 계약직</strong><br>
+    그런데 요구 스펙이 심상치 않았다
+  </div>
+  <div class="slide-num">2 / 7</div>
+</div>
+
+<!-- 3장: 팩트 1 -->
+<div class="card card-3">
+  <div class="tag">팩트 확인</div>
+  <div class="title">채용 공고에 적힌 것들</div>
+  <div class="fact-list">
+    <div class="fact-item">
+      <div class="fact-icon">📋</div>
+      <div class="fact-text">유튜브 콘텐츠 기획 + 팀 운영 + 브랜드 전략 수립</div>
+    </div>
+    <div class="fact-item">
+      <div class="fact-icon">🎨</div>
+      <div class="fact-text">포토샵 편집 + 영상 편집 + SNS 채널 운영</div>
+    </div>
+    <div class="fact-item">
+      <div class="fact-icon">❌</div>
+      <div class="fact-text">정규직 전환 계획 없음 — 공고에 명시</div>
+    </div>
+    <div class="fact-item">
+      <div class="fact-icon">💰</div>
+      <div class="fact-text">회사 연매출은 100억 원</div>
+    </div>
+  </div>
+  <div class="slide-num">3 / 7</div>
+</div>
+
+<!-- 4장: 팩트 2 -->
+<div class="card card-4">
+  <div class="tag">논란 포인트</div>
+  <div class="title">과거 발언이<br>발목을 잡았다</div>
+  <div class="quote-box">
+    <div class="quote-text">"나 같은 신입은<br>어디서 경력을 쌓냐"</div>
+    <div class="quote-source">— 유병재, 과거 SNL 코리아 출연 당시</div>
+  </div>
+  <div class="body">
+    청년 세대 고충을 풍자해 인기를 얻었던 그가<br>
+    정작 본인 회사에선 <strong>경력직 업무를 인턴 조건으로</strong> 내걸었다는 비판이 터졌다
+  </div>
+  <div class="slide-num">4 / 7</div>
+</div>
+
+<!-- 5장: 다양한 시각 -->
+<div class="card card-5">
+  <div class="tag">갑론을박</div>
+  <div class="title">누구 말이 맞을까?</div>
+  <div class="vs-wrap">
+    <div class="vs-box red">
+      <div class="vs-label">😤 비판 측</div>
+      <div class="vs-content">"경력직 업무에 인턴 대우,<br>정규직 전환도 없다.<br>이건 그냥 열정페이다"</div>
+    </div>
+    <div class="vs-box gray">
+      <div class="vs-label">🤔 옹호 측</div>
+      <div class="vs-content">"콘텐츠 업계에선<br>인턴도 실무 전반을<br>맡는 게 흔한 일이다"</div>
+    </div>
+  </div>
+  <div class="slide-num">5 / 7</div>
+</div>
+
+<!-- 6장: 현황 -->
+<div class="card card-6">
+  <div class="tag">지금은?</div>
+  <div class="title">논란 이후<br>벌어진 일</div>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date">공고 게시</div>
+        <div class="tl-text">PM 인턴 채용 공고 올라옴</div>
+        <div class="tl-sub">온라인 커뮤니티로 퍼지기 시작</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date">논란 확산</div>
+        <div class="tl-text">"위선적이다" 비판 폭발</div>
+        <div class="tl-sub">과거 발언 영상 재소환</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date">현재</div>
+        <div class="tl-text">공고 즉시 삭제</div>
+        <div class="tl-sub">"오해 소지 있었다" 해명 후 수정 예정</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">6 / 7</div>
+</div>
+
+<!-- 7장: CTA -->
+<div class="card card-7">
+  <div class="cta-main">이 공고<br>지원했을 것 같아?</div>
+  <div class="cta-sub">댓글로 의견 남겨줘 👇<br>저장하면 나중에 다시 볼 수 있어</div>
+  <div class="cta-icons">
+    <div class="cta-icon-box">
+      <div class="cta-icon-circle">💬</div>
+      <div class="cta-icon-label">댓글</div>
+    </div>
+    <div class="cta-icon-box">
+      <div class="cta-icon-circle">🔖</div>
+      <div class="cta-icon-label">저장</div>
+    </div>
+    <div class="cta-icon-box">
+      <div class="cta-icon-circle">📤</div>
+      <div class="cta-icon-label">공유</div>
+    </div>
+  </div>
+  <div class="slide-num">7 / 7</div>
+</div>
+
+</body>
+</html>
