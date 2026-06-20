@@ -468,7 +468,14 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
               </div>
 
               <div>
-                <label style={S.label}>썸네일 이미지 URL</label>
+                <label style={S.label}>발행일 (비워두면 발행 버튼 누른 시각으로 자동 기록)</label>
+                <input type="date" value={form.publishedAt ? form.publishedAt.slice(0,10) : ''}
+                  onChange={e=>setForm(v=>({...v,publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''}))}
+                  style={S.input} />
+              </div>
+
+              <div>
+                <label style={S.label}>커버 이미지 URL</label>
                 <input value={form.thumbnail} onChange={e=>setForm(v=>({...v,thumbnail:e.target.value}))} placeholder="https://..." style={S.input} />
               </div>
 
