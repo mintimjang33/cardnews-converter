@@ -1,32 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { DEFAULT_CATEGORIES } from '../../lib/blogCategories'
-
-// ── 마크다운 파서
-function parseMd(md) {
-  if (!md) return ''
-  const codePH = []
-  let h = md.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, c) => {
-    codePH.push(`<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`)
-    return `%%CODE${codePH.length-1}%%`
-  })
-  h = h
-    .replace(/^---$/gm,'<hr>')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0">')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
-    .replace(/^- (.+)$/gm,'<li>$1</li>')
-  h = h.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-  h = h.split(/\n{2,}/).map(b => {
-    b = b.trim(); if (!b) return ''
-    if (/^<(h[1-3]|ul|ol|pre|blockquote|hr)/.test(b) || /%%CODE/.test(b)) return b
-    return `<p>${b.replace(/\n/g,'<br>')}</p>`
-  }).join('\n')
-  h = h.replace(/%%CODE(\d+)%%/g, (_, i) => codePH[i])
-  return h
-}
+import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
 
 function slugify(text) {
   if (!text) return ''
@@ -393,6 +367,14 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
         .md-preview a { color:#f97316; text-decoration:underline; }
         .md-preview hr { border:none; border-top:2px solid #f3f4f6; margin:20px 0; }
         .md-preview img { max-width:100%; border-radius:8px; margin:8px 0; display:block; }
+        .md-preview svg { max-width:100%; display:block; margin:16px 0; }
+        .md-preview table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; border:2px solid #e63946; border-radius:8px; overflow:hidden; }
+        .md-preview thead th { background:#e63946; color:#fff; padding:10px 14px; text-align:left; border:1px solid #c92a3a; font-weight:700; }
+        .md-preview tbody td { padding:10px 14px; border:1px solid #e5e7eb; background:#fff; color:#374151; }
+        .md-preview tbody tr:nth-child(even) td { background:#fef2f2; }
+        @media (max-width:600px) {
+          .md-preview table { font-size:13px; display:block; overflow-x:auto; }
+        }
       `}</style>
 
       {/* 헤더 */}
