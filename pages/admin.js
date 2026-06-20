@@ -5,6 +5,7 @@ import LegalPanel from '../components/admin/LegalPanel'
 import AdsensePanel from '../components/admin/AdsensePanel'
 import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
+import ContentLogPanel from '../components/admin/ContentLogPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
 const TAB_LABELS = {
@@ -14,6 +15,7 @@ const TAB_LABELS = {
   blog_write: '✍️ 게시판 글쓰기',
   blog_admin: '📝 게시판 관리',
   blog_menu: '📋 게시판 메뉴관리',
+  content_log: '🗂️ 발행 기록',
   password: '🔑 비밀번호 변경',
 }
 
@@ -236,6 +238,11 @@ export default function Admin() {
             {/* ── 게시판 메뉴관리 */}
             {activeTab === 'blog_menu' && (
               <BlogMenuPanel adminToken={adminToken} />
+            )}
+
+            {/* ── 발행 기록 (관리자 전용, 공개 노출 없음) */}
+            {activeTab === 'content_log' && (
+              <ContentLogPanel adminToken={adminToken} />
             )}
 
             {/* ── 비밀번호 변경 */}

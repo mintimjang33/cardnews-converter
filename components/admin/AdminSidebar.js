@@ -1,13 +1,14 @@
 import { useState } from 'react'
 
 const NAV = [
-  { id: 'settings',   label: '서비스 설정', icon: '🔧' },
-  { id: 'legal',      label: '약관 관리',   icon: '📜' },
-  { id: 'adsense',    label: '광고 관리',   icon: '📢' },
-  { id: 'blog_write', label: '게시판 글쓰기', icon: '✍️' },
-  { id: 'blog_admin', label: '게시판 관리', icon: '📝' },
-  { id: 'blog_menu',  label: '게시판 메뉴관리', icon: '📋' },
-  { id: 'password',   label: '비밀번호 변경', icon: '🔑' },
+  { id: 'settings',    label: '서비스 설정', icon: '🔧' },
+  { id: 'legal',       label: '약관 관리',   icon: '📜' },
+  { id: 'adsense',     label: '광고 관리',   icon: '📢' },
+  { id: 'blog_write',  label: '게시판 글쓰기', icon: '✍️' },
+  { id: 'blog_admin',  label: '게시판 관리', icon: '📝' },
+  { id: 'blog_menu',   label: '게시판 메뉴관리', icon: '📋' },
+  { id: 'content_log', label: '발행 기록',   icon: '🗂️' },
+  { id: 'password',    label: '비밀번호 변경', icon: '🔑' },
 ]
 
 function NavItem({ item, active, onClick }) {
