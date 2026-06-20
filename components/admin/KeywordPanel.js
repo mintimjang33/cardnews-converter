@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 
-// 고정 도구 목록 (기본 업데이트 버튼용)
 const BASE_TOOLS = [
   { id: 'thumb-down',    label: '🖼 썸네일',   hint: '썸네일' },
   { id: 'sound-down',    label: '🔊 효과음',   hint: '효과음' },
@@ -24,17 +23,17 @@ function daysSince(iso) {
 function fmt(n) { return (n || 0).toLocaleString() }
 
 export default function KeywordPanel({ token }) {
-  const [hintList, setHintList]     = useState([])   // Supabase에서 동적으로 받은 hint 목록
-  const [loading, setLoading]       = useState({})
-  const [expanded, setExpanded]     = useState(null)
-  const [topData, setTopData]       = useState({})
-  const [topLoading, setTopLoading] = useState({})
-  const [toast, setToast]           = useState('')
-  const [tab, setTab]               = useState('top')
-  const [picks, setPicks]           = useState([])
+  const [hintList, setHintList]         = useState([])
+  const [loading, setLoading]           = useState({})
+  const [expanded, setExpanded]         = useState(null)
+  const [topData, setTopData]           = useState({})
+  const [topLoading, setTopLoading]     = useState({})
+  const [toast, setToast]               = useState('')
+  const [tab, setTab]                   = useState('top')
+  const [picks, setPicks]               = useState([])
   const [picksLoading, setPicksLoading] = useState(false)
-  const [addKeyword, setAddKeyword] = useState('')
-  const [addLoading, setAddLoading] = useState(false)
+  const [addKeyword, setAddKeyword]     = useState('')
+  const [addLoading, setAddLoading]     = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -58,7 +57,6 @@ export default function KeywordPanel({ token }) {
 
   useEffect(() => { loadPicks() }, [token])
 
-  // 도구 클릭 → TOP 키워드 로드 (hint 기준)
   const handleExpand = async (hint) => {
     if (expanded === hint) { setExpanded(null); return }
     setExpanded(hint)
@@ -74,7 +72,6 @@ export default function KeywordPanel({ token }) {
     setTopLoading(l => ({ ...l, [hint]: false }))
   }
 
-  // 기본 도구 업데이트
   const handleUpdate = async (tool) => {
     setLoading(l => ({ ...l, [tool.hint]: true }))
     try {
@@ -90,7 +87,6 @@ export default function KeywordPanel({ token }) {
     setLoading(l => ({ ...l, [tool.hint]: false }))
   }
 
-  // 키워드 추가 수집 → 아래 목록에 새 행으로 추가
   const handleAdd = async () => {
     const kw = addKeyword.trim()
     if (!kw) return showToast('키워드를 입력해주세요')
@@ -101,7 +97,7 @@ export default function KeywordPanel({ token }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
-      loadStats()  // 목록 새로고침 → 새 hint가 아래에 추가됨
+      loadStats()
       setTopData(d => ({ ...d, [kw]: null }))
       showToast(`✅ "${kw}" 연관 키워드 ${data.saved}개 추가됨!`)
       setAddKeyword('')
@@ -109,7 +105,6 @@ export default function KeywordPanel({ token }) {
     setAddLoading(false)
   }
 
-  // hint 전체 삭제
   const handleDeleteHint = async (hint) => {
     if (!confirm(`"${hint}" 키워드 데이터를 전부 삭제할까요?`)) return
     try {
@@ -123,6 +118,8 @@ export default function KeywordPanel({ token }) {
       showToast(`🗑 "${hint}" 삭제 완료`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
+
+  const handlePick = async (hint, item) => {
     const isPicked = item.picked
     try {
       if (isPicked) {
@@ -155,13 +152,11 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
-  // 기본 도구 hint Set
   const baseHints = new Set(BASE_TOOLS.map(t => t.hint))
 
-  // 전체 표시 목록: 기본 도구 먼저, 그 다음 추가된 hint들
   const baseRows = BASE_TOOLS.map(tool => {
     const stat = hintList.find(h => h.hint === tool.hint) || {}
-    return { hint: tool.hint, label: tool.label, isBase: true, tool, ...stat }
+    return { hint: tool.hint, label: tool.label, isBase: true, tool, collected_at: stat.collected_at, count: stat.count || 0 }
   })
   const extraRows = hintList
     .filter(h => !baseHints.has(h.hint))
@@ -203,9 +198,7 @@ export default function KeywordPanel({ token }) {
             {addLoading ? '수집 중...' : '수집'}
           </button>
         </div>
-        <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>
-          수집하면 아래 목록에 새 항목으로 추가됩니다.
-        </div>
+        <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>수집하면 아래 목록에 새 항목으로 추가됩니다.</div>
       </div>
 
       {/* 탭 */}
@@ -224,11 +217,11 @@ export default function KeywordPanel({ token }) {
       {tab === 'top' && (
         <div>
           {allRows.map(row => {
-            const days       = daysSince(row.collected_at)
+            const days        = daysSince(row.collected_at)
             const needsUpdate = days >= 30
-            const isLoading  = loading[row.hint]
-            const isExpanded = expanded === row.hint
-            const topList    = topData[row.hint] || []
+            const isLoading   = loading[row.hint]
+            const isExpanded  = expanded === row.hint
+            const topList     = topData[row.hint] || []
 
             return (
               <div key={row.hint} style={{ marginBottom: 8 }}>
@@ -241,9 +234,7 @@ export default function KeywordPanel({ token }) {
                   cursor: row.count > 0 ? 'pointer' : 'default',
                 }} onClick={() => row.count > 0 && handleExpand(row.hint)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0', minWidth: 120 }}>
-                      {row.label}
-                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0', minWidth: 120 }}>{row.label}</span>
                     <div>
                       <div style={{ fontSize: 13, color: needsUpdate ? '#f87171' : '#a1a1aa' }}>
                         네이버 검색일: <b style={{ color: needsUpdate ? '#fca5a5' : '#d4d4d8' }}>{formatDate(row.collected_at)}</b>
@@ -261,7 +252,6 @@ export default function KeywordPanel({ token }) {
                         {isExpanded ? '▲' : '▼'}
                       </span>
                     )}
-                    {/* 기본 도구만 업데이트 버튼 */}
                     {row.isBase && (
                       <button onClick={e => { e.stopPropagation(); handleUpdate(row.tool) }} disabled={isLoading} style={{
                         background: needsUpdate ? '#e63946' : '#27272a',
@@ -274,10 +264,9 @@ export default function KeywordPanel({ token }) {
                         {isLoading ? '수집 중...' : '업데이트'}
                       </button>
                     )}
-                    {/* 삭제 버튼 */}
                     <button onClick={e => { e.stopPropagation(); handleDeleteHint(row.hint) }} style={{
                       background: 'none', border: '1px solid #3f3f46', borderRadius: 8,
-                      color: '#71717a', fontSize: 12, padding: '7px 10px',
+                      color: '#71717a', fontSize: 13, padding: '7px 10px',
                       cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
                     }}>🗑</button>
                   </div>
