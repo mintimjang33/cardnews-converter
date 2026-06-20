@@ -4,8 +4,8 @@ const BASE_TOOLS = [
   { id: 'thumb-down',    label: '🖼 썸네일',   hint: '썸네일' },
   { id: 'sound-down',    label: '🔊 효과음',   hint: '효과음' },
   { id: 'clock-down',    label: '⏱ 타이머',   hint: '타이머' },
-  { id: 'voice-down',    label: '🎤 보이스',   hint: '음성타이핑' },
-  { id: 'text-down',     label: '📝 텍스트',   hint: '글자수세기' },
+  { id: 'voice-down',    label: '🎤 보이스',   hint: '보이스' },
+  { id: 'text-down',     label: '📝 텍스트',   hint: '텍스트' },
   { id: 'cardnews-down', label: '📰 카드뉴스', hint: '카드뉴스' },
 ]
 
@@ -241,7 +241,7 @@ export default function KeywordPanel({ token }) {
                       </div>
                       {row.count > 0 && (
                         <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>
-                          키워드 {fmt(row.count)}개 · 클릭해서 TOP 50 보기
+                          키워드 <b style={{ color: '#e63946', fontSize: 13 }}>{fmt(row.count)}개</b> · 클릭해서 TOP 50 보기
                         </div>
                       )}
                     </div>
