@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { S, Toast } from './AdminUI'
 
-// 도구 목록 (사이트에 새 도구 추가 시 여기에도 추가)
+// 도구 목록 (검색 수요 기준 순서 — 사이트에 새 도구 추가 시 여기에도 추가)
 const TOOLS = [
-  { id: 'cardnews-down', label: '📰 카드뉴스' },
   { id: 'thumb-down',    label: '🖼 썸네일' },
   { id: 'sound-down',    label: '🔊 효과음' },
   { id: 'clock-down',    label: '⏱ 타이머' },
   { id: 'voice-down',    label: '🎤 보이스' },
   { id: 'text-down',     label: '📝 텍스트' },
+  { id: 'cardnews-down', label: '📰 카드뉴스' },
 ]
 const toolLabel = (id) => TOOLS.find(t => t.id === id)?.label || id
 
@@ -21,8 +21,51 @@ export default function ContentLogPanel({ adminToken }) {
   // 수동 추가 폼 (보통은 Claude가 작성해주는 내용을 그대로 붙여넣는 용도)
   const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '' })
   const [saving, setSaving] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [parseMsg, setParseMsg] = useState('')
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200) }
+
+  // "도구: thumb-down\n키워드 각도: 다운로드 방법\n제목: ...\n슬러그: ..." 형태의
+  // 4줄 텍스트를 붙여넣으면 자동으로 form 칸에 나눠 채워준다.
+  const parsePastedLog = (text) => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    const picked = { tool: '', angle: '', title: '', slug: '', memo: '' }
+    const patterns = {
+      tool: /^(도구|tool)\s*[:：]\s*(.+)$/i,
+      angle: /^(키워드\s*각도|각도|angle)\s*[:：]\s*(.+)$/i,
+      title: /^(제목|title)\s*[:：]\s*(.+)$/i,
+      slug: /^(슬러그|slug)\s*[:：]\s*(.+)$/i,
+      memo: /^(메모|비고|memo)\s*[:：]\s*(.+)$/i,
+    }
+    lines.forEach(line => {
+      for (const key of Object.keys(patterns)) {
+        const m = line.match(patterns[key])
+        if (m) picked[key] = m[2].trim()
+      }
+    })
+    return picked
+  }
+
+  const handlePasteParse = (text) => {
+    setPasteText(text)
+    if (!text.trim()) { setParseMsg(''); return }
+    const picked = parsePastedLog(text)
+    const found = Object.entries(picked).filter(([, v]) => v)
+    if (found.length === 0) {
+      setParseMsg('⚠️ 인식된 항목이 없습니다. "도구: ...", "제목: ..." 형식인지 확인해주세요.')
+      return
+    }
+    setForm(f => ({
+      tool: picked.tool ? (TOOLS.find(t => t.id === picked.tool)?.id || picked.tool) : f.tool,
+      angle: picked.angle || f.angle,
+      title: picked.title || f.title,
+      slug: picked.slug || f.slug,
+      memo: picked.memo || f.memo,
+    }))
+    const labels = { tool: '도구', angle: '각도', title: '제목', slug: '슬러그', memo: '메모' }
+    setParseMsg(`✅ ${found.map(([k]) => labels[k]).join(', ')} 자동 입력됨 — 아래 내용 확인 후 "기록 추가"를 눌러주세요`)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,6 +94,8 @@ export default function ContentLogPanel({ adminToken }) {
       })
       if (!res.ok) throw new Error()
       setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '' })
+      setPasteText('')
+      setParseMsg('')
       showToast('✅ 기록 추가됨')
       load()
     } catch {
@@ -84,8 +129,24 @@ export default function ContentLogPanel({ adminToken }) {
         <p style={{ color: '#888', fontSize: 13, lineHeight: 1.7, marginBottom: 18 }}>
           공개 블로그에는 노출되지 않는 내부 기록입니다. Claude가 글을 작성할 때마다
           어떤 도구를, 어떤 키워드 각도로 다뤘는지 제목·슬러그와 함께 여기에 남겨두면
-          다음 글 작성 시 중복을 피하는 데 사용됩니다.
+          다음 글 작성 시 중복을 피하는 데 사용됩니다. 아래 붙여넣기 칸에 Claude가 준
+          4줄(도구/키워드 각도/제목/슬러그)을 그대로 붙여넣으면 자동으로 입력됩니다.
         </p>
+
+        {/* 붙여넣기 자동 입력 */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={S.label}>📋 Claude가 준 발행 기록 4줄을 여기에 붙여넣으세요</label>
+          <textarea
+            value={pasteText}
+            onChange={e => handlePasteParse(e.target.value)}
+            placeholder={'도구: thumb-down\n키워드 각도: 다운로드 방법\n제목: 유튜브 썸네일 무료 다운로드 방법, 가입 없이 3초만에\n슬러그: youtube-thumbnail-download-free'}
+            rows={4}
+            style={{ ...S.textarea, marginBottom: 6 }}
+          />
+          {parseMsg && (
+            <div style={{ fontSize: 12, color: parseMsg.startsWith('✅') ? '#4ade80' : '#fbbf24' }}>{parseMsg}</div>
+          )}
+        </div>
 
         {/* 수동 추가 폼 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
