@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { S } from './AdminUI'
+import { DEFAULT_CATEGORIES } from '../../lib/blogCategories'
 
-const DEFAULT_CATS = ['thumb-down', 'sound-down', 'clock-down', 'voice-down', 'text-down', 'sensor-game', 'general']
+const DEFAULT_CATS = DEFAULT_CATEGORIES
 
 export default function BlogMenuPanel({ adminToken }) {
   const [categories, setCategories] = useState([])

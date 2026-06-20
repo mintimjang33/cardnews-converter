@@ -5,6 +5,7 @@ import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { AdSlot } from '../../components/AdSlot'
 import { findAdSlot } from '../../lib/adSlots'
+import { categoryLabel } from '../../lib/blogCategories'
 
 function parseMd(md) {
   if (!md) return ''
@@ -105,7 +106,7 @@ export default function BlogPost() {
 
         {post.category && (
           <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'var(--surface2)', color: 'var(--text2)', marginBottom: 14, display: 'inline-block' }}>
-            {post.category}
+            {categoryLabel(post.category)}
           </span>
         )}
 

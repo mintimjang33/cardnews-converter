@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { DEFAULT_CATEGORIES } from '../../lib/blogCategories'
 
 // ── 마크다운 파서
 function parseMd(md) {
@@ -194,7 +195,7 @@ const ROUTINES = {
   }
 }
 
-const DEFAULT_CATS = ['thumb-down','sound-down','clock-down','voice-down','text-down','sensor-game','general']
+const DEFAULT_CATS = DEFAULT_CATEGORIES
 
 const S = {
   page: { minHeight:'100vh', background:'#0c0c0c', fontFamily:"'Outfit', sans-serif", color:'#f0f0f0', paddingBottom:60 },

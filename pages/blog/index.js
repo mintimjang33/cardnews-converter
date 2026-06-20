@@ -1,43 +1,53 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { AdSlot } from '../../components/AdSlot'
 import { findAdSlot } from '../../lib/adSlots'
+import { DEFAULT_CATEGORIES, categoryLabel } from '../../lib/blogCategories'
 
-const CATEGORIES = [
-  { id: 'all',        label: '전체' },
-  { id: 'thumb-down', label: '🖼 썸네일' },
-  { id: 'sound-down', label: '🔊 효과음' },
-  { id: 'clock-down', label: '⏱ 타이머' },
-  { id: 'voice-down', label: '🎤 보이스' },
-  { id: 'text-down',  label: '📝 텍스트' },
-  { id: 'general',    label: '💡 일반' },
-]
+const PAGE_SIZE = 12
 
 export default function BlogIndex() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
   const [lang, setLang] = useState('ko')
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [customCategories, setCustomCategories] = useState([])
 
-  const loadPosts = async (category) => {
-    setLoading(true)
+  // 기본 카테고리 + 글쓰기에서 추가한 커스텀 카테고리를 합쳐서 필터 칩 구성
+  const categoryChips = [
+    { id: 'all', label: '전체' },
+    ...[...DEFAULT_CATEGORIES, ...customCategories.map(c => c.label).filter(l => !DEFAULT_CATEGORIES.includes(l))]
+      .map(id => ({ id, label: categoryLabel(id) })),
+  ]
+
+  const fetchPosts = useCallback(async (category, offset, append) => {
+    if (append) setLoadingMore(true); else setLoading(true)
     try {
-      const params = new URLSearchParams({ limit: 30 })
+      const params = new URLSearchParams({ limit: PAGE_SIZE, offset })
       if (category && category !== 'all') params.set('category', category)
       const res = await fetch(`/api/blog/posts?${params}`)
       const data = await res.json()
-      setPosts(Array.isArray(data) ? data : [])
-    } catch { setPosts([]) }
-    setLoading(false)
-  }
+      const list = Array.isArray(data) ? data : []
+      setPosts(prev => append ? [...prev, ...list] : list)
+      setHasMore(list.length === PAGE_SIZE)
+    } catch {
+      if (!append) setPosts([])
+      setHasMore(false)
+    }
+    if (append) setLoadingMore(false); else setLoading(false)
+  }, [])
 
-  useEffect(() => { loadPosts(activeCategory) }, [activeCategory])
+  useEffect(() => { fetchPosts(activeCategory, 0, false) }, [activeCategory, fetchPosts])
+
+  const handleLoadMore = () => { fetchPosts(activeCategory, posts.length, true) }
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
@@ -46,6 +56,9 @@ export default function BlogIndex() {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.adSlots !== undefined) setAdSlots(d.adSlots)
     }).catch(() => {}).finally(() => setSettingsLoaded(true))
+    fetch('/api/blog/categories').then(r => r.json()).then(data => {
+      setCustomCategories(Array.isArray(data) ? data : [])
+    }).catch(() => {})
   }, [])
 
   const toggleLang = () => {
@@ -76,9 +89,9 @@ export default function BlogIndex() {
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>📝 블로그</h1>
         <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 28 }}>유용한 팁, 사용법, 업데이트 소식</p>
 
-        {/* 카테고리 필터 */}
+        {/* 카테고리 필터 (기본 + 커스텀 카테고리 동적 로딩) */}
         <div className="cat-chips" style={{ marginBottom: 28 }}>
-          {CATEGORIES.map(cat => (
+          {categoryChips.map(cat => (
             <button key={cat.id} className={`cat-chip${activeCategory === cat.id ? ' active' : ''}`}
               onClick={() => setActiveCategory(cat.id)}>
               {cat.label}
@@ -115,7 +128,7 @@ export default function BlogIndex() {
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
                       background: 'var(--surface2)', color: 'var(--text2)', marginBottom: 8, display: 'inline-block',
-                    }}>{post.category}</span>
+                    }}>{categoryLabel(post.category)}</span>
                   )}
                   <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '8px 0 6px', lineHeight: 1.4 }}>
                     {post.title}
@@ -134,6 +147,19 @@ export default function BlogIndex() {
             </Link>
           ))}
         </div>
+
+        {!loading && hasMore && posts.length > 0 && (
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            <button onClick={handleLoadMore} disabled={loadingMore}
+              style={{
+                padding: '10px 28px', borderRadius: 999, border: '1.5px solid var(--border)',
+                background: 'var(--surface)', color: 'var(--text2)', fontSize: 14, fontWeight: 600,
+                cursor: loadingMore ? 'default' : 'pointer', opacity: loadingMore ? 0.6 : 1,
+              }}>
+              {loadingMore ? '불러오는 중...' : '더 보기'}
+            </button>
+          </div>
+        )}
 
         {settingsLoaded && adsOn && (
           <div style={{ marginTop: 40 }}>
