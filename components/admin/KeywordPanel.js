@@ -30,6 +30,9 @@ export default function KeywordPanel({ token }) {
   const [topLoading, setTopLoading]     = useState({})
   const [toast, setToast]               = useState('')
   const [tab, setTab]                   = useState('top')
+  const [allKeywords, setAllKeywords]   = useState([])
+  const [allKwLoading, setAllKwLoading] = useState(false)
+  const [allKwLoaded, setAllKwLoaded]   = useState(false)
   const [picks, setPicks]               = useState([])
   const [picksLoading, setPicksLoading] = useState(false)
   const [addKeyword, setAddKeyword]     = useState('')
@@ -38,7 +41,24 @@ export default function KeywordPanel({ token }) {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const loadStats = () => {
+  const loadAllKeywords = async () => {
+    if (allKwLoaded) return
+    setAllKwLoading(true)
+    try {
+      const res = await fetch('/api/tools/keyword-all?limit=200', {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      setAllKeywords(data.results || [])
+      setAllKwLoaded(true)
+    } catch (e) { console.error(e) }
+    setAllKwLoading(false)
+  }
+
+  const handleTabChange = (t) => {
+    setTab(t)
+    if (t === 'all') loadAllKeywords()
+  }
     fetch('/api/tools/keyword-stats', { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(data => setHintList(Array.isArray(data) ? data : []))
@@ -206,8 +226,8 @@ export default function KeywordPanel({ token }) {
 
       {/* 탭 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[['top', '📊 수집 현황'], ['picks', '⭐ 찜한 키워드']].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
+        {[['top', '📊 수집 현황'], ['all', '📈 전체 순위'], ['picks', '⭐ 찜한 키워드']].map(([id, label]) => (
+          <button key={id} onClick={() => handleTabChange(id)} style={{
             padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
             background: tab === id ? '#e63946' : '#27272a',
             color: tab === id ? '#fff' : '#a1a1aa',
@@ -316,6 +336,42 @@ export default function KeywordPanel({ token }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* 전체 순위 */}
+      {tab === 'all' && (
+        <div>
+          {allKwLoading ? (
+            <div style={{ color: '#71717a', fontSize: 13, padding: 20, textAlign: 'center' }}>로딩 중...</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>순위</th>
+                  <th style={S.th}>키워드 그룹</th>
+                  <th style={S.th}>키워드</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={S.th}>경쟁</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allKeywords.map((item, i) => (
+                  <tr key={`${item.hint}-${item.keyword}`}>
+                    <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
+                    <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.hint}</td>
+                    <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
+                    <td style={S.tdNum}>{fmt(item.pc)}</td>
+                    <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                    <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                    <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
