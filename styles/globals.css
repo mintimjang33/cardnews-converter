@@ -253,6 +253,14 @@ body {
 .md-body blockquote { border-left: 3px solid var(--accent); padding: 8px 16px; background: var(--surface); margin: 14px 0; border-radius: 0 8px 8px 0; color: var(--text3); }
 .md-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 .md-body img { max-width: 100%; border-radius: 10px; margin: 10px 0; display: block; }
+.md-body svg { max-width: 100%; display: block; margin: 16px 0; }
+.md-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; border: 2px solid var(--accent); border-radius: 8px; overflow: hidden; }
+.md-body thead th { background: var(--accent); color: #fff; padding: 10px 14px; text-align: left; border: 1px solid var(--accent); font-weight: 700; }
+.md-body tbody td { padding: 10px 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); }
+.md-body tbody tr:nth-child(even) td { background: var(--surface2); }
+@media (max-width: 600px) {
+  .md-body table { font-size: 13px; display: block; overflow-x: auto; }
+}
 
 /* ── VOICE-DOWN ── */
 .mic-wrap { display:flex; justify-content:center; padding: 32px 0 24px; }

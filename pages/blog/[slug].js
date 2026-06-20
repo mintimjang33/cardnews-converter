@@ -6,26 +6,7 @@ import Footer from '../../components/Footer'
 import { AdSlot } from '../../components/AdSlot'
 import { findAdSlot } from '../../lib/adSlots'
 import { categoryLabel } from '../../lib/blogCategories'
-
-function parseMd(md) {
-  if (!md) return ''
-  return md
-    .replace(/```[\w]*\n?([\s\S]*?)```/g, (_, c) => `<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>').replace(/^## (.+)$/gm, '<h2>$1</h2>').replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:10px 0">')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^---$/gm, '<hr>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-    .split('\n\n').map(b => {
-      b = b.trim(); if (!b) return ''
-      if (/^<(h[1-3]|ul|ol|pre|blockquote|hr)/.test(b)) return b
-      return `<p>${b.replace(/\n/g, '<br>')}</p>`
-    }).join('\n')
-}
+import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
 
 export default function BlogPost() {
   const [post, setPost] = useState(null)
