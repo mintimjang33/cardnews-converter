@@ -21,7 +21,7 @@
 
 import crypto from 'crypto'
 
-const BASE_URL = 'https://api.naver.com'
+const BASE_URL = 'https://api.searchad.naver.com'
 
 function makeSignature(timestamp, method, path, secretKey) {
   const message = `${timestamp}.${method}.${path}`
@@ -37,9 +37,9 @@ export default async function handler(req, res) {
   const { keywords } = req.query
   if (!keywords) return res.status(400).json({ error: 'keywords 파라미터가 필요합니다' })
 
-  const apiKey      = process.env.NAVER_AD_API_KEY
-  const secretKey   = process.env.NAVER_AD_SECRET_KEY
-  const customerId  = process.env.NAVER_AD_CUSTOMER_ID
+  const apiKey     = process.env.NAVER_AD_API_KEY
+  const secretKey  = process.env.NAVER_AD_SECRET_KEY
+  const customerId = process.env.NAVER_AD_CUSTOMER_ID
 
   if (!apiKey || !secretKey || !customerId) {
     return res.status(500).json({ error: '네이버 광고 API 환경변수가 설정되지 않았습니다' })
@@ -67,8 +67,8 @@ export default async function handler(req, res) {
       method,
       headers: {
         'X-Timestamp': timestamp,
-        'X-API-KEY': apiKey,
-        'X-Customer': customerId,
+        'X-API-KEY':   apiKey,
+        'X-CUSTOMER':  customerId,
         'X-Signature': signature,
         'Content-Type': 'application/json',
       },
@@ -81,24 +81,17 @@ export default async function handler(req, res) {
 
     const data = await response.json()
 
-    // keywordList 응답에서 필요한 필드만 추출
-    const results = (data.keywordList || [])
-      .filter(item => keywordList.includes(item.relKeyword))
-      .map(item => ({
-        keyword: item.relKeyword,
-        pc:      item.monthlyPcQcCnt      === '< 10' ? 0 : Number(item.monthlyPcQcCnt)      || 0,
-        mobile:  item.monthlyMobileQcCnt  === '< 10' ? 0 : Number(item.monthlyMobileQcCnt)  || 0,
-        get total() { return this.pc + this.mobile },
-      }))
-
-    // 요청한 키워드 순서대로 정렬 (API가 순서를 바꿀 수 있으므로)
-    const ordered = keywordList.map(kw => {
-      const found = results.find(r => r.keyword === kw)
-      return found || { keyword: kw, pc: 0, mobile: 0, total: 0 }
+    // 요청한 키워드만 필터링 후 필요한 필드 추출
+    const results = keywordList.map(kw => {
+      const item = (data.keywordList || []).find(r => r.relKeyword === kw)
+      if (!item) return { keyword: kw, pc: 0, mobile: 0, total: 0 }
+      const pc     = item.monthlyPcQcCnt     === '< 10' ? 5 : Number(item.monthlyPcQcCnt)     || 0
+      const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0
+      return { keyword: kw, pc, mobile, total: pc + mobile }
     })
 
-    res.setHeader('Cache-Control', 'public, max-age=86400') // 하루 캐시 (검색량은 월 단위 변동)
-    return res.status(200).json({ results: ordered })
+    res.setHeader('Cache-Control', 'public, max-age=86400') // 하루 캐시
+    return res.status(200).json({ results })
 
   } catch (err) {
     return res.status(500).json({ error: err.message })
