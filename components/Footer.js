@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { AdSlot } from './AdSlot'
 
-export default function Footer({ lang = 'ko', adsOn = true, siteName = 'Unified Tools', slotData = null }) {
+export default function Footer({ lang = 'ko', adsOn = true, siteName = 'Unified Tools', slotData = null, loaded = true }) {
   return (
     <footer className="footer">
       <div className="wrap">
-        {adsOn && (
+        {loaded && adsOn && (
           <AdSlot
             slot={process.env.NEXT_PUBLIC_AD_SLOT_FOOTER || '4444444444'}
             label={lang === 'ko' ? '광고' : 'Ad'}

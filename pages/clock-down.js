@@ -128,6 +128,7 @@ export default function ClockDown() {
   const [now, setNow] = useState(new Date())
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [lang, setLang] = useState('ko')
   const [cooldown, setCooldown] = useState(0)
   const [maxCooldown, setMaxCooldown] = useState(12)
@@ -238,7 +239,7 @@ export default function ClockDown() {
       if(d.adsOn!==undefined)setAdsOn(d.adsOn)
       if(d.cooldown)setMaxCooldown(d.cooldown)
       if(d.adSlots!==undefined)setAdSlots(d.adSlots)
-    }).catch(()=>{})
+    }).catch(()=>{}).finally(() => setSettingsLoaded(true))
   }, [])
 
   useEffect(() => {
@@ -795,14 +796,14 @@ export default function ClockDown() {
 
       <Header lang={lang} onToggleLang={toggleLang} siteName="Clock-Down" siteHref="/" />
 
-      {adsOn && (
+      {settingsLoaded && adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP||'1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} slotData={findAdSlot(adSlots, 'home_left')} number={2} label={t.adLabel} /></aside>}
+        {settingsLoaded && adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} slotData={findAdSlot(adSlots, 'home_left')} number={2} label={t.adLabel} /></aside>}
         <nav className="sidebar-nav">
           {t.tabs.map((name,i) => (
             <div key={i} className={`nav-item${tab===i?' active':''}`} onClick={()=>setTab(i)}>
@@ -831,7 +832,7 @@ export default function ClockDown() {
                   <p>{t.cooldownSub}</p>
                 </div>
               </div>
-              {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} slotData={findAdSlot(adSlots, 'home_cooldown')} tall number={4} label={t.adLabel} />}
+              {settingsLoaded && adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} slotData={findAdSlot(adSlots, 'home_cooldown')} tall number={4} label={t.adLabel} />}
             </div>
           )}
           <div className={`panel${tab===0?' active':''}`}>
@@ -1045,16 +1046,16 @@ export default function ClockDown() {
 
         </div>
 
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} slotData={findAdSlot(adSlots, 'home_right')} number={3} label={t.adLabel} /></aside>}
+        {settingsLoaded && adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} slotData={findAdSlot(adSlots, 'home_right')} number={3} label={t.adLabel} /></aside>}
       </div>
 
-      {adsOn && (
+      {settingsLoaded && adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={5} label={t.adLabel} />
         </div>
       )}
 
-      <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
+      <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
 
       </div>
     </>

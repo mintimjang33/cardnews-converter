@@ -32,6 +32,7 @@ export default function BlogPost() {
   const [lang, setLang] = useState('ko')
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     const slug = window.location.pathname.split('/blog/')[1]
@@ -48,7 +49,7 @@ export default function BlogPost() {
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.adSlots !== undefined) setAdSlots(d.adSlots)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setSettingsLoaded(true))
   }, [])
 
   const toggleLang = () => {
@@ -86,7 +87,7 @@ export default function BlogPost() {
 
       <Header lang={lang} onToggleLang={toggleLang} siteName="Blog" siteHref="/blog" />
 
-      {adsOn && (
+      {settingsLoaded && adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={adLabel} />
         </div>
@@ -122,7 +123,7 @@ export default function BlogPost() {
         )}
 
         {/* 본문 중간 광고 */}
-        {adsOn && (
+        {settingsLoaded && adsOn && (
           <div style={{ marginBottom: 28 }}>
             <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={3} label={adLabel} />
           </div>
@@ -141,7 +142,7 @@ export default function BlogPost() {
         )}
       </div>
 
-      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
     </>
   )
 }

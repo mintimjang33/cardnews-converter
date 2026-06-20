@@ -44,6 +44,7 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null)
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
@@ -51,7 +52,7 @@ export default function FAQ() {
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.adSlots !== undefined) setAdSlots(d.adSlots)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setSettingsLoaded(true))
   }, [])
 
   const toggleLang = () => {
@@ -108,7 +109,7 @@ export default function FAQ() {
         </div>
       </div>
 
-      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
     </>
   )
 }

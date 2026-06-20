@@ -25,6 +25,7 @@ const I18N = {
 export default function CardnewsDown() {
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const iframeRef = useRef(null)
   const [iframeHeight, setIframeHeight] = useState(2600)
   const [lang, setLang] = useState('ko')
@@ -53,7 +54,7 @@ export default function CardnewsDown() {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.cooldown) setMaxCooldown(d.cooldown)
       if (d.adSlots !== undefined) setAdSlots(d.adSlots)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setSettingsLoaded(true))
   }, [])
 
   useEffect(() => {
@@ -101,14 +102,14 @@ export default function CardnewsDown() {
 
       <Header lang={lang} onToggleLang={toggleLang} siteName="CardNews-Down" siteHref="/" />
 
-      {adsOn && (
+      {settingsLoaded && adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && (
+        {settingsLoaded && adsOn && (
           <aside className="sidebar">
             <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} slotData={findAdSlot(adSlots, 'home_left')} number={2} label={t.adLabel} />
           </aside>
@@ -133,7 +134,7 @@ export default function CardnewsDown() {
                   <p>{t.cooldownSub}</p>
                 </div>
               </div>
-              {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} slotData={findAdSlot(adSlots, 'home_cooldown')} tall number={4} label={t.adLabel} />}
+              {settingsLoaded && adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} slotData={findAdSlot(adSlots, 'home_cooldown')} tall number={4} label={t.adLabel} />}
             </div>
           )}
 
@@ -151,20 +152,20 @@ export default function CardnewsDown() {
           />
         </main>
 
-        {adsOn && (
+        {settingsLoaded && adsOn && (
           <aside className="sidebar">
             <SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} slotData={findAdSlot(adSlots, 'home_right')} number={3} label={t.adLabel} />
           </aside>
         )}
       </div>
 
-      {adsOn && (
+      {settingsLoaded && adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
           <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={5} label={t.adLabel} />
         </div>
       )}
 
-      <Footer lang={lang} siteName="CardNews-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
+      <Footer lang={lang} siteName="CardNews-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
     </>
   )
 }
