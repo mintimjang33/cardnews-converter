@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { AdSlot, SidebarAd } from '../components/AdSlot'
+import { findAdSlot } from '../lib/adSlots'
 
 const TOOLS_KO = [
   { id: 'counter', label: '글자수 세기' },
@@ -110,6 +111,7 @@ const S = {
 export default function TextDown() {
   const [tool, setTool] = useState('counter')
   const [adsOn, setAdsOn] = useState(true)
+  const [adSlots, setAdSlots] = useState([])
   const [lang, setLang] = useState('ko')
   const [cooldown, setCooldown] = useState(0)
   const [maxCooldown, setMaxCooldown] = useState(12)
@@ -144,6 +146,7 @@ export default function TextDown() {
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.cooldown) setMaxCooldown(d.cooldown)
+      if (d.adSlots !== undefined) setAdSlots(d.adSlots)
     }).catch(() => {})
   }, [])
 
@@ -265,12 +268,12 @@ export default function TextDown() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={t.adLabel} />
         </div>
       )}
 
       <div className="page-layout">
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} number={2} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_LEFT || '5555555555'} slotData={findAdSlot(adSlots, 'home_left')} number={2} label={t.adLabel} /></aside>}
         <main className="main-content" style={{ paddingTop: 24, paddingBottom: 60, padding: '24px 20px 60px', fontFamily: "'Outfit', -apple-system, sans-serif" }}>
 
         {/* 탭 */}
@@ -300,7 +303,7 @@ export default function TextDown() {
                 <p>{t.cooldownSub}</p>
               </div>
             </div>
-            {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} tall number={4} label={t.adLabel} />}
+            {adsOn && <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_COOLDOWN || '2222222222'} slotData={findAdSlot(adSlots, 'home_cooldown')} tall number={4} label={t.adLabel} />}
           </div>
         )}
 
@@ -430,12 +433,12 @@ export default function TextDown() {
           </div>
         )}
         </main>
-        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} number={3} label={t.adLabel} /></aside>}
+        {adsOn && <aside className="sidebar"><SidebarAd slot={process.env.NEXT_PUBLIC_AD_SLOT_RIGHT || '6666666666'} slotData={findAdSlot(adSlots, 'home_right')} number={3} label={t.adLabel} /></aside>}
       </div>
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24, marginBottom: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={5} label={t.adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={5} label={t.adLabel} />
         </div>
       )}
 

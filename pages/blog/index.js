@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { AdSlot } from '../../components/AdSlot'
+import { findAdSlot } from '../../lib/adSlots'
 
 const CATEGORIES = [
   { id: 'all',        label: '전체' },
@@ -21,6 +22,7 @@ export default function BlogIndex() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [lang, setLang] = useState('ko')
   const [adsOn, setAdsOn] = useState(true)
+  const [adSlots, setAdSlots] = useState([])
 
   const loadPosts = async (category) => {
     setLoading(true)
@@ -41,6 +43,7 @@ export default function BlogIndex() {
     if (saved === 'en' || saved === 'ko') setLang(saved)
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+      if (d.adSlots !== undefined) setAdSlots(d.adSlots)
     }).catch(() => {})
   }, [])
 
@@ -64,7 +67,7 @@ export default function BlogIndex() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={adLabel} />
         </div>
       )}
 
@@ -133,7 +136,7 @@ export default function BlogIndex() {
 
         {adsOn && (
           <div style={{ marginTop: 40 }}>
-            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={3} label={adLabel} />
+            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={3} label={adLabel} />
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { AdSlot } from '../../components/AdSlot'
+import { findAdSlot } from '../../lib/adSlots'
 
 function parseMd(md) {
   if (!md) return ''
@@ -30,6 +31,7 @@ export default function BlogPost() {
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState('ko')
   const [adsOn, setAdsOn] = useState(true)
+  const [adSlots, setAdSlots] = useState([])
 
   useEffect(() => {
     const slug = window.location.pathname.split('/blog/')[1]
@@ -45,6 +47,7 @@ export default function BlogPost() {
     if (saved === 'en' || saved === 'ko') setLang(saved)
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+      if (d.adSlots !== undefined) setAdSlots(d.adSlots)
     }).catch(() => {})
   }, [])
 
@@ -85,7 +88,7 @@ export default function BlogPost() {
 
       {adsOn && (
         <div className="wrap" style={{ marginTop: 24 }}>
-          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} number={1} label={adLabel} />
+          <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_TOP || '1111111111'} slotData={findAdSlot(adSlots, 'home_top')} number={1} label={adLabel} />
         </div>
       )}
 
@@ -121,7 +124,7 @@ export default function BlogPost() {
         {/* 본문 중간 광고 */}
         {adsOn && (
           <div style={{ marginBottom: 28 }}>
-            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} number={3} label={adLabel} />
+            <AdSlot slot={process.env.NEXT_PUBLIC_AD_SLOT_MIDDLE || '3333333333'} slotData={findAdSlot(adSlots, 'home_middle')} number={3} label={adLabel} />
           </div>
         )}
 
