@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { S } from './AdminUI'
 
 const TOOLS = [
   { id: 'thumb-down',    label: '🖼 썸네일',   hint: '썸네일' },
@@ -21,117 +20,289 @@ function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
+function fmt(n) { return (n || 0).toLocaleString() }
+
 export default function KeywordPanel({ token }) {
-  const [stats, setStats]     = useState({})   // { 'thumb-down': { collected_at, count } }
-  const [loading, setLoading] = useState({})   // { 'thumb-down': true }
-  const [toast, setToast]     = useState('')
+  const [stats, setStats]       = useState({})
+  const [loading, setLoading]   = useState({})
+  const [expanded, setExpanded] = useState(null)   // 현재 펼쳐진 tool_id
+  const [topData, setTopData]   = useState({})     // { tool_id: [...] }
+  const [topLoading, setTopLoading] = useState({})
+  const [toast, setToast]       = useState('')
+  const [tab, setTab]           = useState('top')  // 'top' | 'picks'
+  const [picks, setPicks]       = useState([])
+  const [picksLoading, setPicksLoading] = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  // 각 도구별 최신 수집 날짜 + 키워드 수 조회
+  // 수집 현황 로드
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res  = await fetch('/api/tools/keyword-stats', {
-          headers: { 'x-admin-token': token },
-        })
-        const data = await res.json()
-        setStats(data)
-      } catch (e) {
-        console.error(e)
-      }
-    }
-    fetchStats()
+    fetch('/api/tools/keyword-stats', { headers: { 'x-admin-token': token } })
+      .then(r => r.json()).then(setStats).catch(console.error)
   }, [token])
 
-  const handleUpdate = async (tool) => {
-    const hint = TOOLS.find(t => t.id === tool)?.hint
-    if (!hint) return
-    setLoading(l => ({ ...l, [tool]: true }))
+  // 찜 목록 로드
+  const loadPicks = async () => {
+    setPicksLoading(true)
     try {
-      const res  = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}`, {
+      const res = await fetch('/api/tools/keyword-picks', { headers: { 'x-admin-token': token } })
+      const data = await res.json()
+      setPicks(data)
+    } catch (e) { console.error(e) }
+    setPicksLoading(false)
+  }
+
+  useEffect(() => { loadPicks() }, [token])
+
+  // 도구 클릭 → TOP 키워드 로드
+  const handleExpand = async (toolId) => {
+    if (expanded === toolId) { setExpanded(null); return }
+    setExpanded(toolId)
+    if (topData[toolId]) return
+    setTopLoading(l => ({ ...l, [toolId]: true }))
+    try {
+      const res = await fetch(`/api/tools/keyword-top?tool_id=${toolId}&limit=30`, {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      setTopData(d => ({ ...d, [toolId]: data.results || [] }))
+    } catch (e) { console.error(e) }
+    setTopLoading(l => ({ ...l, [toolId]: false }))
+  }
+
+  // 업데이트 (네이버 API 수집)
+  const handleUpdate = async (tool) => {
+    setLoading(l => ({ ...l, [tool.id]: true }))
+    try {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(tool.hint)}`, {
         headers: { 'x-admin-token': token },
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
-      // 수집일 갱신
-      setStats(s => ({
-        ...s,
-        [tool]: { collected_at: new Date().toISOString(), count: data.saved },
-      }))
-      showToast(`✅ ${hint} 키워드 ${data.saved}개 저장 완료!`)
-    } catch (e) {
-      showToast(`❌ 오류: ${e.message}`)
-    }
-    setLoading(l => ({ ...l, [tool]: false }))
+      setStats(s => ({ ...s, [tool.id]: { collected_at: new Date().toISOString(), count: data.saved } }))
+      // TOP 데이터 갱신
+      setTopData(d => ({ ...d, [tool.id]: null }))
+      showToast(`✅ ${tool.hint} 키워드 ${data.saved}개 저장 완료!`)
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+    setLoading(l => ({ ...l, [tool.id]: false }))
   }
 
+  // ⭐ 찜 토글
+  const handlePick = async (toolId, item) => {
+    const isPicked = item.picked
+    try {
+      if (isPicked) {
+        await fetch(`/api/tools/keyword-picks?tool_id=${toolId}&keyword=${encodeURIComponent(item.keyword)}`, {
+          method: 'DELETE', headers: { 'x-admin-token': token },
+        })
+      } else {
+        const tool = TOOLS.find(t => t.id === toolId)
+        await fetch('/api/tools/keyword-picks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({ tool_id: toolId, keyword: item.keyword, pc: item.pc, mobile: item.mobile, total: item.total, competition: item.competition, hint: tool?.hint }),
+        })
+      }
+      // 로컬 상태 업데이트
+      setTopData(d => ({
+        ...d,
+        [toolId]: (d[toolId] || []).map(k =>
+          k.keyword === item.keyword ? { ...k, picked: !isPicked } : k
+        ),
+      }))
+      loadPicks()
+      showToast(isPicked ? '⭐ 찜 해제됨' : '⭐ 찜에 추가됨!')
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
+
+  // 찜 삭제
+  const handleUnpick = async (toolId, keyword) => {
+    try {
+      await fetch(`/api/tools/keyword-picks?tool_id=${toolId}&keyword=${encodeURIComponent(keyword)}`, {
+        method: 'DELETE', headers: { 'x-admin-token': token },
+      })
+      setPicks(p => p.filter(k => !(k.tool_id === toolId && k.keyword === keyword)))
+      setTopData(d => ({
+        ...d,
+        [toolId]: (d[toolId] || []).map(k =>
+          k.keyword === keyword ? { ...k, picked: false } : k
+        ),
+      }))
+      showToast('⭐ 찜 해제됨')
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
+
+  const S = {
+    card: { background: '#1c1c1e', border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 18px', marginBottom: 10 },
+    th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
+    td: { fontSize: 13, color: '#d4d4d8', padding: '8px 10px', borderBottom: '1px solid #18181b' },
+    tdNum: { fontSize: 13, color: '#f0f0f0', fontWeight: 700, padding: '8px 10px', borderBottom: '1px solid #18181b', textAlign: 'right' },
+  }
+
+  const toolLabel = (id) => TOOLS.find(t => t.id === id)?.label || id
+
   return (
-    <div style={{ padding: 28, fontFamily: "'Outfit', sans-serif", maxWidth: 720 }}>
-      <h2 style={{ color: '#f0f0f0', fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
-        🔍 키워드 검색량 관리
-      </h2>
-      <p style={{ color: '#71717a', fontSize: 13, marginBottom: 24 }}>
-        도구별 네이버 연관 키워드 검색량을 수집합니다. 30일마다 업데이트를 권장합니다.
-      </p>
+    <div style={{ padding: 28, fontFamily: "'Outfit', sans-serif", maxWidth: 780 }}>
+      <h2 style={{ color: '#f0f0f0', fontSize: 20, fontWeight: 800, marginBottom: 6 }}>🔍 키워드 검색량 관리</h2>
+      <p style={{ color: '#71717a', fontSize: 13, marginBottom: 20 }}>도구별 네이버 연관 키워드를 수집하고, 검색량 높은 키워드를 찜해두세요.</p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {TOOLS.map(tool => {
-          const stat    = stats[tool.id] || {}
-          const days    = daysSince(stat.collected_at)
-          const needsUpdate = days >= 30
-          const isLoading   = loading[tool.id]
+      {/* 탭 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {[['top', '📊 수집 현황'], ['picks', '⭐ 찜한 키워드']].map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{
+            padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            background: tab === id ? '#e63946' : '#27272a',
+            color: tab === id ? '#fff' : '#a1a1aa',
+            fontSize: 13, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+          }}>{label}</button>
+        ))}
+      </div>
 
-          return (
-            <div key={tool.id} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: '#1c1c1e', border: `1px solid ${needsUpdate ? '#7f1d1d' : '#2a2a2a'}`,
-              borderRadius: 10, padding: '14px 18px',
-            }}>
-              {/* 도구명 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 140 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0' }}>{tool.label}</span>
-              </div>
+      {/* ── 수집 현황 탭 */}
+      {tab === 'top' && (
+        <div>
+          {TOOLS.map(tool => {
+            const stat       = stats[tool.id] || {}
+            const days       = daysSince(stat.collected_at)
+            const needsUpdate = days >= 30
+            const isLoading  = loading[tool.id]
+            const isExpanded = expanded === tool.id
+            const topList    = topData[tool.id] || []
 
-              {/* 수집일 + 키워드 수 */}
-              <div style={{ flex: 1, paddingLeft: 16 }}>
-                <div style={{ fontSize: 13, color: needsUpdate ? '#f87171' : '#a1a1aa' }}>
-                  네이버 검색일: <b style={{ color: needsUpdate ? '#fca5a5' : '#d4d4d8' }}>
-                    {formatDate(stat.collected_at)}
-                  </b>
+            return (
+              <div key={tool.id} style={{ marginBottom: 8 }}>
+                {/* 도구 행 */}
+                <div style={{
+                  ...S.card, marginBottom: 0,
+                  border: `1px solid ${isExpanded ? '#e63946' : needsUpdate ? '#7f1d1d' : '#2a2a2a'}`,
+                  borderRadius: isExpanded ? '10px 10px 0 0' : 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: stat.count > 0 ? 'pointer' : 'default',
+                }} onClick={() => stat.count > 0 && handleExpand(tool.id)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0', minWidth: 100 }}>{tool.label}</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: needsUpdate ? '#f87171' : '#a1a1aa' }}>
+                        네이버 검색일: <b style={{ color: needsUpdate ? '#fca5a5' : '#d4d4d8' }}>{formatDate(stat.collected_at)}</b>
+                      </div>
+                      {stat.count > 0 && (
+                        <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>
+                          키워드 {fmt(stat.count)}개 저장됨 {stat.count > 0 && '· 클릭해서 TOP 30 보기'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {stat.count > 0 && (
+                      <span style={{ fontSize: 18, color: isExpanded ? '#e63946' : '#52525b' }}>
+                        {isExpanded ? '▲' : '▼'}
+                      </span>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); handleUpdate(tool) }} disabled={isLoading} style={{
+                      background: needsUpdate ? '#e63946' : '#27272a',
+                      color: needsUpdate ? '#fff' : '#a1a1aa',
+                      border: 'none', borderRadius: 8, padding: '8px 16px',
+                      fontSize: 13, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
+                      opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap',
+                      fontFamily: "'Outfit', sans-serif",
+                    }}>
+                      {isLoading ? '수집 중...' : '업데이트'}
+                    </button>
+                  </div>
                 </div>
-                {stat.count != null && (
-                  <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>
-                    저장된 키워드 {stat.count.toLocaleString()}개
-                    {needsUpdate && days < 999 && ` · ${days}일 경과`}
+
+                {/* TOP 키워드 테이블 */}
+                {isExpanded && (
+                  <div style={{ background: '#161616', border: '1px solid #e63946', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                    {topLoading[tool.id] ? (
+                      <div style={{ padding: 20, color: '#71717a', fontSize: 13, textAlign: 'center' }}>로딩 중...</div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={S.th}>순위</th>
+                            <th style={S.th}>키워드</th>
+                            <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
+                            <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
+                            <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                            <th style={S.th}>경쟁</th>
+                            <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topList.map((item, i) => (
+                            <tr key={item.keyword} style={{ background: item.picked ? '#1a1a00' : 'transparent' }}>
+                              <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
+                              <td style={{ ...S.td, fontWeight: 600, color: '#f0f0f0' }}>{item.keyword}</td>
+                              <td style={S.tdNum}>{fmt(item.pc)}</td>
+                              <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                              <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                              <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                              <td style={{ ...S.td, textAlign: 'center' }}>
+                                <button onClick={() => handlePick(tool.id, item)} style={{
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  fontSize: 18, lineHeight: 1,
+                                }}>
+                                  {item.picked ? '⭐' : '☆'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 )}
-                {needsUpdate && days >= 30 && days < 999 && (
-                  <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>⚠️ 30일 이상 경과 — 업데이트 권장</div>
-                )}
               </div>
+            )
+          })}
+        </div>
+      )}
 
-              {/* 업데이트 버튼 */}
-              <button
-                onClick={() => handleUpdate(tool.id)}
-                disabled={isLoading}
-                style={{
-                  background: needsUpdate ? '#e63946' : '#27272a',
-                  color: needsUpdate ? '#fff' : '#a1a1aa',
-                  border: 'none', borderRadius: 8,
-                  padding: '8px 16px', fontSize: 13, fontWeight: 700,
-                  cursor: isLoading ? 'wait' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1,
-                  whiteSpace: 'nowrap', fontFamily: "'Outfit', sans-serif",
-                  transition: 'all .15s',
-                }}
-              >
-                {isLoading ? '수집 중...' : '업데이트'}
-              </button>
+      {/* ── 찜한 키워드 탭 */}
+      {tab === 'picks' && (
+        <div>
+          {picksLoading ? (
+            <div style={{ color: '#71717a', fontSize: 13, padding: 20 }}>로딩 중...</div>
+          ) : picks.length === 0 ? (
+            <div style={{ color: '#52525b', fontSize: 14, padding: 20, textAlign: 'center' }}>
+              아직 찜한 키워드가 없어요.<br/>
+              <span style={{ fontSize: 12, marginTop: 6, display: 'block' }}>수집 현황 탭에서 ☆ 버튼으로 찜해두세요!</span>
             </div>
-          )
-        })}
-      </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>도구</th>
+                  <th style={S.th}>키워드</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={S.th}>경쟁</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>해제</th>
+                </tr>
+              </thead>
+              <tbody>
+                {picks.map(item => (
+                  <tr key={`${item.tool_id}-${item.keyword}`}>
+                    <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{toolLabel(item.tool_id)}</td>
+                    <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
+                    <td style={S.tdNum}>{fmt(item.pc)}</td>
+                    <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                    <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                    <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      <button onClick={() => handleUnpick(item.tool_id, item.keyword)} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', fontSize: 16,
+                      }}>⭐</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
@@ -140,9 +311,7 @@ export default function KeywordPanel({ token }) {
           background: '#18181b', border: '1px solid #3f3f46', borderRadius: 10,
           padding: '12px 24px', fontSize: 14, color: '#f0f0f0',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)', zIndex: 9999,
-        }}>
-          {toast}
-        </div>
+        }}>{toast}</div>
       )}
     </div>
   )
