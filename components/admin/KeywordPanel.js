@@ -97,15 +97,11 @@ export default function KeywordPanel({ token }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
-      // stats 갱신
-      setStats(s => ({
-        ...s,
-        [addToolId]: {
-          collected_at: new Date().toISOString(),
-          count: (s[addToolId]?.count || 0) + data.saved,
-        },
-      }))
-      setTopData(d => ({ ...d, [addToolId]: null })) // TOP 캐시 초기화
+      // TOP 캐시 전체 초기화 (어느 도구에 저장됐는지 모르므로)
+      setTopData({})
+      // stats 전체 다시 로드
+      fetch('/api/tools/keyword-stats', { headers: { 'x-admin-token': token } })
+        .then(r => r.json()).then(setStats).catch(console.error)
       showToast(`✅ "${kw}" 연관 키워드 ${data.saved}개 추가 저장 완료!`)
       setAddKeyword('')
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
