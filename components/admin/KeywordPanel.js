@@ -72,20 +72,22 @@ export default function KeywordPanel({ token }) {
     setTopLoading(l => ({ ...l, [hint]: false }))
   }
 
-  const handleUpdate = async (tool) => {
-    setLoading(l => ({ ...l, [tool.hint]: true }))
+  const handleUpdateByHint = async (hint) => {
+    setLoading(l => ({ ...l, [hint]: true }))
     try {
-      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(tool.hint)}`, {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}`, {
         headers: { 'x-admin-token': token },
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
       loadStats()
-      setTopData(d => ({ ...d, [tool.hint]: null }))
-      showToast(`✅ ${tool.hint} 키워드 ${data.saved}개 저장 완료!`)
+      setTopData(d => ({ ...d, [hint]: null }))
+      showToast(`✅ "${hint}" 키워드 ${data.saved}개 저장 완료!`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
-    setLoading(l => ({ ...l, [tool.hint]: false }))
+    setLoading(l => ({ ...l, [hint]: false }))
   }
+
+
 
   const handleAdd = async () => {
     const kw = addKeyword.trim()
@@ -152,16 +154,12 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
-  const baseHints = new Set(BASE_TOOLS.map(t => t.hint))
+  const labelMap = Object.fromEntries(BASE_TOOLS.map(t => [t.hint, t.label]))
 
-  const baseRows = BASE_TOOLS.map(tool => {
-    const stat = hintList.find(h => h.hint === tool.hint) || {}
-    return { hint: tool.hint, label: tool.label, isBase: true, tool, collected_at: stat.collected_at, count: stat.count || 0 }
-  })
-  const extraRows = hintList
-    .filter(h => !baseHints.has(h.hint))
-    .map(h => ({ ...h, label: h.hint, isBase: false }))
-  const allRows = [...baseRows, ...extraRows]
+  const allRows = hintList.map(h => ({
+    ...h,
+    label: labelMap[h.hint] || h.hint,
+  }))
 
   const S = {
     th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
@@ -252,18 +250,16 @@ export default function KeywordPanel({ token }) {
                         {isExpanded ? '▲' : '▼'}
                       </span>
                     )}
-                    {row.isBase && (
-                      <button onClick={e => { e.stopPropagation(); handleUpdate(row.tool) }} disabled={isLoading} style={{
-                        background: needsUpdate ? '#e63946' : '#27272a',
-                        color: needsUpdate ? '#fff' : '#a1a1aa',
-                        border: 'none', borderRadius: 8, padding: '8px 16px',
-                        fontSize: 13, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
-                        opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap',
-                        fontFamily: "'Outfit', sans-serif",
-                      }}>
-                        {isLoading ? '수집 중...' : '업데이트'}
-                      </button>
-                    )}
+                    <button onClick={e => { e.stopPropagation(); handleUpdateByHint(row.hint) }} disabled={isLoading} style={{
+                      background: needsUpdate ? '#e63946' : '#27272a',
+                      color: needsUpdate ? '#fff' : '#a1a1aa',
+                      border: 'none', borderRadius: 8, padding: '8px 16px',
+                      fontSize: 13, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
+                      opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap',
+                      fontFamily: "'Outfit', sans-serif",
+                    }}>
+                      {isLoading ? '수집 중...' : '업데이트'}
+                    </button>
                     <button onClick={e => { e.stopPropagation(); handleDeleteHint(row.hint) }} style={{
                       background: 'none', border: '1px solid #3f3f46', borderRadius: 8,
                       color: '#71717a', fontSize: 13, padding: '7px 10px',
