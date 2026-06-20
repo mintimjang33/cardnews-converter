@@ -6,6 +6,7 @@ import AdsensePanel from '../components/admin/AdsensePanel'
 import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
 import ContentLogPanel from '../components/admin/ContentLogPanel'
+import KeywordPanel from '../components/admin/KeywordPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
 const TAB_LABELS = {
@@ -16,6 +17,7 @@ const TAB_LABELS = {
   blog_admin: '📝 게시판 관리',
   blog_menu: '📋 게시판 메뉴관리',
   content_log: '🗂️ 발행 기록',
+  keyword: '🔍 키워드 관리',
   password: '🔑 비밀번호 변경',
 }
 
@@ -73,21 +75,17 @@ export default function Admin() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [toast, setToast] = useState('')
 
-  // 서비스 설정
   const [cooldownDur, setCooldownDur] = useState(12)
   const [adsOn, setAdsOn] = useState(true)
   const [saved, setSaved] = useState(false)
 
-  // 약관
   const [terms, setTerms] = useState('')
   const [privacy, setPrivacy] = useState('')
   const [termsEn, setTermsEn] = useState('')
   const [privacyEn, setPrivacyEn] = useState('')
 
-  // 광고 슬롯
   const [adSlots, setAdSlots] = useState([])
 
-  // 비밀번호
   const [newPw, setNewPw] = useState('')
   const [newPwConfirm, setNewPwConfirm] = useState('')
   const [pwMsg, setPwMsg] = useState(null)
@@ -160,7 +158,6 @@ export default function Admin() {
       </Head>
 
       <div style={{ minHeight: '100vh', background: '#0c0c0c', fontFamily: "'Outfit', sans-serif", color: '#f0f0f0', display: 'flex' }}>
-        {/* 모바일 상단바 */}
         <div style={{
           display: 'none', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
           background: '#161616', borderBottom: '1px solid #2a2a2a', padding: '14px 16px',
@@ -188,7 +185,6 @@ export default function Admin() {
         <main className="admin-main" style={{ flex: 1, minWidth: 0, padding: '32px 28px 60px' }}>
           <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
-            {/* ── 서비스 설정 */}
             {activeTab === 'settings' && (
               <div style={S.card}>
                 <div style={S.cardTitle}>🔧 서비스 기본 설정</div>
@@ -216,7 +212,6 @@ export default function Admin() {
               </div>
             )}
 
-            {/* ── 약관 관리 */}
             {activeTab === 'legal' && (
               <LegalPanel adminToken={adminToken}
                 terms={terms} privacy={privacy} setTerms={setTerms} setPrivacy={setPrivacy}
@@ -224,28 +219,28 @@ export default function Admin() {
                 onSaved={() => showToast('✅ 저장되었습니다')} />
             )}
 
-            {/* ── 광고 관리 */}
             {activeTab === 'adsense' && (
               <AdsensePanel adminToken={adminToken} adSlots={adSlots} setAdSlots={setAdSlots}
                 onSaved={() => showToast('✅ 저장되었습니다')} />
             )}
 
-            {/* ── 게시판 글쓰기 / 관리 (같은 패널: 목록↔글쓰기 내부 전환) */}
             {(activeTab === 'blog_write' || activeTab === 'blog_admin') && (
               <BlogAdminPanel key={activeTab} adminToken={adminToken} initialView={activeTab === 'blog_write' ? 'write' : 'list'} />
             )}
 
-            {/* ── 게시판 메뉴관리 */}
             {activeTab === 'blog_menu' && (
               <BlogMenuPanel adminToken={adminToken} />
             )}
 
-            {/* ── 발행 기록 (관리자 전용, 공개 노출 없음) */}
             {activeTab === 'content_log' && (
               <ContentLogPanel adminToken={adminToken} />
             )}
 
-            {/* ── 비밀번호 변경 */}
+            {/* ── 키워드 관리 */}
+            {activeTab === 'keyword' && (
+              <KeywordPanel token={adminToken} />
+            )}
+
             {activeTab === 'password' && (
               <div style={S.card}>
                 <div style={S.cardTitle}>🔑 비밀번호 변경</div>
