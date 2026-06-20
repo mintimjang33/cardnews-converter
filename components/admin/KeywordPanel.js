@@ -34,6 +34,7 @@ export default function KeywordPanel({ token }) {
   const [picksLoading, setPicksLoading] = useState(false)
   const [addKeyword, setAddKeyword]     = useState('')
   const [addLoading, setAddLoading]     = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)  // 삭제 확인할 hint
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -92,6 +93,9 @@ export default function KeywordPanel({ token }) {
   const handleAdd = async () => {
     const kw = addKeyword.trim()
     if (!kw) return showToast('키워드를 입력해주세요')
+    // 중복 체크
+    const exists = hintList.find(h => h.hint === kw)
+    if (exists) return setConfirmDelete({ type: 'duplicate', hint: kw })
     setAddLoading(true)
     try {
       const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(kw)}`, {
@@ -108,7 +112,6 @@ export default function KeywordPanel({ token }) {
   }
 
   const handleDeleteHint = async (hint) => {
-    if (!confirm(`"${hint}" 키워드 데이터를 전부 삭제할까요?`)) return
     try {
       const res = await fetch(`/api/tools/keyword-delete?hint=${encodeURIComponent(hint)}`, {
         method: 'DELETE', headers: { 'x-admin-token': token },
@@ -156,10 +159,12 @@ export default function KeywordPanel({ token }) {
 
   const labelMap = Object.fromEntries(BASE_TOOLS.map(t => [t.hint, t.label]))
 
-  const allRows = hintList.map(h => ({
-    ...h,
-    label: labelMap[h.hint] || h.hint,
-  }))
+  const allRows = [...hintList]
+    .sort((a, b) => a.hint.localeCompare(b.hint, 'ko'))
+    .map(h => ({
+      ...h,
+      label: labelMap[h.hint] || h.hint,
+    }))
 
   const S = {
     th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
@@ -260,7 +265,7 @@ export default function KeywordPanel({ token }) {
                     }}>
                       {isLoading ? '수집 중...' : '업데이트'}
                     </button>
-                    <button onClick={e => { e.stopPropagation(); handleDeleteHint(row.hint) }} style={{
+                    <button onClick={e => { e.stopPropagation(); setConfirmDelete({ type: 'delete', hint: row.hint }) }} style={{
                       background: 'none', border: '1px solid #3f3f46', borderRadius: 8,
                       color: '#71717a', fontSize: 13, padding: '7px 10px',
                       cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
@@ -356,6 +361,58 @@ export default function KeywordPanel({ token }) {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* 확인 모달 */}
+      {confirmDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998,
+        }} onClick={() => setConfirmDelete(null)}>
+          <div style={{
+            background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 12,
+            padding: 28, width: 320, fontFamily: "'Outfit', sans-serif",
+          }} onClick={e => e.stopPropagation()}>
+            {confirmDelete.type === 'duplicate' ? (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f0f0f0', marginBottom: 10 }}>⚠️ 이미 있는 키워드</div>
+                <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 20 }}>
+                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b> 는 이미 수집된 키워드예요.<br/>
+                  업데이트하려면 해당 항목의 업데이트 버튼을 눌러주세요.
+                </div>
+                <button onClick={() => setConfirmDelete(null)} style={{
+                  width: '100%', background: '#27272a', color: '#f0f0f0', border: 'none',
+                  borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                }}>확인</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f0f0f0', marginBottom: 10 }}>🗑 키워드 삭제</div>
+                <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 20 }}>
+                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b> 키워드 데이터를 전부 삭제할까요?<br/>
+                  <span style={{ fontSize: 12, color: '#52525b', marginTop: 4, display: 'block' }}>삭제 후 복구가 불가능합니다.</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setConfirmDelete(null)} style={{
+                    flex: 1, background: '#27272a', color: '#a1a1aa', border: 'none',
+                    borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                  }}>취소</button>
+                  <button onClick={async () => {
+                    const hint = confirmDelete.hint
+                    setConfirmDelete(null)
+                    await handleDeleteHint(hint)
+                  }} style={{
+                    flex: 1, background: '#e63946', color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                  }}>삭제</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
