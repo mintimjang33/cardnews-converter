@@ -19,7 +19,7 @@ export default function ContentLogPanel({ adminToken }) {
   const [toast, setToast] = useState('')
 
   // 수동 추가 폼 (보통은 Claude가 작성해주는 내용을 그대로 붙여넣는 용도)
-  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '' })
+  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', publishedAt: new Date().toISOString().slice(0,10) })
   const [saving, setSaving] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [parseMsg, setParseMsg] = useState('')
@@ -30,13 +30,14 @@ export default function ContentLogPanel({ adminToken }) {
   // 4줄 텍스트를 붙여넣으면 자동으로 form 칸에 나눠 채워준다.
   const parsePastedLog = (text) => {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-    const picked = { tool: '', angle: '', title: '', slug: '', memo: '' }
+    const picked = { tool: '', angle: '', title: '', slug: '', memo: '', publishedAt: '' }
     const patterns = {
       tool: /^(도구|tool)\s*[:：]\s*(.+)$/i,
       angle: /^(키워드\s*각도|각도|angle)\s*[:：]\s*(.+)$/i,
       title: /^(제목|title)\s*[:：]\s*(.+)$/i,
       slug: /^(슬러그|slug)\s*[:：]\s*(.+)$/i,
       memo: /^(메모|비고|memo)\s*[:：]\s*(.+)$/i,
+      publishedAt: /^(발행일|발행날짜|publishedat|date)\s*[:：]\s*(.+)$/i,
     }
     lines.forEach(line => {
       for (const key of Object.keys(patterns)) {
@@ -62,8 +63,9 @@ export default function ContentLogPanel({ adminToken }) {
       title: picked.title || f.title,
       slug: picked.slug || f.slug,
       memo: picked.memo || f.memo,
+      publishedAt: picked.publishedAt || f.publishedAt,
     }))
-    const labels = { tool: '도구', angle: '각도', title: '제목', slug: '슬러그', memo: '메모' }
+    const labels = { tool: '도구', angle: '각도', title: '제목', slug: '슬러그', memo: '메모', publishedAt: '발행일' }
     setParseMsg(`✅ ${found.map(([k]) => labels[k]).join(', ')} 자동 입력됨 — 아래 내용 확인 후 "기록 추가"를 눌러주세요`)
   }
 
@@ -93,7 +95,7 @@ export default function ContentLogPanel({ adminToken }) {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
-      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '' })
+      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '', publishedAt: new Date().toISOString().slice(0,10) })
       setPasteText('')
       setParseMsg('')
       showToast('✅ 기록 추가됨')
@@ -139,8 +141,8 @@ export default function ContentLogPanel({ adminToken }) {
           <textarea
             value={pasteText}
             onChange={e => handlePasteParse(e.target.value)}
-            placeholder={'도구: thumb-down\n키워드 각도: 다운로드 방법\n제목: 유튜브 썸네일 무료 다운로드 방법, 가입 없이 3초만에\n슬러그: youtube-thumbnail-download-free'}
-            rows={4}
+            placeholder={'도구: thumb-down\n키워드 각도: 다운로드 방법\n제목: 유튜브 썸네일 무료 다운로드 방법, 가입 없이 3초만에\n슬러그: youtube-thumbnail-download-free\n발행일: 2026-06-20'}
+            rows={5}
             style={{ ...S.textarea, marginBottom: 6 }}
           />
           {parseMsg && (
@@ -170,6 +172,11 @@ export default function ContentLogPanel({ adminToken }) {
             <label style={S.label}>슬러그</label>
             <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
               placeholder="youtube-thumbnail-download" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>발행일</label>
+            <input type="date" value={form.publishedAt} onChange={e => setForm(f => ({ ...f, publishedAt: e.target.value }))}
+              style={S.input} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={S.label}>메모 (선택)</label>
@@ -220,9 +227,10 @@ export default function ContentLogPanel({ adminToken }) {
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', marginBottom: 2 }}>{log.title}</div>
                   <div style={{ fontSize: 12, color: '#555' }}>
                     /blog/{log.slug}
+                    {log.published_at && <span style={{ marginLeft: 8, color: '#888' }}>· 발행일 {log.published_at}</span>}
                     {log.memo && <span style={{ marginLeft: 8, opacity: 0.7 }}>· {log.memo}</span>}
                     <span style={{ marginLeft: 8, opacity: 0.5 }}>
-                      {log.created_at ? new Date(log.created_at).toLocaleDateString('ko-KR') : ''}
+                      (기록 {log.created_at ? new Date(log.created_at).toLocaleDateString('ko-KR') : ''})
                     </span>
                   </div>
                 </div>

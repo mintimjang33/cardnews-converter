@@ -18,8 +18,12 @@ function genId() {
 //   title text not null,           -- 글 제목
 //   slug text not null,            -- URL 슬러그
 //   memo text,                     -- 비고 (선택)
+//   published_at date,             -- 실제 블로그 발행일 (선택, YYYY-MM-DD)
 //   created_at timestamptz not null default now()
 // );
+//
+// 기존 테이블에 이미 만들어둔 경우 아래 한 줄만 추가로 실행:
+// alter table content_log add column if not exists published_at date;
 //
 // 이 테이블은 실제 글 본문을 저장하지 않습니다 (blog_posts와 별개).
 // Claude가 글을 작성·발행할 때마다 "무엇을 어떤 각도로 썼는지"만 가볍게 기록해
@@ -54,6 +58,7 @@ export default async function handler(req, res) {
       title: body.title,
       slug: body.slug,
       memo: body.memo || null,
+      published_at: body.publishedAt || null,
       created_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('content_log').insert([row]).select().single()
