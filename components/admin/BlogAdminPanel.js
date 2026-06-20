@@ -444,7 +444,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
               <input value={form.title} onChange={e=>setForm(v=>({...v,title:e.target.value,slug:v.slug||slugify(e.target.value)}))}
                 placeholder="제목을 입력하세요" style={{ ...S.input, fontSize:18, fontWeight:700, padding:'12px 14px' }} />
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:10 }}>
                 <div>
                   <label style={S.label}>URL 슬러그</label>
                   <input value={form.slug} onChange={e=>setForm(v=>({...v,slug:e.target.value}))} placeholder="url-slug" style={S.input} />
