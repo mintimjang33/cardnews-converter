@@ -146,6 +146,18 @@ export default function ThumbDown() {
     try {
       const res = await fetch(`/api/tools/thumb-download?url=${encodeURIComponent(thumbUrl)}`)
       if (!res.ok) throw new Error()
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        // 서버 프록시 불가 → 직접 다운로드 시도
+        const json = await res.json()
+        const directUrl = json.directUrl || thumbUrl
+        const a = document.createElement('a')
+        a.href = directUrl
+        a.download = `youtube_thumbnail_${key}.jpg`
+        a.target = '_blank'
+        a.click()
+        return
+      }
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)

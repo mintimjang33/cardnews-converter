@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
 const DEFAULT_TERMS = `이용약관
 
 제1조 (목적)
@@ -50,23 +45,41 @@ const DEFAULTS = {
   adSlots: DEFAULT_AD_SLOTS,
 }
 
+// Supabase 없이도 기본값 반환
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key || url.trim() === '' || key.trim() === '') return null
+  try {
+    return createClient(url, key)
+  } catch {
+    return null
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
+
+  const supabase = getSupabaseClient()
+  if (!supabase) {
+    return res.status(200).json(DEFAULTS)
+  }
+
   try {
     const { data, error } = await supabase.from('settings').select('key, value')
     if (error) throw error
     const map = {}
     for (const row of data || []) map[row.key] = row.value
     res.status(200).json({
-      cooldown: map['site:cooldown'] ?? DEFAULTS.cooldown,
-      adsOn:    map['site:ads_on']   ?? DEFAULTS.adsOn,
-      terms:    map['site:terms']    ?? DEFAULTS.terms,
-      privacy:  map['site:privacy']  ?? DEFAULTS.privacy,
-      termsEn:  map['site:terms_en']   ?? null,
-      privacyEn:map['site:privacy_en'] ?? null,
-      adSlots:  map['site:ad_slots'] ?? DEFAULTS.adSlots,
+      cooldown:  map['site:cooldown']    ?? DEFAULTS.cooldown,
+      adsOn:     map['site:ads_on']      ?? DEFAULTS.adsOn,
+      terms:     map['site:terms']       ?? DEFAULTS.terms,
+      privacy:   map['site:privacy']     ?? DEFAULTS.privacy,
+      termsEn:   map['site:terms_en']    ?? null,
+      privacyEn: map['site:privacy_en']  ?? null,
+      adSlots:   map['site:ad_slots']    ?? DEFAULTS.adSlots,
     })
-  } catch (err) {
+  } catch {
     res.status(200).json(DEFAULTS)
   }
 }

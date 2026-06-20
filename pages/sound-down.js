@@ -194,6 +194,12 @@ export default function SoundDown() {
     try {
       const res = await fetch(`/api/tools/sound-download?url=${encodeURIComponent(sound.download)}&name=${encodeURIComponent(sound.name)}`)
       if (!res.ok) throw new Error()
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const json = await res.json()
+        window.open(json.directUrl || sound.download, '_blank')
+        return
+      }
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
