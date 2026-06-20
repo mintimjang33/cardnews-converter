@@ -35,7 +35,7 @@ export default function KeywordPanel({ token }) {
 
   // 키워드 추가 관련
   const [addKeyword, setAddKeyword]   = useState('')      // 입력값
-  const [addToolId, setAddToolId]     = useState('')      // 어느 도구에 추가할지
+  
   const [addLoading, setAddLoading]   = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
@@ -90,7 +90,6 @@ export default function KeywordPanel({ token }) {
   const handleAdd = async () => {
     const kw = addKeyword.trim()
     if (!kw) return showToast('키워드를 입력해주세요')
-    if (!addToolId) return showToast('도구를 선택해주세요')
     setAddLoading(true)
     try {
       const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(kw)}`, {
@@ -173,18 +172,6 @@ export default function KeywordPanel({ token }) {
       <div style={{ background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10, padding: '16px 18px', marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>➕ 키워드 추가 수집</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select
-            value={addToolId}
-            onChange={e => setAddToolId(e.target.value)}
-            style={{
-              background: '#27272a', border: '1px solid #3f3f46', borderRadius: 8,
-              color: '#f0f0f0', fontSize: 13, padding: '8px 12px',
-              fontFamily: "'Outfit', sans-serif", cursor: 'pointer',
-            }}
-          >
-            <option value="">도구 선택</option>
-            {TOOLS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
           <input
             value={addKeyword}
             onChange={e => setAddKeyword(e.target.value)}
