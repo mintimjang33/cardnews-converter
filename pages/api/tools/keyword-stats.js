@@ -13,28 +13,10 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await supabase
-      .from('keyword_stats')
-      .select('hint, collected_at')
+      .rpc('keyword_stats_summary')
 
     if (error) throw new Error(error.message)
-
-    // JS에서 hint별 집계
-    const map = {}
-    for (const row of data || []) {
-      const h = row.hint
-      if (!map[h]) {
-        map[h] = { hint: h, count: 0, collected_at: row.collected_at }
-      }
-      map[h].count++
-      if (new Date(row.collected_at) > new Date(map[h].collected_at)) {
-        map[h].collected_at = row.collected_at
-      }
-    }
-
-    const result = Object.values(map)
-      .sort((a, b) => new Date(b.collected_at) - new Date(a.collected_at))
-
-    return res.status(200).json(result)
+    return res.status(200).json(data || [])
   } catch (err) {
     return res.status(500).json({ error: err.message })
   }
