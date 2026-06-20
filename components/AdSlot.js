@@ -45,8 +45,10 @@ export function AdSlot({ slot, format = 'auto', tall = false, label = '광고', 
   const codeRef = useRef(null)
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
 
-  // 관리자 코드 사용 모드
+  // 관리자 코드 사용 모드 (active && code 둘 다 있을 때만 실제 광고 표시)
   const hasManagedCode = !!(slotData && slotData.active && slotData.code)
+  // 대기 상태: active는 켜져 있지만 코드가 아직 없음 → 빈 자리(placeholder)만 표시
+  const isWaiting = !!(slotData && slotData.active && !slotData.code)
   useInjectAdCode(codeRef, hasManagedCode ? slotData.code : null, [hasManagedCode, slotData?.code])
 
   useEffect(() => {
@@ -55,13 +57,23 @@ export function AdSlot({ slot, format = 'auto', tall = false, label = '광고', 
     try { ;(window.adsbygoogle = window.adsbygoogle || []).push({}) } catch {}
   }, [client, hasManagedCode])
 
-  // slotData가 명시적으로 전달됐는데 비활성/코드없음 → 아무것도 렌더링하지 않음
-  if (slotData && !hasManagedCode) return null
+  // slotData가 명시적으로 전달됐는데 OFF(active=false) → 완전히 숨김
+  if (slotData && !slotData.active) return null
 
   if (hasManagedCode) return (
     <div style={extraStyle}>
       {number && <AdBadge number={number} label={label} />}
       <div ref={codeRef} />
+    </div>
+  )
+
+  // 대기 상태: 자리만 보여주고 광고는 없음
+  if (isWaiting) return (
+    <div className={`ad-slot${tall ? ' tall' : ''}`} style={extraStyle}>
+      {number && <AdBadge number={number} label={label} />}
+      <span style={{ fontSize: 20 }}>📢</span>
+      <span>{label} 영역</span>
+      <span style={{ fontSize: 11, color: '#444', marginTop: 4 }}>관리자 페이지에서 광고 코드를 등록하세요</span>
     </div>
   )
 
@@ -98,6 +110,7 @@ export function SidebarAd({ slot, label = '광고', number, slotData = null }) {
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
 
   const hasManagedCode = !!(slotData && slotData.active && slotData.code)
+  const isWaiting = !!(slotData && slotData.active && !slotData.code)
   useInjectAdCode(codeRef, hasManagedCode ? slotData.code : null, [hasManagedCode, slotData?.code])
 
   useEffect(() => {
@@ -106,12 +119,30 @@ export function SidebarAd({ slot, label = '광고', number, slotData = null }) {
     try { ;(window.adsbygoogle = window.adsbygoogle || []).push({}) } catch {}
   }, [client, hasManagedCode])
 
-  if (slotData && !hasManagedCode) return null
+  // OFF(active=false) → 완전히 숨김
+  if (slotData && !slotData.active) return null
 
   if (hasManagedCode) return (
     <div>
       {number && <AdBadge number={number} label={label} />}
       <div ref={codeRef} />
+    </div>
+  )
+
+  // 대기 상태: 자리만 보여주고 광고는 없음
+  if (isWaiting) return (
+    <div className="sidebar-ad-placeholder">
+      {number && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 20, height: 20, borderRadius: '50%',
+          background: '#e63946', color: '#fff',
+          fontSize: 11, fontWeight: 800, marginBottom: 6,
+        }}>{number}</span>
+      )}
+      <span style={{ fontSize: 18 }}>📢</span>
+      <span style={{ fontSize: 12, color: '#555', marginTop: 6 }}>{label}</span>
+      <span style={{ fontSize: 10, color: '#444', marginTop: 4, textAlign: 'center' }}>160×600</span>
     </div>
   )
 
