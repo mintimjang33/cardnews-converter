@@ -109,7 +109,20 @@ export default function KeywordPanel({ token }) {
     setAddLoading(false)
   }
 
-  const handlePick = async (hint, item) => {
+  // hint 전체 삭제
+  const handleDeleteHint = async (hint) => {
+    if (!confirm(`"${hint}" 키워드 데이터를 전부 삭제할까요?`)) return
+    try {
+      const res = await fetch(`/api/tools/keyword-delete?hint=${encodeURIComponent(hint)}`, {
+        method: 'DELETE', headers: { 'x-admin-token': token },
+      })
+      if (!res.ok) throw new Error('삭제 실패')
+      loadStats()
+      setTopData(d => { const n = { ...d }; delete n[hint]; return n })
+      if (expanded === hint) setExpanded(null)
+      showToast(`🗑 "${hint}" 삭제 완료`)
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
     const isPicked = item.picked
     try {
       if (isPicked) {
@@ -248,7 +261,7 @@ export default function KeywordPanel({ token }) {
                         {isExpanded ? '▲' : '▼'}
                       </span>
                     )}
-                    {/* 기본 도구만 업데이트 버튼 표시 */}
+                    {/* 기본 도구만 업데이트 버튼 */}
                     {row.isBase && (
                       <button onClick={e => { e.stopPropagation(); handleUpdate(row.tool) }} disabled={isLoading} style={{
                         background: needsUpdate ? '#e63946' : '#27272a',
@@ -261,6 +274,12 @@ export default function KeywordPanel({ token }) {
                         {isLoading ? '수집 중...' : '업데이트'}
                       </button>
                     )}
+                    {/* 삭제 버튼 */}
+                    <button onClick={e => { e.stopPropagation(); handleDeleteHint(row.hint) }} style={{
+                      background: 'none', border: '1px solid #3f3f46', borderRadius: 8,
+                      color: '#71717a', fontSize: 12, padding: '7px 10px',
+                      cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                    }}>🗑</button>
                   </div>
                 </div>
 
