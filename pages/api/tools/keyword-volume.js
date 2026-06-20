@@ -46,12 +46,12 @@ export default async function handler(req, res) {
   const timestamp = Date.now().toString()
   const signature = makeSignature(timestamp, method, path, secretKey)
 
-  // URLSearchParams 대신 직접 쿼리스트링 조립 (쉼표/공백 인코딩 방지)
-  const queryString = `hintKeywords=${encodeURIComponent(keywordList.join(','))}&showDetail=1`
-  const requestUrl = `${BASE_URL}${path}?${queryString}`
+  // 인코딩 없이 raw 문자열로 직접 조립
+  const hintKeywords = keywordList.join(',')
+  const requestUrl = `${BASE_URL}${path}?hintKeywords=${hintKeywords}&showDetail=1`
 
   debug.requestUrl   = requestUrl
-  debug.hintKeywords = keywordList.join(',')
+  debug.hintKeywords = hintKeywords
   debug.timestamp    = timestamp
   debug.signature    = signature
 
