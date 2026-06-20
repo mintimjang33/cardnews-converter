@@ -27,10 +27,9 @@ export default async function handler(req, res) {
   const token = req.headers['x-admin-token']
   if (token !== process.env.ADMIN_SECRET_TOKEN) return res.status(401).json({ error: '인증 필요' })
 
-  const { tool_id, limit = '30' } = req.query
-  if (!tool_id || !TOOL_HINTS[tool_id]) return res.status(400).json({ error: '유효하지 않은 tool_id' })
-
-  const hint = TOOL_HINTS[tool_id]
+  const { tool_id, hint: hintParam, limit = '30' } = req.query
+  const hint = hintParam || TOOL_HINTS[tool_id]
+  if (!hint) return res.status(400).json({ error: 'hint 또는 tool_id 필요' })
 
   try {
     // TOP 키워드 조회
@@ -47,7 +46,7 @@ export default async function handler(req, res) {
     const { data: picksData } = await supabase
       .from('keyword_picks')
       .select('keyword')
-      .eq('tool_id', tool_id)
+      .eq('tool_id', hint)
 
     const pickedSet = new Set((picksData || []).map(p => p.keyword))
 

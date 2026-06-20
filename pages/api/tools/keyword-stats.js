@@ -17,15 +17,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const TOOL_HINTS = {
-  'thumb-down':    '썸네일',
-  'sound-down':    '효과음',
-  'clock-down':    '타이머',
-  'voice-down':    '음성타이핑',
-  'text-down':     '글자수세기',
-  'cardnews-down': '카드뉴스',
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
@@ -34,32 +25,28 @@ export default async function handler(req, res) {
   if (!isAdmin) return res.status(401).json({ error: '인증 필요' })
 
   try {
-    const result = {}
+    // Supabase에서 hint별 최신 수집일 + 키워드 수 집계
+    const { data, error } = await supabase
+      .from('keyword_stats')
+      .select('hint, collected_at')
+      .order('collected_at', { ascending: false })
 
-    for (const [toolId, hint] of Object.entries(TOOL_HINTS)) {
-      const { data, error } = await supabase
-        .from('keyword_stats')
-        .select('collected_at')
-        .eq('hint', hint)
-        .order('collected_at', { ascending: false })
-        .limit(1)
+    if (error) throw new Error(error.message)
 
-      if (error) {
-        result[toolId] = { collected_at: null, count: 0 }
-        continue
+    // hint별로 그룹핑
+    const hintMap = {}
+    for (const row of data || []) {
+      const h = row.hint
+      if (!hintMap[h]) {
+        hintMap[h] = { collected_at: row.collected_at, count: 0 }
       }
-
-      // 해당 hint의 키워드 총 개수
-      const { count } = await supabase
-        .from('keyword_stats')
-        .select('*', { count: 'exact', head: true })
-        .eq('hint', hint)
-
-      result[toolId] = {
-        collected_at: data?.[0]?.collected_at || null,
-        count: count || 0,
-      }
+      hintMap[h].count++
     }
+
+    // hint 목록 배열로 반환 (최신순 정렬)
+    const result = Object.entries(hintMap)
+      .map(([hint, stat]) => ({ hint, ...stat }))
+      .sort((a, b) => new Date(b.collected_at) - new Date(a.collected_at))
 
     return res.status(200).json(result)
   } catch (err) {
