@@ -1,14 +1,20 @@
 /**
  * /api/tools/keyword-volume
- * 네이버 검색광고 API를 통해 키워드 월간 검색량 조회
+ * 네이버 검색광고 API — 연관 키워드 전체를 Supabase에 저장 + 정렬 반환
  *
- * 주의: 네이버 API는 hintKeywords에 공백 불가
- * → 키워드를 하나씩 순차 요청 후 합산
+ * 사용법:
+ *   GET /api/tools/keyword-volume?keyword=썸네일&limit=20
  */
 
 import crypto from 'crypto'
+import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL = 'https://api.searchad.naver.com'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
 function makeSignature(timestamp, method, path, secretKey) {
   const message = `${timestamp}.${method}.${path}`
@@ -18,50 +24,20 @@ function makeSignature(timestamp, method, path, secretKey) {
     .digest('base64')
 }
 
-async function fetchOneKeyword(keyword, apiKey, secretKey, customerId) {
-  const path = '/keywordstool'
-  const method = 'GET'
-  const timestamp = Date.now().toString()
-  const signature = makeSignature(timestamp, method, path, secretKey)
+function encodeKeyword(kw) {
+  return kw.split(' ').map(part => encodeURIComponent(part)).join('+')
+}
 
-  // 공백 제거한 키워드로 요청 (네이버 API 제약)
-  const safeKeyword = keyword.replace(/\s/g, '')
-  const requestUrl = `${BASE_URL}${path}?hintKeywords=${encodeURIComponent(safeKeyword)}&showDetail=1`
-
-  const response = await fetch(requestUrl, {
-    method,
-    headers: {
-      'X-Timestamp': timestamp,
-      'X-API-KEY':   apiKey,
-      'X-Customer':  customerId,
-      'X-Signature': signature,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  const rawText = await response.text()
-  if (!response.ok) throw new Error(`${response.status}: ${rawText}`)
-
-  const data = JSON.parse(rawText)
-  // 응답에서 원본 키워드(공백 포함)와 가장 유사한 항목 찾기
-  const list = data.keywordList || []
-
-  // 공백 제거 버전으로 매칭
-  const item = list.find(r => r.relKeyword.replace(/\s/g, '') === safeKeyword)
-    || list[0] // 없으면 첫 번째 연관 키워드 사용
-
-  if (!item) return { keyword, pc: 0, mobile: 0, total: 0 }
-
-  const pc     = item.monthlyPcQcCnt     === '< 10' ? 5 : Number(item.monthlyPcQcCnt)     || 0
-  const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0
-  return { keyword, matched: item.relKeyword, pc, mobile, total: pc + mobile }
+function parseCount(val) {
+  if (val === '< 10' || val === '<10') return 5
+  return Number(val) || 0
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const { keywords } = req.query
-  if (!keywords) return res.status(400).json({ error: 'keywords 파라미터가 필요합니다' })
+  const { keyword, limit = '30' } = req.query
+  if (!keyword) return res.status(400).json({ error: 'keyword 파라미터가 필요합니다' })
 
   const apiKey     = process.env.NAVER_AD_API_KEY
   const secretKey  = process.env.NAVER_AD_SECRET_KEY
@@ -71,28 +47,68 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: '환경변수 누락' })
   }
 
-  const keywordList = keywords
-    .split(',')
-    .map(k => k.trim())
-    .filter(Boolean)
-    .slice(0, 5)
+  const path = '/keywordstool'
+  const method = 'GET'
+  const timestamp = Date.now().toString()
+  const signature = makeSignature(timestamp, method, path, secretKey)
+
+  const encoded = encodeKeyword(keyword)
+  const requestUrl = `${BASE_URL}${path}?hintKeywords=${encoded}&showDetail=1`
 
   try {
-    // 키워드 하나씩 순차 요청 (공백 불가 제약 우회)
-    const results = []
-    for (const kw of keywordList) {
-      try {
-        const result = await fetchOneKeyword(kw, apiKey, secretKey, customerId)
-        results.push(result)
-      } catch (e) {
-        results.push({ keyword: kw, pc: 0, mobile: 0, total: 0, error: e.message })
+    const response = await fetch(requestUrl, {
+      method,
+      headers: {
+        'X-Timestamp': timestamp,
+        'X-API-KEY':   apiKey,
+        'X-Customer':  customerId,
+        'X-Signature': signature,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const rawText = await response.text()
+    if (!response.ok) return res.status(response.status).json({ error: `네이버 API 오류: ${rawText}` })
+
+    const data = JSON.parse(rawText)
+    const list = data.keywordList || []
+
+    // 파싱
+    const parsed = list.map(item => {
+      const pc     = parseCount(item.monthlyPcQcCnt)
+      const mobile = parseCount(item.monthlyMobileQcCnt)
+      return {
+        hint:        keyword,
+        keyword:     item.relKeyword,
+        pc,
+        mobile,
+        total:       pc + mobile,
+        competition: item.compIdx || '-',
       }
-      // API 레이트 리밋 방지 (100ms 간격)
-      await new Promise(r => setTimeout(r, 100))
+    })
+
+    // Supabase 저장 (같은 hint+keyword 조합은 upsert로 덮어쓰기)
+    if (parsed.length > 0) {
+      const { error: dbError } = await supabase
+        .from('keyword_stats')
+        .upsert(parsed, { onConflict: 'hint,keyword' })
+
+      if (dbError) console.error('Supabase 저장 오류:', dbError.message)
     }
 
-    res.setHeader('Cache-Control', 'public, max-age=86400')
-    return res.status(200).json({ results })
+    // total 기준 내림차순 정렬 후 limit개 반환
+    const results = parsed
+      .sort((a, b) => b.total - a.total)
+      .slice(0, Number(limit))
+      .map(({ hint, ...rest }) => rest) // hint 필드는 응답에서 제외
+
+    res.setHeader('Cache-Control', 'no-store') // 저장 후엔 캐시 안 함
+    return res.status(200).json({
+      keyword,
+      total_found: list.length,
+      saved: parsed.length,
+      results,
+    })
 
   } catch (err) {
     return res.status(500).json({ error: err.message })
