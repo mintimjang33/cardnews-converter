@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 
 const BASE_TOOLS = [
-  { id: 'thumb-down',    label: '🖼 썸네일',   hint: '썸네일' },
-  { id: 'sound-down',    label: '🔊 효과음',   hint: '효과음' },
-  { id: 'clock-down',    label: '⏱ 타이머',   hint: '타이머' },
-  { id: 'voice-down',    label: '🎤 보이스',   hint: '보이스' },
-  { id: 'text-down',     label: '📝 텍스트',   hint: '텍스트' },
-  { id: 'cardnews-down', label: '📰 카드뉴스', hint: '카드뉴스' },
+  { hint: '썸네일',   label: '🖼 썸네일' },
+  { hint: '효과음',   label: '🔊 효과음' },
+  { hint: '타이머',   label: '⏱ 타이머' },
+  { hint: '보이스',   label: '🎤 보이스' },
+  { hint: '텍스트',   label: '📝 텍스트' },
+  { hint: '카드뉴스', label: '📰 카드뉴스' },
 ]
 
 function formatDate(iso) {
@@ -23,42 +23,25 @@ function daysSince(iso) {
 function fmt(n) { return (n || 0).toLocaleString() }
 
 export default function KeywordPanel({ token }) {
-  const [hintList, setHintList]         = useState([])
-  const [loading, setLoading]           = useState({})
-  const [expanded, setExpanded]         = useState(null)
-  const [topData, setTopData]           = useState({})
-  const [topLoading, setTopLoading]     = useState({})
-  const [toast, setToast]               = useState('')
-  const [tab, setTab]                   = useState('top')
-  const [allKeywords, setAllKeywords]   = useState([])
-  const [allKwLoading, setAllKwLoading] = useState(false)
-  const [allKwLoaded, setAllKwLoaded]   = useState(false)
-  const [picks, setPicks]               = useState([])
-  const [picksLoading, setPicksLoading] = useState(false)
-  const [addKeyword, setAddKeyword]     = useState('')
-  const [addLoading, setAddLoading]     = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(null)  // 삭제 확인할 hint
+  const [hintList, setHintList]           = useState([])
+  const [loading, setLoading]             = useState({})
+  const [expanded, setExpanded]           = useState(null)
+  const [topData, setTopData]             = useState({})
+  const [topLoading, setTopLoading]       = useState({})
+  const [toast, setToast]                 = useState('')
+  const [tab, setTab]                     = useState('top')
+  const [picks, setPicks]                 = useState([])
+  const [picksLoading, setPicksLoading]   = useState(false)
+  const [addKeyword, setAddKeyword]       = useState('')
+  const [addLoading, setAddLoading]       = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [allKeywords, setAllKeywords]     = useState([])
+  const [allKwLoading, setAllKwLoading]   = useState(false)
+  const [allKwLoaded, setAllKwLoaded]     = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const loadAllKeywords = async () => {
-    if (allKwLoaded) return
-    setAllKwLoading(true)
-    try {
-      const res = await fetch('/api/tools/keyword-all?limit=200', {
-        headers: { 'x-admin-token': token },
-      })
-      const data = await res.json()
-      setAllKeywords(data.results || [])
-      setAllKwLoaded(true)
-    } catch (e) { console.error(e) }
-    setAllKwLoading(false)
-  }
-
-  const handleTabChange = (t) => {
-    setTab(t)
-    if (t === 'all') loadAllKeywords()
-  }
+  const loadStats = () => {
     fetch('/api/tools/keyword-stats', { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(data => setHintList(Array.isArray(data) ? data : []))
@@ -77,6 +60,23 @@ export default function KeywordPanel({ token }) {
   }
 
   useEffect(() => { loadPicks() }, [token])
+
+  const loadAllKeywords = async () => {
+    if (allKwLoaded) return
+    setAllKwLoading(true)
+    try {
+      const res = await fetch('/api/tools/keyword-all?limit=200', { headers: { 'x-admin-token': token } })
+      const data = await res.json()
+      setAllKeywords(data.results || [])
+      setAllKwLoaded(true)
+    } catch (e) { console.error(e) }
+    setAllKwLoading(false)
+  }
+
+  const handleTabChange = (t) => {
+    setTab(t)
+    if (t === 'all') loadAllKeywords()
+  }
 
   const handleExpand = async (hint) => {
     if (expanded === hint) { setExpanded(null); return }
@@ -103,19 +103,20 @@ export default function KeywordPanel({ token }) {
       if (!res.ok) throw new Error(data.error || '오류')
       loadStats()
       setTopData(d => ({ ...d, [hint]: null }))
+      setAllKwLoaded(false)
       showToast(`✅ "${hint}" 키워드 ${data.saved}개 저장 완료!`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
     setLoading(l => ({ ...l, [hint]: false }))
   }
 
-
-
   const handleAdd = async () => {
     const kw = addKeyword.trim()
     if (!kw) return showToast('키워드를 입력해주세요')
-    // 중복 체크
     const exists = hintList.find(h => h.hint === kw)
-    if (exists) return setConfirmDelete({ type: 'duplicate', hint: kw })
+    if (exists) {
+      setConfirmDelete({ type: 'duplicate', hint: kw })
+      return
+    }
     setAddLoading(true)
     try {
       const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(kw)}`, {
@@ -124,7 +125,7 @@ export default function KeywordPanel({ token }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
       loadStats()
-      setTopData(d => ({ ...d, [kw]: null }))
+      setAllKwLoaded(false)
       showToast(`✅ "${kw}" 연관 키워드 ${data.saved}개 추가됨!`)
       setAddKeyword('')
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
@@ -140,6 +141,7 @@ export default function KeywordPanel({ token }) {
       loadStats()
       setTopData(d => { const n = { ...d }; delete n[hint]; return n })
       if (expanded === hint) setExpanded(null)
+      setAllKwLoaded(false)
       showToast(`🗑 "${hint}" 삭제 완료`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
@@ -181,10 +183,7 @@ export default function KeywordPanel({ token }) {
 
   const allRows = [...hintList]
     .sort((a, b) => a.hint.localeCompare(b.hint, 'ko'))
-    .map(h => ({
-      ...h,
-      label: labelMap[h.hint] || h.hint,
-    }))
+    .map(h => ({ ...h, label: labelMap[h.hint] || h.hint }))
 
   const S = {
     th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
@@ -197,7 +196,6 @@ export default function KeywordPanel({ token }) {
       <h2 style={{ color: '#f0f0f0', fontSize: 20, fontWeight: 800, marginBottom: 6 }}>🔍 키워드 검색량 관리</h2>
       <p style={{ color: '#71717a', fontSize: 13, marginBottom: 20 }}>키워드를 입력하면 네이버 연관 키워드 전체를 수집해서 아래 목록에 추가합니다.</p>
 
-      {/* 키워드 추가 */}
       <div style={{ background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10, padding: '16px 18px', marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>➕ 키워드 추가 수집</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -224,7 +222,6 @@ export default function KeywordPanel({ token }) {
         <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>수집하면 아래 목록에 새 항목으로 추가됩니다.</div>
       </div>
 
-      {/* 탭 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {[['top', '📊 수집 현황'], ['all', '📈 전체 순위'], ['picks', '⭐ 찜한 키워드']].map(([id, label]) => (
           <button key={id} onClick={() => handleTabChange(id)} style={{
@@ -236,7 +233,6 @@ export default function KeywordPanel({ token }) {
         ))}
       </div>
 
-      {/* 수집 현황 */}
       {tab === 'top' && (
         <div>
           {allRows.map(row => {
@@ -339,7 +335,6 @@ export default function KeywordPanel({ token }) {
         </div>
       )}
 
-      {/* 전체 순위 */}
       {tab === 'all' && (
         <div>
           {allKwLoading ? (
@@ -349,7 +344,7 @@ export default function KeywordPanel({ token }) {
               <thead>
                 <tr>
                   <th style={S.th}>순위</th>
-                  <th style={S.th}>키워드 그룹</th>
+                  <th style={S.th}>그룹</th>
                   <th style={S.th}>키워드</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
@@ -375,7 +370,6 @@ export default function KeywordPanel({ token }) {
         </div>
       )}
 
-      {/* 찜한 키워드 */}
       {tab === 'picks' && (
         <div>
           {picksLoading ? (
@@ -389,7 +383,7 @@ export default function KeywordPanel({ token }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
               <thead>
                 <tr>
-                  <th style={S.th}>키워드 그룹</th>
+                  <th style={S.th}>그룹</th>
                   <th style={S.th}>키워드</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
@@ -420,7 +414,6 @@ export default function KeywordPanel({ token }) {
         </div>
       )}
 
-      {/* 확인 모달 */}
       {confirmDelete && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
@@ -434,7 +427,7 @@ export default function KeywordPanel({ token }) {
               <>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#f0f0f0', marginBottom: 10 }}>⚠️ 이미 있는 키워드</div>
                 <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 20 }}>
-                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b> 는 이미 수집된 키워드예요.<br/>
+                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b>는 이미 수집된 키워드예요.<br/>
                   업데이트하려면 해당 항목의 업데이트 버튼을 눌러주세요.
                 </div>
                 <button onClick={() => setConfirmDelete(null)} style={{
@@ -447,7 +440,7 @@ export default function KeywordPanel({ token }) {
               <>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#f0f0f0', marginBottom: 10 }}>🗑 키워드 삭제</div>
                 <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 20 }}>
-                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b> 키워드 데이터를 전부 삭제할까요?<br/>
+                  <b style={{ color: '#e63946' }}>"{confirmDelete.hint}"</b> 키워드 데이터를 전부 삭제할까요?
                   <span style={{ fontSize: 12, color: '#52525b', marginTop: 4, display: 'block' }}>삭제 후 복구가 불가능합니다.</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
