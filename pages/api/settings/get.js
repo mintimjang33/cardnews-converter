@@ -61,6 +61,8 @@ export default async function handler(req, res) {
       adsOn:    map['site:ads_on']   ?? DEFAULTS.adsOn,
       terms:    map['site:terms']    ?? DEFAULTS.terms,
       privacy:  map['site:privacy']  ?? DEFAULTS.privacy,
+      termsEn:  map['site:terms_en']   ?? null,
+      privacyEn:map['site:privacy_en'] ?? null,
       adSlots:  map['site:ad_slots'] ?? DEFAULTS.adSlots,
     })
   } catch (err) {

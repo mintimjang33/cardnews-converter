@@ -90,10 +90,18 @@ const I18N = {
 
 export default function Terms() {
   const [lang, setLang] = useState('ko')
+  const [customTerms, setCustomTerms] = useState(null)   // 관리자가 저장한 한국어 본문
+  const [customTermsEn, setCustomTermsEn] = useState(null) // 관리자가 저장한 영어 본문
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.terms && d.terms.trim()) setCustomTerms(d.terms)
+      if (d.termsEn && d.termsEn.trim()) setCustomTermsEn(d.termsEn)
+    }).catch(() => {}).finally(() => setLoaded(true))
   }, [])
 
   const toggleLang = () => {
@@ -103,6 +111,8 @@ export default function Terms() {
   }
 
   const t = I18N[lang]
+  const customText = lang === 'ko' ? customTerms : customTermsEn
+  const useCustom = !!customText
 
   return (
     <>
@@ -118,19 +128,25 @@ export default function Terms() {
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>{t.heading}</h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 32 }}>{t.updated}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
-          {t.sections.map((s, i) => (
-            <section key={i}>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>{s.title}</h2>
-              {s.content && <p>{s.content}</p>}
-              {s.list && (
-                <ul style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {s.list.map((li, j) => <li key={j}>{li}</li>)}
-                </ul>
-              )}
-            </section>
-          ))}
-        </div>
+        {!loaded ? null : useCustom ? (
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text2)', whiteSpace: 'pre-wrap' }}>
+            {customText}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
+            {t.sections.map((s, i) => (
+              <section key={i}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>{s.title}</h2>
+                {s.content && <p>{s.content}</p>}
+                {s.list && (
+                  <ul style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {s.list.map((li, j) => <li key={j}>{li}</li>)}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
       </div>
 
       <Footer lang={lang} siteName="Unified Tools" />

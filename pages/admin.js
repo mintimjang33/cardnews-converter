@@ -65,6 +65,8 @@ export default function Admin() {
   // 약관
   const [terms, setTerms] = useState('')
   const [privacy, setPrivacy] = useState('')
+  const [termsEn, setTermsEn] = useState('')
+  const [privacyEn, setPrivacyEn] = useState('')
 
   // 광고 슬롯
   const [adSlots, setAdSlots] = useState([])
@@ -88,6 +90,8 @@ export default function Admin() {
       if (data.adsOn !== undefined) setAdsOn(data.adsOn)
       if (data.terms !== undefined) setTerms(data.terms)
       if (data.privacy !== undefined) setPrivacy(data.privacy)
+      if (data.termsEn !== undefined && data.termsEn !== null) setTermsEn(data.termsEn)
+      if (data.privacyEn !== undefined && data.privacyEn !== null) setPrivacyEn(data.privacyEn)
       if (data.adSlots !== undefined) setAdSlots(data.adSlots)
     } catch {}
   }
@@ -205,8 +209,9 @@ export default function Admin() {
 
             {/* ── 약관 관리 */}
             {activeTab === 'legal' && (
-              <LegalPanel adminToken={adminToken} terms={terms} privacy={privacy}
-                setTerms={setTerms} setPrivacy={setPrivacy}
+              <LegalPanel adminToken={adminToken}
+                terms={terms} privacy={privacy} setTerms={setTerms} setPrivacy={setPrivacy}
+                termsEn={termsEn} privacyEn={privacyEn} setTermsEn={setTermsEn} setPrivacyEn={setPrivacyEn}
                 onSaved={() => showToast('✅ 저장되었습니다')} />
             )}
 

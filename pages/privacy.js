@@ -82,10 +82,18 @@ const I18N = {
 
 export default function Privacy() {
   const [lang, setLang] = useState('ko')
+  const [customPrivacy, setCustomPrivacy] = useState(null)     // 관리자가 저장한 한국어 본문
+  const [customPrivacyEn, setCustomPrivacyEn] = useState(null) // 관리자가 저장한 영어 본문
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.privacy && d.privacy.trim()) setCustomPrivacy(d.privacy)
+      if (d.privacyEn && d.privacyEn.trim()) setCustomPrivacyEn(d.privacyEn)
+    }).catch(() => {}).finally(() => setLoaded(true))
   }, [])
 
   const toggleLang = () => {
@@ -95,6 +103,8 @@ export default function Privacy() {
   }
 
   const t = I18N[lang]
+  const customText = lang === 'ko' ? customPrivacy : customPrivacyEn
+  const useCustom = !!customText
 
   return (
     <>
@@ -110,16 +120,22 @@ export default function Privacy() {
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>{t.heading}</h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 32 }}>{t.updated}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
-          {t.sections.map((s, i) => (
-            <section key={i}>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>{s.title}</h2>
-              <p>{s.content}</p>
-            </section>
-          ))}
+        {!loaded ? null : useCustom ? (
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text2)', whiteSpace: 'pre-wrap' }}>
+            {customText}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
+            {t.sections.map((s, i) => (
+              <section key={i}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>{s.title}</h2>
+                <p>{s.content}</p>
+              </section>
+            ))}
 
-          <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 12 }}>{t.note}</p>
-        </div>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 12 }}>{t.note}</p>
+          </div>
+        )}
       </div>
 
       <Footer lang={lang} siteName="Unified Tools" />
