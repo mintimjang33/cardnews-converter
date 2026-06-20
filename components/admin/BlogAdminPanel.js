@@ -227,21 +227,11 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
 
   // SEO 체크리스트
   const [activeToolPanel, setActiveToolPanel] = useState(null)
-  const [checklistChecks, setChecklistChecks] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try { return JSON.parse(localStorage.getItem('ba_checklist') || '{}') } catch {}
-    }
-    return {}
-  })
+  const [checklistChecks, setChecklistChecks] = useState({})
 
   // 루틴 달력
   const [showRoutine, setShowRoutine] = useState(false)
-  const [routineChecks, setRoutineChecks] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try { return JSON.parse(localStorage.getItem('ba_routine') || '{}') } catch {}
-    }
-    return {}
-  })
+  const [routineChecks, setRoutineChecks] = useState({})
   const [collapsedRoutines, setCollapsedRoutines] = useState({})
 
   const emptyForm = { title:'', slug:'', summary:'', content:'', category:'general', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
@@ -249,7 +239,27 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
 
   const token = () => adminToken
 
-  useEffect(() => { loadPosts(); loadCategories() }, [])
+  useEffect(() => { loadPosts(); loadCategories(); loadChecklist() }, [])
+
+  const loadChecklist = async () => {
+    try {
+      const res = await fetch('/api/admin/checklist', { headers: { 'x-admin-token': adminToken } })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.checklist) setChecklistChecks(data.checklist)
+      if (data.routine) setRoutineChecks(data.routine)
+    } catch {}
+  }
+
+  const saveChecklist = async (checklist, routine) => {
+    try {
+      await fetch('/api/admin/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+        body: JSON.stringify({ checklist, routine }),
+      })
+    } catch {}
+  }
 
   const loadPosts = async () => {
     setLoading(true)
@@ -332,7 +342,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const toggleCheck = (key) => {
     const next = { ...checklistChecks, [key]: !checklistChecks[key] }
     setChecklistChecks(next)
-    localStorage.setItem('ba_checklist', JSON.stringify(next))
+    saveChecklist(next, routineChecks)
   }
 
   // ── 루틴 달력
@@ -343,7 +353,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
     const k = `${periodKey}__${ii}`
     const next = { ...routineChecks, [k]: !routineChecks[k] }
     setRoutineChecks(next)
-    localStorage.setItem('ba_routine', JSON.stringify(next))
+    saveChecklist(checklistChecks, next)
   }
 
   // ── 달력 계산
