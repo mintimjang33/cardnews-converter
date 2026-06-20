@@ -23,45 +23,46 @@ function daysSince(iso) {
 function fmt(n) { return (n || 0).toLocaleString() }
 
 export default function KeywordPanel({ token }) {
-  const [stats, setStats]       = useState({})
-  const [loading, setLoading]   = useState({})
-  const [expanded, setExpanded] = useState(null)   // 현재 펼쳐진 tool_id
-  const [topData, setTopData]   = useState({})     // { tool_id: [...] }
+  const [stats, setStats]           = useState({})
+  const [loading, setLoading]       = useState({})
+  const [expanded, setExpanded]     = useState(null)
+  const [topData, setTopData]       = useState({})
   const [topLoading, setTopLoading] = useState({})
-  const [toast, setToast]       = useState('')
-  const [tab, setTab]           = useState('top')  // 'top' | 'picks'
-  const [picks, setPicks]       = useState([])
+  const [toast, setToast]           = useState('')
+  const [tab, setTab]               = useState('top')
+  const [picks, setPicks]           = useState([])
   const [picksLoading, setPicksLoading] = useState(false)
+
+  // 키워드 추가 관련
+  const [addKeyword, setAddKeyword]   = useState('')      // 입력값
+  const [addToolId, setAddToolId]     = useState('')      // 어느 도구에 추가할지
+  const [addLoading, setAddLoading]   = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  // 수집 현황 로드
   useEffect(() => {
     fetch('/api/tools/keyword-stats', { headers: { 'x-admin-token': token } })
       .then(r => r.json()).then(setStats).catch(console.error)
   }, [token])
 
-  // 찜 목록 로드
   const loadPicks = async () => {
     setPicksLoading(true)
     try {
       const res = await fetch('/api/tools/keyword-picks', { headers: { 'x-admin-token': token } })
-      const data = await res.json()
-      setPicks(data)
+      setPicks(await res.json())
     } catch (e) { console.error(e) }
     setPicksLoading(false)
   }
 
   useEffect(() => { loadPicks() }, [token])
 
-  // 도구 클릭 → TOP 키워드 로드
   const handleExpand = async (toolId) => {
     if (expanded === toolId) { setExpanded(null); return }
     setExpanded(toolId)
     if (topData[toolId]) return
     setTopLoading(l => ({ ...l, [toolId]: true }))
     try {
-      const res = await fetch(`/api/tools/keyword-top?tool_id=${toolId}&limit=30`, {
+      const res = await fetch(`/api/tools/keyword-top?tool_id=${toolId}&limit=50`, {
         headers: { 'x-admin-token': token },
       })
       const data = await res.json()
@@ -70,7 +71,6 @@ export default function KeywordPanel({ token }) {
     setTopLoading(l => ({ ...l, [toolId]: false }))
   }
 
-  // 업데이트 (네이버 API 수집)
   const handleUpdate = async (tool) => {
     setLoading(l => ({ ...l, [tool.id]: true }))
     try {
@@ -80,14 +80,39 @@ export default function KeywordPanel({ token }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '오류')
       setStats(s => ({ ...s, [tool.id]: { collected_at: new Date().toISOString(), count: data.saved } }))
-      // TOP 데이터 갱신
       setTopData(d => ({ ...d, [tool.id]: null }))
       showToast(`✅ ${tool.hint} 키워드 ${data.saved}개 저장 완료!`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
     setLoading(l => ({ ...l, [tool.id]: false }))
   }
 
-  // ⭐ 찜 토글
+  // 키워드 추가 수집
+  const handleAdd = async () => {
+    const kw = addKeyword.trim()
+    if (!kw) return showToast('키워드를 입력해주세요')
+    if (!addToolId) return showToast('도구를 선택해주세요')
+    setAddLoading(true)
+    try {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(kw)}`, {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '오류')
+      // stats 갱신
+      setStats(s => ({
+        ...s,
+        [addToolId]: {
+          collected_at: new Date().toISOString(),
+          count: (s[addToolId]?.count || 0) + data.saved,
+        },
+      }))
+      setTopData(d => ({ ...d, [addToolId]: null })) // TOP 캐시 초기화
+      showToast(`✅ "${kw}" 연관 키워드 ${data.saved}개 추가 저장 완료!`)
+      setAddKeyword('')
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+    setAddLoading(false)
+  }
+
   const handlePick = async (toolId, item) => {
     const isPicked = item.picked
     try {
@@ -103,7 +128,6 @@ export default function KeywordPanel({ token }) {
           body: JSON.stringify({ tool_id: toolId, keyword: item.keyword, pc: item.pc, mobile: item.mobile, total: item.total, competition: item.competition, hint: tool?.hint }),
         })
       }
-      // 로컬 상태 업데이트
       setTopData(d => ({
         ...d,
         [toolId]: (d[toolId] || []).map(k =>
@@ -115,7 +139,6 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
-  // 찜 삭제
   const handleUnpick = async (toolId, keyword) => {
     try {
       await fetch(`/api/tools/keyword-picks?tool_id=${toolId}&keyword=${encodeURIComponent(keyword)}`, {
@@ -132,6 +155,8 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
+  const toolLabel = (id) => TOOLS.find(t => t.id === id)?.label || id
+
   const S = {
     card: { background: '#1c1c1e', border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 18px', marginBottom: 10 },
     th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
@@ -139,12 +164,56 @@ export default function KeywordPanel({ token }) {
     tdNum: { fontSize: 13, color: '#f0f0f0', fontWeight: 700, padding: '8px 10px', borderBottom: '1px solid #18181b', textAlign: 'right' },
   }
 
-  const toolLabel = (id) => TOOLS.find(t => t.id === id)?.label || id
-
   return (
     <div style={{ padding: 28, fontFamily: "'Outfit', sans-serif", maxWidth: 780 }}>
       <h2 style={{ color: '#f0f0f0', fontSize: 20, fontWeight: 800, marginBottom: 6 }}>🔍 키워드 검색량 관리</h2>
       <p style={{ color: '#71717a', fontSize: 13, marginBottom: 20 }}>도구별 네이버 연관 키워드를 수집하고, 검색량 높은 키워드를 찜해두세요.</p>
+
+      {/* ── 키워드 추가 수집 */}
+      <div style={{ background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10, padding: '16px 18px', marginBottom: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>➕ 키워드 추가 수집</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <select
+            value={addToolId}
+            onChange={e => setAddToolId(e.target.value)}
+            style={{
+              background: '#27272a', border: '1px solid #3f3f46', borderRadius: 8,
+              color: '#f0f0f0', fontSize: 13, padding: '8px 12px',
+              fontFamily: "'Outfit', sans-serif", cursor: 'pointer',
+            }}
+          >
+            <option value="">도구 선택</option>
+            {TOOLS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+          <input
+            value={addKeyword}
+            onChange={e => setAddKeyword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+            placeholder="예: 포모도로, 알람, 집중타이머"
+            style={{
+              flex: 1, minWidth: 200,
+              background: '#27272a', border: '1px solid #3f3f46', borderRadius: 8,
+              color: '#f0f0f0', fontSize: 13, padding: '8px 12px',
+              fontFamily: "'Outfit', sans-serif", outline: 'none',
+            }}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={addLoading}
+            style={{
+              background: '#e63946', color: '#fff', border: 'none', borderRadius: 8,
+              padding: '8px 18px', fontSize: 13, fontWeight: 700,
+              cursor: addLoading ? 'wait' : 'pointer', opacity: addLoading ? 0.6 : 1,
+              fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap',
+            }}
+          >
+            {addLoading ? '수집 중...' : '수집'}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>
+          입력한 키워드의 네이버 연관 키워드 전체를 수집해서 선택한 도구에 추가합니다.
+        </div>
+      </div>
 
       {/* 탭 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
@@ -162,16 +231,15 @@ export default function KeywordPanel({ token }) {
       {tab === 'top' && (
         <div>
           {TOOLS.map(tool => {
-            const stat       = stats[tool.id] || {}
-            const days       = daysSince(stat.collected_at)
+            const stat        = stats[tool.id] || {}
+            const days        = daysSince(stat.collected_at)
             const needsUpdate = days >= 30
-            const isLoading  = loading[tool.id]
-            const isExpanded = expanded === tool.id
-            const topList    = topData[tool.id] || []
+            const isLoading   = loading[tool.id]
+            const isExpanded  = expanded === tool.id
+            const topList     = topData[tool.id] || []
 
             return (
               <div key={tool.id} style={{ marginBottom: 8 }}>
-                {/* 도구 행 */}
                 <div style={{
                   ...S.card, marginBottom: 0,
                   border: `1px solid ${isExpanded ? '#e63946' : needsUpdate ? '#7f1d1d' : '#2a2a2a'}`,
@@ -187,7 +255,7 @@ export default function KeywordPanel({ token }) {
                       </div>
                       {stat.count > 0 && (
                         <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>
-                          키워드 {fmt(stat.count)}개 저장됨 {stat.count > 0 && '· 클릭해서 TOP 30 보기'}
+                          키워드 {fmt(stat.count)}개 저장됨 · 클릭해서 TOP 50 보기
                         </div>
                       )}
                     </div>
@@ -211,7 +279,6 @@ export default function KeywordPanel({ token }) {
                   </div>
                 </div>
 
-                {/* TOP 키워드 테이블 */}
                 {isExpanded && (
                   <div style={{ background: '#161616', border: '1px solid #e63946', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
                     {topLoading[tool.id] ? (
@@ -239,9 +306,8 @@ export default function KeywordPanel({ token }) {
                               <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
                               <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
                               <td style={{ ...S.td, textAlign: 'center' }}>
-                                <button onClick={() => handlePick(tool.id, item)} style={{
-                                  background: 'none', border: 'none', cursor: 'pointer',
-                                  fontSize: 18, lineHeight: 1,
+                                <button onClick={e => { e.stopPropagation(); handlePick(tool.id, item) }} style={{
+                                  background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1,
                                 }}>
                                   {item.picked ? '⭐' : '☆'}
                                 </button>
@@ -304,7 +370,6 @@ export default function KeywordPanel({ token }) {
         </div>
       )}
 
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
