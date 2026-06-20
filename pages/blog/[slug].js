@@ -81,7 +81,7 @@ export default function BlogPost() {
         <meta name="description" content={post.summary || post.title} />
         <meta property="og:title" content={post.title} />
         <meta property="og:description" content={post.summary || ''} />
-        {post.thumbnail && <meta property="og:image" content={post.thumbnail} />}
+        {post.cover_image && <meta property="og:image" content={post.cover_image} />}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -98,8 +98,8 @@ export default function BlogPost() {
           ← 목록으로
         </Link>
 
-        {post.thumbnail && (
-          <img src={post.thumbnail} alt={post.title}
+        {post.cover_image && (
+          <img src={post.cover_image} alt={post.title}
             style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 'var(--radius)', marginBottom: 28, display: 'block' }} />
         )}
 

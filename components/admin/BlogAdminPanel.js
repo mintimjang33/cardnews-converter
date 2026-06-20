@@ -243,7 +243,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   })
   const [collapsedRoutines, setCollapsedRoutines] = useState({})
 
-  const emptyForm = { title:'', slug:'', summary:'', content:'', category:'general', tags:'', thumbnail:'', published:true, scheduledAt:'' }
+  const emptyForm = { title:'', slug:'', summary:'', content:'', category:'general', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
   const [form, setForm] = useState(emptyForm)
 
   const token = () => adminToken
@@ -283,9 +283,9 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
       content: post.content || '',
       category: post.category || 'general',
       tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
-      thumbnail: post.thumbnail || '',
-      published: !!post.published,
+      thumbnail: post.cover_image || '',
       scheduledAt: post.scheduled_at ? post.scheduled_at.slice(0,16) : '',
+      publishedAt: post.published_at || '',
     })
     setPreview(false); setView('write')
   }
@@ -310,9 +310,11 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
       const body = {
         title: form.title.trim(), slug, summary: form.summary.trim(),
         content: form.content, category: form.category, tags,
-        thumbnail: form.thumbnail.trim(),
-        published: status === 'published',
+        cover_image: form.thumbnail.trim(),
+        status,
         scheduled_at: status === 'scheduled' ? new Date(form.scheduledAt).toISOString() : null,
+        // 발행 시각: 이미 한 번 발행된 적 있으면 그 시각 유지, 처음 발행되는 거면 지금 시각
+        published_at: status === 'published' ? (form.publishedAt || new Date().toISOString()) : (form.publishedAt || null),
       }
       const method = editId ? 'PUT' : 'POST'
       if (editId) body.id = editId
@@ -351,7 +353,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
   const dailyCount = {}
   posts.forEach(p => {
-    if (p.published && p.created_at) {
+    if (p.status === 'published' && p.created_at) {
       const ds = p.created_at.slice(0,10)
       if (ds.startsWith(monthStr)) dailyCount[parseInt(ds.slice(8,10))] = (dailyCount[parseInt(ds.slice(8,10))]||0)+1
     }
@@ -464,11 +466,6 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                 <textarea value={form.content} onChange={e=>{setForm(v=>({...v,content:e.target.value}))}}
                   rows={22} placeholder={'# 제목\n\n본문을 마크다운으로 작성하세요.\n\n## 소제목\n\n- 항목 1\n- 항목 2\n\n**굵게** *기울임* `코드`'}
                   style={S.textarea} />
-              </div>
-
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <Toggle value={form.published} onChange={v=>setForm(p=>({...p,published:v}))} />
-                <span style={{ fontSize:14, color:form.published?'#4ade80':'#888' }}>{form.published?'✅ 발행':'📝 임시저장'}</span>
               </div>
             </div>
 
@@ -664,9 +661,15 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                   <div key={post.id} style={{ background:'#161616', borderRadius:12, border:'1.5px solid #2a2a2a', padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, flexWrap:'wrap' }}>
-                        <span style={{ fontSize:11, fontWeight:700, borderRadius:999, padding:'2px 10px', background:post.published?'#0a2a0a':'#1a1a1a', color:post.published?'#4ade80':'#888', border:`1px solid ${post.published?'#166534':'#2a2a2a'}` }}>
-                          {post.published?'✅ 발행':'📝 임시'}
+                        <span style={{ fontSize:11, fontWeight:700, borderRadius:999, padding:'2px 10px',
+                          background: post.status==='published'?'#0a2a0a':post.status==='scheduled'?'#0d1b2a':'#1a1a1a',
+                          color: post.status==='published'?'#4ade80':post.status==='scheduled'?'#60a5fa':'#888',
+                          border:`1px solid ${post.status==='published'?'#166534':post.status==='scheduled'?'#1e3a5f':'#2a2a2a'}` }}>
+                          {post.status==='published'?'✅ 발행':post.status==='scheduled'?'⏰ 예약':'📝 임시'}
                         </span>
+                        {post.status==='scheduled' && post.scheduled_at && (
+                          <span style={{ fontSize:11, color:'#60a5fa' }}>{new Date(post.scheduled_at).toLocaleString('ko-KR')}</span>
+                        )}
                         {post.category && <span style={{ fontSize:11, color:'#888', background:'#1f1f1f', borderRadius:4, padding:'2px 8px', border:'1px solid #2a2a2a' }}>{post.category}</span>}
                       </div>
                       <div style={{ fontSize:15, fontWeight:700, color:'#f0f0f0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:3 }}>{post.title}</div>
@@ -676,7 +679,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                       </div>
                     </div>
                     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                      {post.published && post.slug && (
+                      {post.status==='published' && post.slug && (
                         <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer"
                           style={{ padding:'6px 12px', borderRadius:7, border:'1px solid #2a2a2a', background:'#1f1f1f', color:'#888', fontSize:12, fontWeight:600, textDecoration:'none' }}>보기</a>
                       )}

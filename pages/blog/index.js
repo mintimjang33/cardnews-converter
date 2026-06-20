@@ -106,8 +106,8 @@ export default function BlogIndex() {
                 onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text3)'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
-                {post.thumbnail && (
-                  <img src={post.thumbnail} alt={post.title}
+                {post.cover_image && (
+                  <img src={post.cover_image} alt={post.title}
                     style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
                 )}
                 <div style={{ padding: 18 }}>
