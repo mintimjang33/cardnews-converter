@@ -25,11 +25,10 @@ export default async function handler(req, res) {
   const secretKey  = process.env.NAVER_AD_SECRET_KEY
   const customerId = process.env.NAVER_AD_CUSTOMER_ID
 
-  // ── 디버그: 환경변수 로드 확인 (값 앞 4자리만 노출) ──
   const debug = {
-    apiKey_prefix:     apiKey     ? apiKey.slice(0, 4) + '****'     : 'MISSING',
-    secretKey_prefix:  secretKey  ? secretKey.slice(0, 4) + '****'  : 'MISSING',
-    customerId:        customerId || 'MISSING',
+    apiKey_prefix:    apiKey     ? apiKey.slice(0, 4) + '****'    : 'MISSING',
+    secretKey_prefix: secretKey  ? secretKey.slice(0, 4) + '****' : 'MISSING',
+    customerId:       customerId || 'MISSING',
   }
 
   if (!apiKey || !secretKey || !customerId) {
@@ -47,46 +46,33 @@ export default async function handler(req, res) {
   const timestamp = Date.now().toString()
   const signature = makeSignature(timestamp, method, path, secretKey)
 
-  const params = new URLSearchParams({
-    hintKeywords: keywordList.join(','),
-    showDetail: '1',
-  })
+  // URLSearchParams 대신 직접 쿼리스트링 조립 (쉼표/공백 인코딩 방지)
+  const queryString = `hintKeywords=${encodeURIComponent(keywordList.join(','))}&showDetail=1`
+  const requestUrl = `${BASE_URL}${path}?${queryString}`
 
-  const requestUrl = `${BASE_URL}${path}?${params}`
-  const requestHeaders = {
-    'X-Timestamp': timestamp,
-    'X-API-KEY':   apiKey,
-    'X-CUSTOMER':  customerId,
-    'X-Signature': signature,
-    'Content-Type': 'application/json',
-  }
-
-  // ── 디버그: 요청 정보 ──
-  debug.requestUrl     = requestUrl
-  debug.timestamp      = timestamp
-  debug.signature      = signature
-  debug.hintKeywords   = keywordList.join(',')
-  debug.headers_sent   = {
-    'X-Timestamp': timestamp,
-    'X-API-KEY':   apiKey.slice(0, 4) + '****',
-    'X-CUSTOMER':  customerId,
-    'X-Signature': signature,
-  }
+  debug.requestUrl   = requestUrl
+  debug.hintKeywords = keywordList.join(',')
+  debug.timestamp    = timestamp
+  debug.signature    = signature
 
   try {
     const response = await fetch(requestUrl, {
       method,
-      headers: requestHeaders,
+      headers: {
+        'X-Timestamp': timestamp,
+        'X-API-KEY':   apiKey,
+        'X-CUSTOMER':  customerId,
+        'X-Signature': signature,
+        'Content-Type': 'application/json',
+      },
     })
 
     const rawText = await response.text()
-
-    // ── 디버그: 응답 원문 ──
     debug.responseStatus = response.status
     debug.responseBody   = rawText
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: `네이버 API 오류`, debug })
+      return res.status(response.status).json({ error: '네이버 API 오류', debug })
     }
 
     const data = JSON.parse(rawText)
