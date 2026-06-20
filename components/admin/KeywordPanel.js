@@ -369,20 +369,31 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
                   <th style={S.th}>경쟁</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                 </tr>
               </thead>
               <tbody>
-                {allKeywords.map((item, i) => (
-                  <tr key={`${item.hint}-${item.keyword}`}>
-                    <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
-                    <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.hint}</td>
-                    <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
-                    <td style={S.tdNum}>{fmt(item.pc)}</td>
-                    <td style={S.tdNum}>{fmt(item.mobile)}</td>
-                    <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
-                    <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
-                  </tr>
-                ))}
+                {allKeywords.map((item, i) => {
+                  const isPicked = picks.some(p => p.keyword === item.keyword && p.tool_id === item.hint)
+                  return (
+                    <tr key={`${item.hint}-${item.keyword}`} style={{ background: isPicked ? '#1a1a00' : 'transparent' }}>
+                      <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
+                      <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.hint}</td>
+                      <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
+                      <td style={S.tdNum}>{fmt(item.pc)}</td>
+                      <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                      <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                      <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                      <td style={{ ...S.td, textAlign: 'center' }}>
+                        <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
+                          background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
+                        }}>
+                          {isPicked ? '⭐' : '☆'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}
