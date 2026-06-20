@@ -17,6 +17,8 @@ export default function ContentLogPanel({ adminToken }) {
   const [loading, setLoading] = useState(true)
   const [filterTool, setFilterTool] = useState('all')
   const [toast, setToast] = useState('')
+  const [promptText, setPromptText] = useState('')
+  const [promptOpen, setPromptOpen] = useState(false)
 
   // 수동 추가 폼 (보통은 Claude가 작성해주는 내용을 그대로 붙여넣는 용도)
   const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', publishedAt: new Date().toISOString().slice(0,10) })
@@ -25,6 +27,44 @@ export default function ContentLogPanel({ adminToken }) {
   const [parseMsg, setParseMsg] = useState('')
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200) }
+
+  // 다음에 다룰 도구/각도를 계산해 Claude에게 그대로 줄 수 있는 프롬프트 텍스트를 만든다.
+  const ANGLE_ORDER = ['사용법', '규격/수치', '저작권/정책', '비교', '실수/팁']
+  const buildClaudePrompt = () => {
+    const lines = []
+    lines.push('아래는 우리 사이트 블로그 발행 기록입니다. 이 기록을 기준으로 중복 없이 오늘 블로그 글 1편을 써줘.')
+    lines.push('')
+    if (logs.length === 0) {
+      lines.push('발행 기록: 없음 (처음 시작)')
+    } else {
+      lines.push(`발행 기록 (${logs.length}건, 최신순):`)
+      logs.forEach(l => {
+        lines.push(`- 도구: ${l.tool} / 각도: ${l.angle} / 제목: ${l.title} / 슬러그: ${l.slug}${l.published_at ? ' / 발행일: ' + l.published_at : ''}`)
+      })
+    }
+    lines.push('')
+
+    // 다음 차례 도구 계산: 가장 최근 기록(logs[0], created_at desc 정렬되어 있음)의 다음 순서
+    let nextTool = TOOLS[0].id
+    if (logs.length > 0) {
+      const lastTool = logs[0].tool
+      const idx = TOOLS.findIndex(t => t.id === lastTool)
+      nextTool = idx >= 0 ? TOOLS[(idx + 1) % TOOLS.length].id : TOOLS[0].id
+    }
+    // 그 도구로 이미 쓴 각도들
+    const usedAngles = logs.filter(l => l.tool === nextTool).map(l => l.angle)
+    const nextAngle = ANGLE_ORDER.find(a => !usedAngles.includes(a)) || ANGLE_ORDER[usedAngles.length % ANGLE_ORDER.length]
+
+    lines.push(`→ 순환 로직상 다음 도구는 "${toolLabel(nextTool)}(${nextTool})", 아직 안 쓴 각도는 "${nextAngle}"로 추정됩니다.`)
+    lines.push('이 도구·각도가 맞으면 그대로 진행하고, 사용자가 다른 도구를 지정하면 그걸 우선해줘.')
+    return lines.join('\n')
+  }
+
+  const openClaudePrompt = () => {
+    const text = buildClaudePrompt()
+    setPromptText(text)
+    setPromptOpen(true)
+  }
 
   // "도구: thumb-down\n키워드 각도: 다운로드 방법\n제목: ...\n슬러그: ..." 형태의
   // 4줄 텍스트를 붙여넣으면 자동으로 form 칸에 나눠 채워준다.
@@ -192,19 +232,60 @@ export default function ContentLogPanel({ adminToken }) {
       <div style={S.card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <div style={S.cardTitle}>📜 기록 목록 ({filtered.length})</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {[['all', '전체'], ...TOOLS.map(t => [t.id, t.label])].map(([key, label]) => (
-              <button key={key} onClick={() => setFilterTool(key)}
-                style={{
-                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: filterTool === key ? 700 : 500,
-                  border: `1.5px solid ${filterTool === key ? '#e63946' : '#2a2a2a'}`,
-                  background: filterTool === key ? '#2a0a0a' : '#161616',
-                  color: filterTool === key ? '#e63946' : '#888', cursor: 'pointer',
-                  fontFamily: "'Outfit', sans-serif",
-                }}>{label}</button>
-            ))}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={openClaudePrompt} style={{ ...S.btn(), padding: '7px 16px', fontSize: 13 }}>
+              🤖 클로드에게 부탁하기
+            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[['all', '전체'], ...TOOLS.map(t => [t.id, t.label])].map(([key, label]) => (
+                <button key={key} onClick={() => setFilterTool(key)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: filterTool === key ? 700 : 500,
+                    border: `1.5px solid ${filterTool === key ? '#e63946' : '#2a2a2a'}`,
+                    background: filterTool === key ? '#2a0a0a' : '#161616',
+                    color: filterTool === key ? '#e63946' : '#888', cursor: 'pointer',
+                    fontFamily: "'Outfit', sans-serif",
+                  }}>{label}</button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {promptOpen && (
+          <div style={{ background: '#0f1115', border: '1px solid #2a2a2a', borderRadius: 10, padding: 16, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>
+                💬 아래 내용을 복사해서 Claude 채팅창에 붙여넣으세요
+              </div>
+              <button onClick={() => setPromptOpen(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14 }}>✕</button>
+            </div>
+            <textarea
+              readOnly
+              value={promptText}
+              rows={Math.min(Math.max(promptText.split('\n').length + 1, 6), 16)}
+              style={{ ...S.textarea, marginBottom: 10, fontSize: 12, lineHeight: 1.7, color: '#d4d4d4', background: '#161616' }}
+              onFocus={e => e.target.select()}
+            />
+            <button
+              onClick={() => {
+                const ta = document.createElement('textarea')
+                ta.value = promptText
+                ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;'
+                document.body.appendChild(ta)
+                ta.focus(); ta.select()
+                let ok = false
+                try { ok = document.execCommand('copy') } catch { ok = false }
+                document.body.removeChild(ta)
+                if (!ok && navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(promptText).catch(() => {})
+                }
+                showToast('✅ 복사됨 — Claude 채팅창에 붙여넣으세요')
+              }}
+              style={{ ...S.btn(), padding: '8px 18px', fontSize: 13 }}>
+              📋 복사하기
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>불러오는 중...</div>
