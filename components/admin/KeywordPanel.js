@@ -36,6 +36,7 @@ export default function KeywordPanel({ token }) {
   const [addLoading, setAddLoading]       = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [allKeywords, setAllKeywords]     = useState([])
+  const [allKwLimit, setAllKwLimit] = useState(100)
   const [allKwLoading, setAllKwLoading]   = useState(false)
   const [allKwLoaded, setAllKwLoaded]     = useState(false)
 
@@ -61,11 +62,10 @@ export default function KeywordPanel({ token }) {
 
   useEffect(() => { loadPicks() }, [token])
 
-  const loadAllKeywords = async () => {
-    if (allKwLoaded) return
+  const loadAllKeywords = async (lim) => {
     setAllKwLoading(true)
     try {
-      const res = await fetch('/api/tools/keyword-all?limit=200', { headers: { 'x-admin-token': token } })
+      const res = await fetch(`/api/tools/keyword-all?limit=${lim || allKwLimit}`, { headers: { 'x-admin-token': token } })
       const data = await res.json()
       setAllKeywords(data.results || [])
       setAllKwLoaded(true)
@@ -76,6 +76,12 @@ export default function KeywordPanel({ token }) {
   const handleTabChange = (t) => {
     setTab(t)
     if (t === 'all') loadAllKeywords()
+  }
+
+  const handleLimitChange = (lim) => {
+    setAllKwLimit(lim)
+    setAllKwLoaded(false)
+    loadAllKeywords(lim)
   }
 
   const handleExpand = async (hint) => {
@@ -337,6 +343,19 @@ export default function KeywordPanel({ token }) {
 
       {tab === 'all' && (
         <div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            {[100, 200, 500, 1000].map(n => (
+              <button key={n} onClick={() => handleLimitChange(n)} style={{
+                padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: allKwLimit === n ? '#e63946' : '#27272a',
+                color: allKwLimit === n ? '#fff' : '#a1a1aa',
+                fontSize: 13, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+              }}>{n}개</button>
+            ))}
+            <span style={{ fontSize: 12, color: '#52525b', alignSelf: 'center', marginLeft: 8 }}>
+              현재 {allKeywords.length.toLocaleString()}개 표시
+            </span>
+          </div>
           {allKwLoading ? (
             <div style={{ color: '#71717a', fontSize: 13, padding: 20, textAlign: 'center' }}>로딩 중...</div>
           ) : (
