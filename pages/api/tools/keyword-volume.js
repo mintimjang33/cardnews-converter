@@ -46,12 +46,11 @@ export default async function handler(req, res) {
   const timestamp = Date.now().toString()
   const signature = makeSignature(timestamp, method, path, secretKey)
 
-  // 인코딩 없이 raw 문자열로 직접 조립
-  const hintKeywords = keywordList.join(',')
-  const requestUrl = `${BASE_URL}${path}?hintKeywords=${hintKeywords}&showDetail=1`
+  const queryString = `hintKeywords=${encodeURIComponent(keywordList.join(','))}&showDetail=1`
+  const requestUrl = `${BASE_URL}${path}?${queryString}`
 
   debug.requestUrl   = requestUrl
-  debug.hintKeywords = hintKeywords
+  debug.hintKeywords = keywordList.join(',')
   debug.timestamp    = timestamp
   debug.signature    = signature
 
@@ -61,7 +60,7 @@ export default async function handler(req, res) {
       headers: {
         'X-Timestamp': timestamp,
         'X-API-KEY':   apiKey,
-        'X-CUSTOMER':  customerId,
+        'X-Customer':  customerId,   // 네이버 공식 담당자 확인: X-Customer (이 대소문자)
         'X-Signature': signature,
         'Content-Type': 'application/json',
       },
