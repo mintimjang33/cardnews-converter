@@ -254,7 +254,7 @@ export default function TextDown() {
   const circumference = 2 * Math.PI * 24
 
   return (
-    <>
+    <div className="light-theme">
       <Head>
         <title>{t.metaTitle}</title>
         <meta name="description" content={t.metaDesc} />
@@ -444,6 +444,6 @@ export default function TextDown() {
       )}
 
       <Footer lang={lang} siteName="Text-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
-    </>
+    </div>
   )
 }

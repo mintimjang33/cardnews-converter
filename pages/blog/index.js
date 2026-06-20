@@ -70,7 +70,7 @@ export default function BlogIndex() {
   const adLabel = lang === 'en' ? 'Ad' : '광고'
 
   return (
-    <>
+    <div className="light-theme">
       <Head>
         <title>블로그 - Unified Tools</title>
         <meta name="description" content="YouTube 썸네일, 효과음, 온라인 도구 관련 팁과 정보" />
@@ -169,6 +169,6 @@ export default function BlogIndex() {
       </div>
 
       <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
-    </>
+    </div>
   )
 }

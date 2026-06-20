@@ -182,13 +182,13 @@ export default function BlogPost() {
   const adLabel = lang === 'en' ? 'Ad' : '광고'
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>
+    <div className="light-theme" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>
       불러오는 중...
     </div>
   )
 
   if (!post || post.error) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+    <div className="light-theme" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <div style={{ fontSize: 36 }}>📭</div>
       <p style={{ color: 'var(--text2)' }}>글을 찾을 수 없습니다</p>
       <Link href="/blog" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 14 }}>← 블로그 목록</Link>
@@ -196,7 +196,7 @@ export default function BlogPost() {
   )
 
   return (
-    <>
+    <div className="light-theme">
       <Head>
         <title>{post.title} - Blog</title>
         <meta name="description" content={post.summary || post.title} />
@@ -279,6 +279,6 @@ export default function BlogPost() {
       </div>
 
       <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} loaded={settingsLoaded} />
-    </>
+    </div>
   )
 }
