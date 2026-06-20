@@ -343,7 +343,7 @@ export default function SoundDown() {
         </div>
       )}
 
-      <Footer lang={lang} adsOn={adsOn} siteName="Sound-Down" />
+      <Footer lang={lang} adsOn={adsOn} siteName="Sound-Down" slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

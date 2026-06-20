@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import { findAdSlot } from '../lib/adSlots'
 
 const I18N = {
   ko: {
@@ -93,6 +94,8 @@ export default function Terms() {
   const [customTerms, setCustomTerms] = useState(null)   // 관리자가 저장한 한국어 본문
   const [customTermsEn, setCustomTermsEn] = useState(null) // 관리자가 저장한 영어 본문
   const [loaded, setLoaded] = useState(false)
+  const [adsOn, setAdsOn] = useState(true)
+  const [adSlots, setAdSlots] = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
@@ -101,6 +104,8 @@ export default function Terms() {
     fetch('/api/settings/get').then(r => r.json()).then(d => {
       if (d.terms && d.terms.trim()) setCustomTerms(d.terms)
       if (d.termsEn && d.termsEn.trim()) setCustomTermsEn(d.termsEn)
+      if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+      if (d.adSlots !== undefined) setAdSlots(d.adSlots)
     }).catch(() => {}).finally(() => setLoaded(true))
   }, [])
 
@@ -149,7 +154,7 @@ export default function Terms() {
         )}
       </div>
 
-      <Footer lang={lang} siteName="Unified Tools" />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

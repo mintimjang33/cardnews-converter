@@ -442,7 +442,7 @@ export default function TextDown() {
         </div>
       )}
 
-      <Footer lang={lang} siteName="Text-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Text-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

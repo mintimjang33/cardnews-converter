@@ -269,7 +269,7 @@ export default function ThumbDown() {
         </div>
       )}
 
-      <Footer lang={lang} adsOn={adsOn} siteName="Thumb-Down" />
+      <Footer lang={lang} adsOn={adsOn} siteName="Thumb-Down" slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

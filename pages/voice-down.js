@@ -288,7 +288,7 @@ export default function VoiceDown() {
         </div>
       )}
 
-      <Footer lang={lang} siteName="Voice-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Voice-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

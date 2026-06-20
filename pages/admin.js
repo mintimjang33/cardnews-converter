@@ -7,6 +7,16 @@ import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
+const TAB_LABELS = {
+  settings: '🔧 서비스 설정',
+  legal: '📜 약관 관리',
+  adsense: '📢 광고 관리',
+  blog_write: '✍️ 게시판 글쓰기',
+  blog_admin: '📝 게시판 관리',
+  blog_menu: '📋 게시판 메뉴관리',
+  password: '🔑 비밀번호 변경',
+}
+
 function LoginScreen({ onLogin }) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
@@ -53,7 +63,11 @@ export default function Admin() {
   const [authed, setAuthed] = useState(false)
   const [adminToken, setAdminToken] = useState('')
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('settings')
+  const [activeTab, setActiveTabState] = useState('settings')
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab)
+    try { sessionStorage.setItem('admin_active_tab', tab) } catch {}
+  }
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -78,6 +92,8 @@ export default function Admin() {
 
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token')
+    const savedTab = sessionStorage.getItem('admin_active_tab')
+    if (savedTab && TAB_LABELS[savedTab]) setActiveTabState(savedTab)
     if (token) { setAuthed(true); setAdminToken(token); loadSettings(token) }
     setLoading(false)
   }, [])
@@ -127,21 +143,12 @@ export default function Admin() {
 
   const handleLogout = () => {
     sessionStorage.removeItem('admin_token')
+    sessionStorage.removeItem('admin_active_tab')
     setAuthed(false)
   }
 
   if (loading) return null
   if (!authed) return <LoginScreen onLogin={(t) => { setAuthed(true); setAdminToken(t); loadSettings(t) }} />
-
-  const TAB_LABELS = {
-    settings: '🔧 서비스 설정',
-    legal: '📜 약관 관리',
-    adsense: '📢 광고 관리',
-    blog_write: '✍️ 게시판 글쓰기',
-    blog_admin: '📝 게시판 관리',
-    blog_menu: '📋 게시판 메뉴관리',
-    password: '🔑 비밀번호 변경',
-  }
 
   return (
     <>

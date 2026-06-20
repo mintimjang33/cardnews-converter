@@ -164,7 +164,7 @@ export default function CardnewsDown() {
         </div>
       )}
 
-      <Footer lang={lang} siteName="CardNews-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="CardNews-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

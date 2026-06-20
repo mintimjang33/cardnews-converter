@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import { findAdSlot } from '../lib/adSlots'
 
 const I18N = {
   ko: {
@@ -41,10 +42,16 @@ const I18N = {
 export default function FAQ() {
   const [lang, setLang] = useState('ko')
   const [openIndex, setOpenIndex] = useState(null)
+  const [adsOn, setAdsOn] = useState(true)
+  const [adSlots, setAdSlots] = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
     if (saved === 'en' || saved === 'ko') setLang(saved)
+    fetch('/api/settings/get').then(r => r.json()).then(d => {
+      if (d.adsOn !== undefined) setAdsOn(d.adsOn)
+      if (d.adSlots !== undefined) setAdSlots(d.adSlots)
+    }).catch(() => {})
   }, [])
 
   const toggleLang = () => {
@@ -101,7 +108,7 @@ export default function FAQ() {
         </div>
       </div>
 
-      <Footer lang={lang} siteName="Unified Tools" />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

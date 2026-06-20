@@ -141,7 +141,7 @@ export default function BlogIndex() {
         )}
       </div>
 
-      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Unified Tools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

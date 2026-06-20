@@ -153,7 +153,7 @@ export default function Home() {
         </div>
       )}
 
-      <Footer lang={lang} siteName="DownTools" adsOn={adsOn} />
+      <Footer lang={lang} siteName="DownTools" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
     </>
   )
 }

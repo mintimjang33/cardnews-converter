@@ -1054,7 +1054,7 @@ export default function ClockDown() {
         </div>
       )}
 
-      <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} />
+      <Footer lang={lang} siteName="Clock-Down" adsOn={adsOn} slotData={findAdSlot(adSlots, 'footer')} />
 
       </div>
     </>

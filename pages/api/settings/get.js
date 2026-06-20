@@ -39,7 +39,7 @@ const DEFAULT_AD_SLOTS = [
   { id: 'home_right',    name: '전체 페이지 우측 사이드',   w: 160,    h: 600, active: false, code: '' },
   { id: 'home_middle',   name: '전체 페이지 중단 배너',     w: '100%', h: 90,  active: false, code: '' },
   { id: 'home_cooldown', name: '다운로드 대기 화면 배너',   w: '100%', h: 250, active: false, code: '' },
-  { id: 'sidebar_bottom',name: '관리자 사이드바 하단', w: '100%', h: 120, active: false, code: '' },
+  { id: 'footer',        name: '전체 페이지 하단 푸터 배너', w: '100%', h: 90,  active: false, code: '' },
 ]
 
 const DEFAULTS = {
