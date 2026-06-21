@@ -21,7 +21,7 @@ export default function ContentLogPanel({ adminToken }) {
   const [promptOpen, setPromptOpen] = useState(false)
 
   // 수동 추가 폼 (보통은 Claude가 작성해주는 내용을 그대로 붙여넣는 용도)
-  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', publishedAt: new Date().toISOString().slice(0,10) })
+  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: new Date().toISOString().slice(0,10) })
   const [saving, setSaving] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [parseMsg, setParseMsg] = useState('')
@@ -39,7 +39,12 @@ export default function ContentLogPanel({ adminToken }) {
     } else {
       lines.push(`발행 기록 (${logs.length}건, 최신순):`)
       logs.forEach(l => {
-        lines.push(`- 도구: ${l.tool} / 각도: ${l.angle} / 제목: ${l.title} / 슬러그: ${l.slug}${l.published_at ? ' / 발행일: ' + l.published_at : ''}`)
+        let line = `- 도구: ${l.tool} / 각도: ${l.angle} / 제목: ${l.title} / 슬러그: ${l.slug}${l.published_at ? ' / 발행일: ' + l.published_at : ''}`
+        if (l.target_keyword) {
+          line += ` / 타겟키워드: ${l.target_keyword}`
+          if (l.search_total) line += ` (검색수 ${l.search_total.toLocaleString()}${l.competition ? ' / 경쟁도 ' + l.competition : ''})`
+        }
+        lines.push(line)
       })
     }
     lines.push('')
@@ -70,13 +75,18 @@ export default function ContentLogPanel({ adminToken }) {
   // 4줄 텍스트를 붙여넣으면 자동으로 form 칸에 나눠 채워준다.
   const parsePastedLog = (text) => {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-    const picked = { tool: '', angle: '', title: '', slug: '', memo: '', publishedAt: '' }
+    const picked = { tool: '', angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: '' }
     const patterns = {
       tool: /^(도구|tool)\s*[:：]\s*(.+)$/i,
       angle: /^(키워드\s*각도|각도|angle)\s*[:：]\s*(.+)$/i,
       title: /^(제목|title)\s*[:：]\s*(.+)$/i,
       slug: /^(슬러그|slug)\s*[:：]\s*(.+)$/i,
       memo: /^(메모|비고|memo)\s*[:：]\s*(.+)$/i,
+      targetKeyword: /^(타겟\s*키워드|타겟키워드|target.?keyword)\s*[:：]\s*(.+)$/i,
+      searchPc: /^(PC\s*검색수|검색수\s*PC|search.?pc)\s*[:：]\s*(.+)$/i,
+      searchMobile: /^(모바일\s*검색수|검색수\s*모바일|search.?mobile)\s*[:：]\s*(.+)$/i,
+      searchTotal: /^(검색수\s*합계|합계\s*검색수|search.?total)\s*[:：]\s*(.+)$/i,
+      competition: /^(경쟁도|competition)\s*[:：]\s*(.+)$/i,
       publishedAt: /^(발행일|발행날짜|publishedat|date)\s*[:：]\s*(.+)$/i,
     }
     lines.forEach(line => {
@@ -103,9 +113,14 @@ export default function ContentLogPanel({ adminToken }) {
       title: picked.title || f.title,
       slug: picked.slug || f.slug,
       memo: picked.memo || f.memo,
+      targetKeyword: picked.targetKeyword || f.targetKeyword,
+      searchPc: picked.searchPc || f.searchPc,
+      searchMobile: picked.searchMobile || f.searchMobile,
+      searchTotal: picked.searchTotal || f.searchTotal,
+      competition: picked.competition || f.competition,
       publishedAt: picked.publishedAt || f.publishedAt,
     }))
-    const labels = { tool: '도구', angle: '각도', title: '제목', slug: '슬러그', memo: '메모', publishedAt: '발행일' }
+    const labels = { tool: '도구', angle: '각도', title: '제목', slug: '슬러그', memo: '메모', targetKeyword: '타겟키워드', searchPc: 'PC검색수', searchMobile: '모바일검색수', searchTotal: '합계검색수', competition: '경쟁도', publishedAt: '발행일' }
     setParseMsg(`✅ ${found.map(([k]) => labels[k]).join(', ')} 자동 입력됨 — 아래 내용 확인 후 "기록 추가"를 눌러주세요`)
   }
 
@@ -135,7 +150,7 @@ export default function ContentLogPanel({ adminToken }) {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
-      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '', publishedAt: new Date().toISOString().slice(0,10) })
+      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: new Date().toISOString().slice(0,10) })
       setPasteText('')
       setParseMsg('')
       showToast('✅ 기록 추가됨')
@@ -212,6 +227,35 @@ export default function ContentLogPanel({ adminToken }) {
             <label style={S.label}>슬러그</label>
             <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
               placeholder="youtube-thumbnail-download" style={S.input} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={S.label}>타겟 키워드 (선택)</label>
+            <input value={form.targetKeyword} onChange={e => setForm(f => ({ ...f, targetKeyword: e.target.value }))}
+              placeholder="예: 유튜브 썸네일 다운로드" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>PC 검색수</label>
+            <input type="number" value={form.searchPc} onChange={e => setForm(f => ({ ...f, searchPc: e.target.value }))}
+              placeholder="0" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>모바일 검색수</label>
+            <input type="number" value={form.searchMobile} onChange={e => setForm(f => ({ ...f, searchMobile: e.target.value }))}
+              placeholder="0" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>합계 검색수</label>
+            <input type="number" value={form.searchTotal} onChange={e => setForm(f => ({ ...f, searchTotal: e.target.value }))}
+              placeholder="0" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>경쟁도</label>
+            <select value={form.competition} onChange={e => setForm(f => ({ ...f, competition: e.target.value }))} style={S.input}>
+              <option value="">-</option>
+              <option value="낮음">낮음</option>
+              <option value="중간">중간</option>
+              <option value="높음">높음</option>
+            </select>
           </div>
           <div>
             <label style={S.label}>발행일</label>
@@ -314,6 +358,29 @@ export default function ContentLogPanel({ adminToken }) {
                       (기록 {log.created_at ? new Date(log.created_at).toLocaleDateString('ko-KR') : ''})
                     </span>
                   </div>
+                  {log.target_keyword && (
+                    <div style={{ marginTop: 5, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#60a5fa', background: '#0f1f3d', borderRadius: 4, padding: '2px 8px', border: '1px solid #1e3a5f', fontWeight: 700 }}>
+                        🔑 {log.target_keyword}
+                      </span>
+                      {log.search_total != null && (
+                        <span style={{ fontSize: 11, color: '#888' }}>
+                          검색수 <strong style={{ color: '#f0f0f0' }}>{Number(log.search_total).toLocaleString()}</strong>
+                          {log.search_pc != null && <span> (PC {Number(log.search_pc).toLocaleString()} / 모바일 {Number(log.search_mobile).toLocaleString()})</span>}
+                        </span>
+                      )}
+                      {log.competition && (
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                          background: log.competition === '낮음' ? '#052e16' : log.competition === '중간' ? '#1c1c00' : '#2a0a0a',
+                          color: log.competition === '낮음' ? '#4ade80' : log.competition === '중간' ? '#facc15' : '#f87171',
+                          border: `1px solid ${log.competition === '낮음' ? '#166534' : log.competition === '중간' ? '#854d0e' : '#7f1d1d'}`,
+                        }}>
+                          경쟁도 {log.competition}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => deleteLog(log.id)}
                   style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #7f1d1d', background: '#2a0a0a', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}>

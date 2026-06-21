@@ -18,12 +18,23 @@ function genId() {
 //   title text not null,           -- 글 제목
 //   slug text not null,            -- URL 슬러그
 //   memo text,                     -- 비고 (선택)
+//   target_keyword text,           -- 타겟 키워드 (예: "유튜브 썸네일 다운로드")
+//   search_pc integer,             -- 네이버 PC 월간 검색수
+//   search_mobile integer,         -- 네이버 모바일 월간 검색수
+//   search_total integer,          -- PC + 모바일 합계
+//   competition text,              -- 경쟁도 (높음/중간/낮음)
 //   published_at date,             -- 실제 블로그 발행일 (선택, YYYY-MM-DD)
 //   created_at timestamptz not null default now()
 // );
 //
-// 기존 테이블에 이미 만들어둔 경우 아래 한 줄만 추가로 실행:
-// alter table content_log add column if not exists published_at date;
+// 기존 테이블에 컬럼 추가 (이미 테이블이 있는 경우):
+// alter table content_log
+//   add column if not exists target_keyword text,
+//   add column if not exists search_pc integer,
+//   add column if not exists search_mobile integer,
+//   add column if not exists search_total integer,
+//   add column if not exists competition text,
+//   add column if not exists published_at date;
 //
 // 이 테이블은 실제 글 본문을 저장하지 않습니다 (blog_posts와 별개).
 // Claude가 글을 작성·발행할 때마다 "무엇을 어떤 각도로 썼는지"만 가볍게 기록해
@@ -58,6 +69,11 @@ export default async function handler(req, res) {
       title: body.title,
       slug: body.slug,
       memo: body.memo || null,
+      target_keyword: body.targetKeyword || null,
+      search_pc: body.searchPc != null ? Number(body.searchPc) : null,
+      search_mobile: body.searchMobile != null ? Number(body.searchMobile) : null,
+      search_total: body.searchTotal != null ? Number(body.searchTotal) : null,
+      competition: body.competition || null,
       published_at: body.publishedAt || null,
       created_at: new Date().toISOString(),
     }

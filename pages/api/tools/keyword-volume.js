@@ -1,9 +1,14 @@
 /**
  * /api/tools/keyword-volume
- * 네이버 검색광고 API — 연관 키워드 전체를 Supabase에 저장 + 정렬 반환
+ * 네이버 검색광고 API — 연관 키워드 검색량 + 네이버 블로그 문서수 병렬 조회
+ * Supabase에 저장 + 정렬 반환
  *
  * 사용법:
  *   GET /api/tools/keyword-volume?keyword=썸네일&limit=20
+ *
+ * 문서수 조회는 네이버 오픈API (블로그 검색) 를 사용합니다.
+ * 환경변수에 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 을 추가해야 합니다.
+ * (네이버 개발자센터 https://developers.naver.com 에서 "검색" API 앱 등록 후 발급)
  */
 
 import crypto from 'crypto'
@@ -31,6 +36,29 @@ function encodeKeyword(kw) {
 function parseCount(val) {
   if (val === '< 10' || val === '<10') return 5
   return Number(val) || 0
+}
+
+// 네이버 블로그 검색 API로 문서수 조회
+async function fetchDocCount(keyword) {
+  const clientId = process.env.NAVER_CLIENT_ID
+  const clientSecret = process.env.NAVER_CLIENT_SECRET
+  if (!clientId || !clientSecret) return null
+
+  try {
+    const url = `https://openapi.naver.com/v1/search/blog?query=${encodeURIComponent(keyword)}&display=1`
+    const res = await fetch(url, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.total ?? null
+  } catch {
+    return null
+  }
 }
 
 export default async function handler(req, res) {
@@ -87,26 +115,37 @@ export default async function handler(req, res) {
       }
     })
 
-    // Supabase 저장 (같은 hint+keyword 조합은 upsert로 덮어쓰기)
-    if (parsed.length > 0) {
+    // 상위 limit개 키워드에 대해 문서수 병렬 조회
+    const topParsed = parsed
+      .sort((a, b) => b.total - a.total)
+      .slice(0, Number(limit))
+
+    const docCounts = await Promise.all(
+      topParsed.map(item => fetchDocCount(item.keyword))
+    )
+
+    const withDocCount = topParsed.map((item, i) => ({
+      ...item,
+      doc_count: docCounts[i],
+    }))
+
+    // Supabase 저장 (keyword_stats 테이블 — doc_count 컬럼 추가 필요)
+    // alter table keyword_stats add column if not exists doc_count bigint;
+    if (withDocCount.length > 0) {
       const { error: dbError } = await supabase
         .from('keyword_stats')
-        .upsert(parsed, { onConflict: 'hint,keyword' })
+        .upsert(withDocCount, { onConflict: 'hint,keyword' })
 
       if (dbError) console.error('Supabase 저장 오류:', dbError.message)
     }
 
-    // total 기준 내림차순 정렬 후 limit개 반환
-    const results = parsed
-      .sort((a, b) => b.total - a.total)
-      .slice(0, Number(limit))
-      .map(({ hint, ...rest }) => rest) // hint 필드는 응답에서 제외
+    const results = withDocCount.map(({ hint, ...rest }) => rest)
 
-    res.setHeader('Cache-Control', 'no-store') // 저장 후엔 캐시 안 함
+    res.setHeader('Cache-Control', 'no-store')
     return res.status(200).json({
       keyword,
       total_found: list.length,
-      saved: parsed.length,
+      saved: withDocCount.length,
       results,
     })
 

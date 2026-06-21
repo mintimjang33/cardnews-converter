@@ -160,7 +160,7 @@ async function fetchNaverKeywordData(keywords) {
   }
   const data = await response.json()
   const list = Array.isArray(data?.keywordList) ? data.keywordList : []
-  return list.map(item => {
+  const parsed = list.map(item => {
     const pc = item.monthlyPcQcCnt === '< 10' ? 5 : Number(item.monthlyPcQcCnt) || 0
     const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0
     return {
@@ -171,6 +171,33 @@ async function fetchNaverKeywordData(keywords) {
       competition: item.compIdx,
     }
   }).sort((a, b) => b.monthlySearchTotal - a.monthlySearchTotal)
+
+  // 네이버 블로그 검색 API로 문서수 병렬 조회
+  const clientId = process.env.NAVER_CLIENT_ID
+  const clientSecret = process.env.NAVER_CLIENT_SECRET
+  if (clientId && clientSecret) {
+    const docCounts = await Promise.all(
+      parsed.map(async (item) => {
+        try {
+          const res = await fetch(
+            `https://openapi.naver.com/v1/search/blog?query=${encodeURIComponent(item.keyword)}&display=1`,
+            {
+              headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+              signal: AbortSignal.timeout(5000),
+            }
+          )
+          if (!res.ok) return null
+          const d = await res.json()
+          return d.total ?? null
+        } catch {
+          return null
+        }
+      })
+    )
+    return parsed.map((item, i) => ({ ...item, docCount: docCounts[i] }))
+  }
+
+  return parsed
 }
 
 // ── MCP 서버 정의 ─────────────────────────────────────────────────────
@@ -255,7 +282,8 @@ const baseHandler = createMcpHandler(
         title: '네이버 키워드 실시간 검색량 조회',
         description:
           '네이버 검색광고 키워드도구로 키워드별 월간 검색량(PC/모바일 합산)과 경쟁정도를 ' +
-          '실시간으로 조회한다. 캐시에 없는 새 후보 키워드를 즉석에서 비교할 때 사용한다. ' +
+          '실시간으로 조회한다. NAVER_CLIENT_ID/SECRET 환경변수가 설정되어 있으면 네이버 블로그 ' +
+          '문서수(docCount)도 함께 반환된다. 캐시에 없는 새 후보 키워드를 즉석에서 비교할 때 사용한다. ' +
           '조회 결과 중 나중에도 쓸만한 키워드가 있으면 save_keyword_data로 캐시에 저장해두면, ' +
           '다음 글 작성 때 get_keyword_data로 다시 불러와 재활용할 수 있다.',
         inputSchema: {
@@ -581,7 +609,9 @@ const baseHandler = createMcpHandler(
           '새로 작성한 블로그 글 1편을 발행 기록에 남긴다. STEP 3에서 최종 아티팩트를 ' +
           '출력한 직후 호출해서, 같은 도구·각도를 다음에 또 쓰지 않도록 한다. 이 글에서 ' +
           'pick_keyword로 찜해뒀던 황금키워드를 실제로 썼다면, memo에 어떤 키워드를 어떻게 ' +
-          '썼는지 짧게 남긴다(예: "찜 키워드 \'맞춤법검사기\' 사용"). created_at이 자동으로 ' +
+          '썼는지 짧게 남긴다(예: "찜 키워드 \'맞춤법검사기\' 사용"). target_keyword·search_pc·' +
+          'search_mobile·search_total·competition을 함께 넘기면 발행 기록에 키워드 데이터도 ' +
+          '같이 저장된다. created_at이 자동으로 ' +
           '날짜를 남기기 때문에, 이렇게 하면 "그 키워드를 며칠에 어느 글에 썼는지"가 ' +
           'get_publish_log 조회만으로 그대로 추적된다.',
         inputSchema: {
@@ -590,14 +620,24 @@ const baseHandler = createMcpHandler(
           title: z.string(),
           slug: z.string(),
           memo: z.string().optional().describe('이 글에서 사용한 찜 키워드나 특이사항 메모'),
+          target_keyword: z.string().optional().describe('타겟 키워드, 예: "유튜브 썸네일 다운로드"'),
+          search_pc: z.number().optional().describe('네이버 PC 월간 검색수'),
+          search_mobile: z.number().optional().describe('네이버 모바일 월간 검색수'),
+          search_total: z.number().optional().describe('PC+모바일 합계 검색수'),
+          competition: z.string().optional().describe('경쟁도 (높음/중간/낮음)'),
         },
         annotations: { destructiveHint: false, idempotentHint: false },
       },
-      async ({ tool, angle, title, slug, memo }) => {
+      async ({ tool, angle, title, slug, memo, target_keyword, search_pc, search_mobile, search_total, competition }) => {
         const row = {
           id: Date.now().toString(36) + Math.random().toString(36).slice(2),
           tool, angle, title, slug,
           memo: memo || null,
+          target_keyword: target_keyword || null,
+          search_pc: search_pc != null ? Number(search_pc) : null,
+          search_mobile: search_mobile != null ? Number(search_mobile) : null,
+          search_total: search_total != null ? Number(search_total) : null,
+          competition: competition || null,
           published_at: null,
           created_at: new Date().toISOString(),
         }
