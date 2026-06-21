@@ -1,14 +1,12 @@
 /**
  * /api/tools/keyword-volume
- * 네이버 검색광고 API — 연관 키워드 검색량 + 네이버 블로그 문서수 병렬 조회
+ * 네이버 검색광고 API — 연관 키워드 검색량 + 네이버 블로그 문서수 조회
  * Supabase에 저장 + 정렬 반환
  *
- * 사용법:
- *   GET /api/tools/keyword-volume?keyword=썸네일&limit=20
+ * GET /api/tools/keyword-volume?keyword=썸네일
  *
- * 문서수 조회는 네이버 오픈API (블로그 검색) 를 사용합니다.
- * 환경변수에 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 을 추가해야 합니다.
- * (네이버 개발자센터 https://developers.naver.com 에서 "검색" API 앱 등록 후 발급)
+ * 문서수(doc_count)는 아직 조회 안 된 키워드(null)만 새로 가져옵니다.
+ * 환경변수: NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
  */
 
 import crypto from 'crypto'
@@ -23,10 +21,7 @@ const supabase = createClient(
 
 function makeSignature(timestamp, method, path, secretKey) {
   const message = `${timestamp}.${method}.${path}`
-  return crypto
-    .createHmac('sha256', secretKey)
-    .update(message)
-    .digest('base64')
+  return crypto.createHmac('sha256', secretKey).update(message).digest('base64')
 }
 
 function encodeKeyword(kw) {
@@ -38,21 +33,22 @@ function parseCount(val) {
   return Number(val) || 0
 }
 
-// 네이버 블로그 검색 API로 문서수 조회
+// 네이버 블로그 문서수 조회 (개별)
 async function fetchDocCount(keyword) {
   const clientId = process.env.NAVER_CLIENT_ID
   const clientSecret = process.env.NAVER_CLIENT_SECRET
   if (!clientId || !clientSecret) return null
-
   try {
-    const url = `https://openapi.naver.com/v1/search/blog?query=${encodeURIComponent(keyword)}&display=1`
-    const res = await fetch(url, {
-      headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
-      signal: AbortSignal.timeout(5000),
-    })
+    const res = await fetch(
+      `https://openapi.naver.com/v1/search/blog?query=${encodeURIComponent(keyword)}&display=1`,
+      {
+        headers: {
+          'X-Naver-Client-Id': clientId,
+          'X-Naver-Client-Secret': clientSecret,
+        },
+        signal: AbortSignal.timeout(5000),
+      }
+    )
     if (!res.ok) return null
     const data = await res.json()
     return data.total ?? null
@@ -61,10 +57,22 @@ async function fetchDocCount(keyword) {
   }
 }
 
+// 50개씩 배치 병렬 처리
+async function fetchDocCountBatch(keywords) {
+  const BATCH = 50
+  const results = []
+  for (let i = 0; i < keywords.length; i += BATCH) {
+    const batch = keywords.slice(i, i + BATCH)
+    const counts = await Promise.all(batch.map(kw => fetchDocCount(kw)))
+    results.push(...counts)
+  }
+  return results
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const { keyword, limit = '30' } = req.query
+  const { keyword } = req.query
   if (!keyword) return res.status(400).json({ error: 'keyword 파라미터가 필요합니다' })
 
   const apiKey     = process.env.NAVER_AD_API_KEY
@@ -84,6 +92,7 @@ export default async function handler(req, res) {
   const requestUrl = `${BASE_URL}${path}?hintKeywords=${encoded}&showDetail=1`
 
   try {
+    // 1. 네이버 검색광고 API — 전체 키워드 검색량 조회
     const response = await fetch(requestUrl, {
       method,
       headers: {
@@ -101,7 +110,6 @@ export default async function handler(req, res) {
     const data = JSON.parse(rawText)
     const list = data.keywordList || []
 
-    // 파싱
     const parsed = list.map(item => {
       const pc     = parseCount(item.monthlyPcQcCnt)
       const mobile = parseCount(item.monthlyMobileQcCnt)
@@ -113,29 +121,41 @@ export default async function handler(req, res) {
         total:       pc + mobile,
         competition: item.compIdx || '-',
       }
-    })
+    }).sort((a, b) => b.total - a.total)
 
-    // 상위 limit개 키워드에 대해 문서수 병렬 조회
-    const topParsed = parsed
-      .sort((a, b) => b.total - a.total)
-      .slice(0, Number(limit))
+    // 2. 이미 doc_count가 있는 키워드는 건너뜀 — DB에서 기존 데이터 조회
+    const keywordList = parsed.map(i => i.keyword)
+    const { data: existing } = await supabase
+      .from('keyword_stats')
+      .select('keyword, doc_count')
+      .eq('hint', keyword)
+      .in('keyword', keywordList)
 
-    const docCounts = await Promise.all(
-      topParsed.map(item => fetchDocCount(item.keyword))
-    )
+    const existingMap = {}
+    ;(existing || []).forEach(row => { existingMap[row.keyword] = row.doc_count })
 
-    const withDocCount = topParsed.map((item, i) => ({
+    // doc_count가 null인 것만 새로 조회
+    const needsDocCount = parsed.filter(item => existingMap[item.keyword] == null)
+    const skipCount = parsed.length - needsDocCount.length
+
+    let docCountMap = {}
+    if (needsDocCount.length > 0) {
+      const counts = await fetchDocCountBatch(needsDocCount.map(i => i.keyword))
+      needsDocCount.forEach((item, i) => { docCountMap[item.keyword] = counts[i] })
+    }
+
+    // 3. 전체 upsert — 검색량은 항상 최신으로, doc_count는 새로 조회한 것만 반영
+    const withDocCount = parsed.map(item => ({
       ...item,
-      doc_count: docCounts[i],
+      doc_count: docCountMap[item.keyword] !== undefined
+        ? docCountMap[item.keyword]
+        : (existingMap[item.keyword] ?? null),
     }))
 
-    // Supabase 저장 (keyword_stats 테이블 — doc_count 컬럼 추가 필요)
-    // alter table keyword_stats add column if not exists doc_count bigint;
     if (withDocCount.length > 0) {
       const { error: dbError } = await supabase
         .from('keyword_stats')
         .upsert(withDocCount, { onConflict: 'hint,keyword' })
-
       if (dbError) console.error('Supabase 저장 오류:', dbError.message)
     }
 
@@ -146,6 +166,8 @@ export default async function handler(req, res) {
       keyword,
       total_found: list.length,
       saved: withDocCount.length,
+      doc_count_fetched: needsDocCount.length,  // 새로 조회한 수
+      doc_count_skipped: skipCount,              // 기존 데이터 재사용한 수
       results,
     })
 

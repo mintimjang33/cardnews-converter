@@ -263,7 +263,7 @@ export default function KeywordPanel({ token }) {
   const handleUpdateByHint = async (hint) => {
     setLoading(l => ({ ...l, [hint]: true }))
     try {
-      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}`, {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&limit=1000`, {
         headers: { 'x-admin-token': token },
       })
       const data = await res.json()
@@ -394,7 +394,33 @@ export default function KeywordPanel({ token }) {
   return (
     <div style={{ padding: 28, fontFamily: "'Outfit', sans-serif", maxWidth: 780 }}>
       <h2 style={{ color: '#f0f0f0', fontSize: 20, fontWeight: 800, marginBottom: 6 }}>🔍 키워드 검색량 관리</h2>
-      <p style={{ color: '#71717a', fontSize: 13, marginBottom: 20 }}>키워드를 입력하면 네이버 연관 키워드 전체를 수집해서 아래 목록에 추가합니다.</p>
+      <p style={{ color: '#71717a', fontSize: 13, marginBottom: 12 }}>키워드를 입력하면 네이버 연관 키워드 전체를 수집해서 아래 목록에 추가합니다.</p>
+
+      {/* 전체 수집 현황 요약 */}
+      {allRows.length > 0 && (() => {
+        const totalKeywords = allRows.reduce((sum, r) => sum + (r.count || 0), 0)
+        const totalWithDoc  = allRows.reduce((sum, r) => sum + (r.doc_count_filled || 0), 0)
+        return (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div style={{
+              background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
+              padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 13, color: '#71717a' }}>전체 수집 키워드</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#e63946' }}>{totalKeywords.toLocaleString()}</span>
+              <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
+            </div>
+            <div style={{
+              background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
+              padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 13, color: '#71717a' }}>도구 그룹</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#f0f0f0' }}>{allRows.length}</span>
+              <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
+            </div>
+          </div>
+        )
+      })()}
 
       <div style={{ background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10, padding: '16px 18px', marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>➕ 키워드 추가 수집</div>
@@ -444,7 +470,7 @@ export default function KeywordPanel({ token }) {
         <div>
           {allRows.map(row => {
             const days        = daysSince(row.collected_at)
-            const needsUpdate = days >= 30
+            const needsUpdate = days >= 15
             const isLoading   = loading[row.hint]
             const isExpanded  = expanded === row.hint
             const topList     = topData[row.hint] || []
@@ -464,10 +490,27 @@ export default function KeywordPanel({ token }) {
                     <div>
                       <div style={{ fontSize: 13, color: needsUpdate ? '#f87171' : '#a1a1aa' }}>
                         네이버 검색일: <b style={{ color: needsUpdate ? '#fca5a5' : '#d4d4d8' }}>{formatDate(row.collected_at)}</b>
+                        {row.collected_at && !needsUpdate && (() => {
+                          const nextDate = new Date(new Date(row.collected_at).getTime() + 15 * 86400000)
+                          const daysLeft = Math.ceil((nextDate.getTime() - Date.now()) / 86400000)
+                          const isAllFilled = (row.null_doc_count || 0) === 0 && row.count > 0
+                          if (!isAllFilled) return null
+                          return (
+                            <span style={{ marginLeft: 10, fontSize: 12, color: '#52525b' }}>
+                              · 다음 업데이트 <b style={{ color: '#a1a1aa' }}>{formatDate(nextDate.toISOString())}</b>
+                              <span style={{ color: '#3f3f46', marginLeft: 4 }}>({daysLeft}일 후)</span>
+                            </span>
+                          )
+                        })()}
                       </div>
                       {row.count > 0 && (
                         <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>
-                          키워드 <b style={{ color: '#e63946', fontSize: 13 }}>{fmt(row.count)}개</b> · 클릭해서 TOP 50 보기
+                          키워드 <b style={{ color: '#e63946', fontSize: 13 }}>{fmt(row.count)}개</b>
+                          {row.null_doc_count > 0
+                            ? <span style={{ color: '#f87171', marginLeft: 6 }}>· 문서수 미수집 <b>{fmt(row.null_doc_count)}개</b> 남음</span>
+                            : <span style={{ color: '#4ade80', marginLeft: 6 }}>· 문서수 완료 ✓</span>
+                          }
+                          {' · 클릭해서 TOP 50 보기'}
                         </div>
                       )}
                     </div>
@@ -479,8 +522,8 @@ export default function KeywordPanel({ token }) {
                       </span>
                     )}
                     <button onClick={e => { e.stopPropagation(); handleUpdateByHint(row.hint) }} disabled={isLoading} style={{
-                      background: needsUpdate ? '#e63946' : '#27272a',
-                      color: needsUpdate ? '#fff' : '#a1a1aa',
+                      background: (needsUpdate || (row.null_doc_count || 0) > 0) ? '#e63946' : '#27272a',
+                      color: (needsUpdate || (row.null_doc_count || 0) > 0) ? '#fff' : '#a1a1aa',
                       border: 'none', borderRadius: 8, padding: '8px 16px',
                       fontSize: 13, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
                       opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap',
