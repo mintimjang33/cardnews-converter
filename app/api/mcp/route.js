@@ -5,12 +5,28 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 5개:
+// 노출 툴 7개:
 //   - get_publish_log     : 발행 기록 조회 (중복 방지용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase)
 //   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출)
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
+//   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
+//   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
+//
+// tool_info 테이블 (Supabase에 최초 1회 생성 필요):
+//
+// create table tool_info (
+//   tool_id text primary key,        -- 예: thumb-down, clock-down ...
+//   name text,                       -- 도구명, 예: "카드뉴스 변환기"
+//   description text not null,       -- 도구 기능 설명 (도구당 최신 1개, 덮어쓰기 방식)
+//   path text,                       -- 경로, 예: /cardnews-down
+//   updated_at timestamptz not null default now()
+// );
+//
+// 이 테이블은 "도구가 정확히 무엇을 하는지"에 대한 살아있는 단일 정답을 보관합니다.
+// Claude가 추측하거나 다른 글에서 유추한 내용으로는 절대 update_tool_info를 호출하지 않고,
+// 사용자가 대화 중 직접 확인·정정해준 내용만 반영합니다.
 //
 // 필요한 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY   - 기존 admin API들과 동일하게 사용
@@ -276,6 +292,75 @@ const baseHandler = createMcpHandler(
           ? `✅ 발행 완료 — https://cardnews-converter.vercel.app/blog/${slug} 에서 바로 확인 가능`
           : `✅ ${finalStatus === 'draft' ? '임시저장(draft)' : '예약(scheduled)'} 완료 — admin에서 확인 필요`
         return { content: [{ type: 'text', text: liveNote }] }
+      }
+    )
+
+    server.registerTool(
+      'get_tool_info',
+      {
+        title: '도구 기능 설명 조회',
+        description:
+          '사이트에 등록된 도구들의 최신 기능 설명을 가져온다. tool_id를 비우면 전체를 반환한다. ' +
+          'STEP 1 시작 시 get_publish_log와 같은 타이밍에 한 번 호출해서, 글 작성 전에 도구 설명을 ' +
+          '최신 상태로 확인하는 데 쓴다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).optional().describe('특정 도구로만 조회하고 싶을 때, 비우면 전체'),
+        },
+      },
+      async ({ tool_id }) => {
+        let q = supabase.from('tool_info').select('*').order('tool_id')
+        if (tool_id) q = q.eq('tool_id', tool_id)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data || !data.length) {
+          return { content: [{ type: 'text', text: tool_id ? `${tool_id}: 등록된 설명 없음` : '등록된 도구 설명 없음 (아직 update_tool_info로 등록된 적 없음)' }] }
+        }
+        const lines = data.map(t =>
+          `- [${t.tool_id}] ${t.name || ''}: ${t.description}${t.path ? ' (' + t.path + ')' : ''} · 갱신일 ${t.updated_at}`
+        )
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
+      'update_tool_info',
+      {
+        title: '도구 기능 설명 갱신',
+        description:
+          '도구 기능 설명을 갱신한다 (도구당 최신 1개로 덮어씀). 사용자가 대화 중 직접 ' +
+          '정정·확인해준 내용만 반영하고, 추측이나 다른 글에서 유추한 정보로는 절대 호출하지 않는다. ' +
+          '호출 전 갱신할 내용을 한 줄로 요약해 사용자에게 보여준다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).describe('도구 코드'),
+          description: z.string().describe('갱신할 전체 기능 설명'),
+          name: z.string().optional().describe('도구명 (선택, 비우면 기존 값 유지)'),
+          path: z.string().optional().describe('도구 경로, 예: /cardnews-down (선택, 비우면 기존 값 유지)'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ tool_id, description, name, path }) => {
+        const { data: prevRow } = await supabase
+          .from('tool_info').select('description').eq('tool_id', tool_id).maybeSingle()
+        const previousDescription = prevRow?.description || null
+
+        const row = {
+          tool_id,
+          description,
+          updated_at: new Date().toISOString(),
+        }
+        if (name) row.name = name
+        if (path) row.path = path
+
+        const { data, error } = await supabase
+          .from('tool_info')
+          .upsert(row, { onConflict: 'tool_id' })
+          .select().single()
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+
+        const lines = [`✅ ${tool_id} 설명 갱신됨`]
+        if (previousDescription) lines.push(`이전: ${previousDescription}`)
+        lines.push(`이후: ${description}`)
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
     )
   },
