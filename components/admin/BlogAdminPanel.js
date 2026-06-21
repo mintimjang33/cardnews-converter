@@ -208,7 +208,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const [routineChecks, setRoutineChecks] = useState({})
   const [collapsedRoutines, setCollapsedRoutines] = useState({})
 
-  const emptyForm = { title:'', slug:'', summary:'', content:'', category:'general', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
+  const emptyForm = { title:'', slug:'', summary:'', content:'', category:'thumb-down', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
   const [form, setForm] = useState(emptyForm)
 
   const token = () => adminToken
@@ -266,7 +266,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
       slug: post.slug || '',
       summary: post.summary || '',
       content: post.content || '',
-      category: post.category || 'general',
+      category: post.category || 'thumb-down',
       tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
       thumbnail: post.cover_image || '',
       scheduledAt: post.scheduled_at ? post.scheduled_at.slice(0,16) : '',
@@ -347,7 +347,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   for (let d=1;d<=daysInMonth;d++) if (new Date(year,month,d).getDay()===6) saturdays.push(d)
   const lastSat = saturdays[saturdays.length-1]
 
-  const filteredPosts = filterType === 'all' ? posts : posts.filter(p => (p.category||'general') === filterType)
+  const filteredPosts = filterType === 'all' ? posts : posts.filter(p => (p.category||'thumb-down') === filterType)
 
   return (
     <div>
@@ -642,7 +642,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
               {[['all','전체'], ...allCategories.map(c=>[c,c])].map(([key,label]) => (
                 <button key={key} onClick={()=>setFilterType(key)}
                   style={{ padding:'6px 14px', borderRadius:8, border:`1.5px solid ${filterType===key?'#e63946':'#2a2a2a'}`, background:filterType===key?'#2a0a0a':'#161616', color:filterType===key?'#e63946':'#888', fontSize:13, fontWeight:filterType===key?700:500, cursor:'pointer', fontFamily:"'Outfit', sans-serif" }}>
-                  {label} {key==='all'?posts.length:posts.filter(p=>(p.category||'general')===key).length}
+                  {label} {key==='all'?posts.length:posts.filter(p=>(p.category||'thumb-down')===key).length}
                 </button>
               ))}
             </div>
