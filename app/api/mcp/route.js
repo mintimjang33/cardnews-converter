@@ -5,26 +5,36 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 11개:
+// 노출 툴 12개:
 //   - get_publish_log     : 발행 기록 조회 (메모 포함, 중복 방지 + 키워드 사용 추적용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
 //   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람, competition 필터로 황금키워드 탐색
 //   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출, 저장 안 함)
 //   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
 //   - pick_keyword        : 나중에 쓸 키워드를 찜(bookmark)해두기, 계획 메모 포함 (쓰기 작업)
-//   - search_keyword_picks: 찜해둔 키워드 전체를 그룹 구분 없이 검색/열람
+//   - search_keyword_picks: 찜해둔 키워드 검색/열람, 기본은 미사용만 (그룹 구분 없음)
+//   - mark_keyword_used   : 찜 키워드를 글에 실제로 썼을 때 사용 처리 — 날짜·글 자동 기록 (쓰기 작업)
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
 //   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
 //
+// keyword_picks 테이블에 사용 처리 컬럼이 필요합니다 (최초 1회, Supabase SQL 에디터에서 실행):
+//
+// alter table keyword_picks
+//   add column if not exists used_at timestamptz,
+//   add column if not exists used_in_title text,
+//   add column if not exists used_in_slug text;
+//
 // 황금키워드 운영 흐름 (검색량 높고 경쟁 낮은 키워드로 트래픽을 모으는 전략):
 //   1. search_keyword_data(competition: "낮음")로 경쟁 낮은 후보를 검색량 순으로 훑어본다.
+//      (admin 화면에서는 "🏆 황금키워드" 탭에서 같은 데이터를 사람이 직접 봄)
 //   2. 지금 바로 쓸 게 아니면 pick_keyword로 찜해두고, memo에 "이런 글로 연결하면 좋겠다"를 적어둔다.
-//   3. 글감을 정할 때마다 search_keyword_picks로 찜 목록을 먼저 훑어, 오늘 쓸 만한 게 있는지 확인한다.
-//   4. 찜 키워드를 실제로 글에 썼으면, add_publish_log의 memo에 어떤 키워드를 썼는지 남긴다 —
-//      날짜(created_at)와 글(title/slug)이 자동으로 같이 남기 때문에, get_publish_log만 다시 봐도
-//      "그 키워드를 며칠에 어디에 썼는지"가 그대로 추적된다.
+//   3. 글감을 정할 때마다 search_keyword_picks(기본 미사용만)로 찜 목록을 먼저 훑어, 오늘 쓸 만한 게 있는지 확인한다.
+//   4. 찜 키워드를 실제로 글에 썼으면 mark_keyword_used를 호출한다 — used_at(날짜)·used_in_title/slug(어느 글)이
+//      구조화된 컬럼으로 남기 때문에, admin "✅ 사용 키워드" 탭과 search_keyword_picks(include_used: true)에서
+//      "그 키워드를 며칠에 어디에 썼는지"가 그대로 조회된다. (add_publish_log의 memo에도 같은 내용을 짧게
+//      남겨두면 발행 기록 쪽에서도 한 번 더 확인할 수 있다.)
 //
 // get_keyword_data는 hint(도구 그룹)로 좁혀서 보고, search_keyword_data는 hint 구분 없이
 // keyword_stats 전체를 본다 — 한 도구를 조사하다 다른 도구에도 쓸만한 키워드가 우연히
@@ -384,18 +394,20 @@ const baseHandler = createMcpHandler(
       {
         title: '찜한 키워드 전체 검색/열람 (그룹 구분 없음)',
         description:
-          'pick_keyword로 찜해둔 키워드를 그룹(hint) 구분 없이 전체 열람·검색한다. 어떤 황금키워드를 ' +
-          '찜해뒀는지, 어떤 계획(memo)을 적어뒀는지 한눈에 다시 확인할 때 쓴다. 글감을 정하기 전에 ' +
-          '한 번씩 호출해서 "찜해둔 것 중 오늘 쓸 만한 게 있는지" 확인하면 좋다.',
+          'pick_keyword로 찜해둔 키워드를 그룹(hint) 구분 없이 전체 열람·검색한다. 기본적으로 아직 ' +
+          '글에 안 쓴(미사용) 키워드만 보여준다 — 글감을 정하기 전에 한 번씩 호출해서 "찜해둔 것 중 ' +
+          '오늘 쓸 만한 게 있는지" 확인하면 좋다. 이미 쓴 것까지 같이 보고 싶으면 include_used를 true로 준다.',
         inputSchema: {
           query: z.string().optional().describe('키워드 또는 메모에 포함될 부분 문자열. 비우면 전체 반환'),
+          include_used: z.boolean().optional().describe('true면 이미 사용 처리된 키워드도 함께 보여준다 (기본 false, 미사용만)'),
         },
       },
-      async ({ query }) => {
+      async ({ query, include_used }) => {
         let q = supabase
           .from('keyword_picks')
-          .select('tool_id, keyword, pc, mobile, total, competition, memo')
+          .select('tool_id, keyword, pc, mobile, total, competition, memo, used_at, used_in_title, used_in_slug')
           .order('total', { ascending: false })
+        if (!include_used) q = q.is('used_at', null)
         const { data, error } = await q
         if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
         let rows = data || []
@@ -406,13 +418,57 @@ const baseHandler = createMcpHandler(
           )
         }
         if (!rows.length) {
-          return { content: [{ type: 'text', text: '찜한 키워드 없음' }] }
+          return { content: [{ type: 'text', text: include_used ? '찜한 키워드 없음' : '미사용 찜 키워드 없음 (전부 글에 썼거나, 아직 찜한 게 없음)' }] }
         }
-        const lines = [`⭐ 찜한 키워드 (${rows.length}개):`]
-        rows.forEach(p =>
-          lines.push(`- [${p.tool_id}] ${p.keyword} · 합계 ${fmt(p.total)} (PC ${fmt(p.pc)} / 모바일 ${fmt(p.mobile)})${p.competition ? ' · 경쟁도 ' + p.competition : ''}${p.memo ? ' · 메모: ' + p.memo : ''}`)
-        )
+        const label = include_used ? '찜한 키워드 (사용 여부 포함)' : '⭐ 미사용 찜 키워드'
+        const lines = [`${label} (${rows.length}개):`]
+        rows.forEach(p => {
+          const usedNote = p.used_at ? ` · ✅ 사용됨(${p.used_at.slice(0, 10)}, ${p.used_in_title || p.used_in_slug || '글 정보 없음'})` : ''
+          lines.push(`- [${p.tool_id}] ${p.keyword} · 합계 ${fmt(p.total)} (PC ${fmt(p.pc)} / 모바일 ${fmt(p.mobile)})${p.competition ? ' · 경쟁도 ' + p.competition : ''}${p.memo ? ' · 메모: ' + p.memo : ''}${usedNote}`)
+        })
         return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
+      'mark_keyword_used',
+      {
+        title: '찜 키워드 사용 처리 (날짜·글 자동 기록)',
+        description:
+          '찜해둔 키워드를 실제로 글에 썼을 때 호출해서 "사용됨"으로 표시한다. create_blog_post와 ' +
+          'add_publish_log 직후, 그 글에서 황금키워드를 실제로 썼다면 이어서 호출한다. 사용 시각이 ' +
+          '자동으로 기록되고(used_at), 어느 글에 썼는지(used_in_title/slug)도 같이 남아서 admin ' +
+          '"사용 키워드" 화면과 search_keyword_picks(include_used: true)에서 며칠에 어느 글에 그 ' +
+          '키워드를 썼는지 그대로 확인할 수 있다. 아직 pick_keyword로 찜해둔 적 없는 키워드를 즉석에서 ' +
+          '쓴 경우에도 호출할 수 있다 — 그 경우 사용 기록과 함께 새로 찜 항목이 생성된다.',
+        inputSchema: {
+          group: z.string().describe('pick_keyword에 쓴 것과 같은 그룹/hint 이름'),
+          keyword: z.string(),
+          used_in_title: z.string().describe('그 키워드를 사용한 글의 제목'),
+          used_in_slug: z.string().optional().describe('그 키워드를 사용한 글의 슬러그'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ group, keyword, used_in_title, used_in_slug }) => {
+        const nowIso = new Date().toISOString()
+        const row = {
+          tool_id: group,
+          hint: group,
+          keyword,
+          used_at: nowIso,
+          used_in_title: used_in_title || null,
+          used_in_slug: used_in_slug || null,
+        }
+        const { error } = await supabase
+          .from('keyword_picks')
+          .upsert(row, { onConflict: 'tool_id,keyword' })
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        return {
+          content: [{
+            type: 'text',
+            text: `✅ 사용 처리됨: [${group}] ${keyword} → "${used_in_title}" (${nowIso.slice(0, 10)})`,
+          }],
+        }
       }
     )
 
