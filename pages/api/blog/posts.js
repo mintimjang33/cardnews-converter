@@ -14,8 +14,6 @@ export default async function handler(req, res) {
   const isAdmin = token === process.env.ADMIN_SECRET_TOKEN
 
   // 예약 발행 시간이 지난 글은 조회 시점에 자동으로 published 전환
-  // (Vercel Hobby 플랜은 cron이 하루 1회로 제한되므로, 방문자가 들어올 때마다
-  //  여기서 "지나간 예약"을 처리해서 즉시 반영되게 함)
   try {
     const nowIso = new Date().toISOString()
     await supabase
@@ -23,58 +21,84 @@ export default async function handler(req, res) {
       .update({ status: 'published', published_at: nowIso })
       .eq('status', 'scheduled')
       .lte('scheduled_at', nowIso)
-  } catch {
-    // 자동발행 처리 실패는 조회 자체를 막지 않음 (다음 요청에서 재시도됨)
-  }
+  } catch {}
 
   // GET
   if (req.method === 'GET') {
-    const { slug, category, limit = 20, offset = 0 } = req.query
+    const { slug, category, post_type, limit = 20, offset = 0 } = req.query
     if (slug) {
       let q = supabase.from('blog_posts').select('*').eq('slug', slug)
       if (!isAdmin) q = q.eq('status', 'published')
       const { data, error } = await q.single()
       if (error || !data) return res.status(404).json({ error: 'Not found' })
+      // 비밀글은 content 제외하고 반환 (별도 검증 API에서 content 제공)
+      if (!isAdmin && data.is_secret) {
+        const { content, secret_password, ...safeData } = data
+        return res.status(200).json({ ...safeData, is_secret: true, content: null })
+      }
       return res.status(200).json(data)
     }
     let q = supabase.from('blog_posts').select('*').order('created_at', { ascending: false })
     if (!isAdmin) q = q.eq('status', 'published')
     if (category) q = q.eq('category', category)
+    // post_type 필터: 기본은 blog만 (자유게시판/부탁해요는 별도)
+    if (post_type) {
+      q = q.eq('post_type', post_type)
+    } else {
+      q = q.eq('post_type', 'blog')
+    }
     q = q.range(Number(offset), Number(offset) + Number(limit) - 1)
     const { data, error } = await q
     if (error) return res.status(500).json({ error: error.message })
-    return res.status(200).json(data || [])
+    // 목록에서는 secret_password 필드 제거
+    const safeList = (data || []).map(({ secret_password, ...rest }) => rest)
+    return res.status(200).json(safeList)
   }
 
   // POST - 생성
   if (req.method === 'POST') {
-    if (!isAdmin) return res.status(401).json({ error: '인증 필요' })
     const body = req.body
-    const status = body.status || 'draft'
+    const postType = body.post_type || 'blog'
+
+    // 자유게시판/부탁해요는 누구나 작성 가능, 블로그는 admin만
+    if (postType === 'blog' && !isAdmin) {
+      return res.status(401).json({ error: '인증 필요' })
+    }
+
     const nowIso = new Date().toISOString()
+    const status = postType === 'blog' ? (body.status || 'draft') : 'published'
+
+    // slug 자동 생성 (자유게시판/부탁해요)
+    const slug = body.slug || `${postType}-${genId()}`
+
     const row = {
       id: genId(),
       type: 'blog',
+      post_type: postType,
       title: body.title,
-      slug: body.slug,
+      slug,
       summary: body.summary || null,
-      content: body.content,
-      category: body.category || 'general',
+      content: body.content || '',
+      category: body.category || postType,
       tags: Array.isArray(body.tags) ? body.tags : [],
       cover_image: body.cover_image || null,
       author: body.author || null,
+      author_name: body.author_name || null,
+      is_secret: body.is_secret || false,
+      secret_password: body.is_secret ? (body.secret_password || null) : null,
       status,
       scheduled_at: status === 'scheduled' ? (body.scheduled_at || null) : null,
-      published_at: status === 'published' ? (body.published_at || nowIso) : (body.published_at || null),
+      published_at: status === 'published' ? nowIso : null,
       created_at: nowIso,
       updated_at: nowIso,
     }
     const { data, error } = await supabase.from('blog_posts').insert([row]).select().single()
     if (error) return res.status(500).json({ error: error.message })
-    return res.status(200).json(data)
+    const { secret_password: _pw, ...safeData } = data
+    return res.status(200).json(safeData)
   }
 
-  // PUT - 수정
+  // PUT - 수정 (admin only)
   if (req.method === 'PUT') {
     if (!isAdmin) return res.status(401).json({ error: '인증 필요' })
     const { id, ...body } = req.body
@@ -85,7 +109,7 @@ export default async function handler(req, res) {
       slug: body.slug,
       summary: body.summary || null,
       content: body.content,
-      category: body.category || 'general',
+      category: body.category || 'blog',
       tags: Array.isArray(body.tags) ? body.tags : [],
       cover_image: body.cover_image || null,
       author: body.author || null,
@@ -95,13 +119,12 @@ export default async function handler(req, res) {
       updated_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('blog_posts')
-      .update(updateRow)
-      .eq('id', id).select().single()
+      .update(updateRow).eq('id', id).select().single()
     if (error) return res.status(500).json({ error: error.message })
     return res.status(200).json(data)
   }
 
-  // DELETE
+  // DELETE (admin only)
   if (req.method === 'DELETE') {
     if (!isAdmin) return res.status(401).json({ error: '인증 필요' })
     const { id } = req.query

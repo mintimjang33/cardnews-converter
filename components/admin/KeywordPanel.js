@@ -22,6 +22,142 @@ function daysSince(iso) {
 
 function fmt(n) { return (n || 0).toLocaleString() }
 
+
+function FeatureIdeasTab({ token, showToast }) {
+  const [ideas, setIdeas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const STATUS_LABELS = {
+    proposed: { label: '검토 중', color: '#facc15', bg: '#1c1c00' },
+    building:  { label: '개발 중', color: '#60a5fa', bg: '#0f1f3d' },
+    done:      { label: '완료',   color: '#4ade80', bg: '#052e16' },
+    rejected:  { label: '보류',   color: '#71717a', bg: '#27272a' },
+  }
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/tools/feature-ideas', {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      setIdeas(Array.isArray(data) ? data : [])
+    } catch { setIdeas([]) }
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const res = await fetch('/api/tools/feature-ideas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ id, status: newStatus }),
+      })
+      if (!res.ok) throw new Error()
+      setIdeas(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i))
+      showToast('✅ 상태 변경됨')
+    } catch { showToast('❌ 변경 실패') }
+  }
+
+  const fmt = (n) => (n || 0).toLocaleString('ko-KR')
+
+  const filtered = statusFilter === 'all' ? ideas : ideas.filter(i => i.status === statusFilter)
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, fontSize: 13, color: '#71717a', lineHeight: 1.7 }}>
+        MCP <code style={{ color: '#e63946' }}>suggest_feature</code> 툴로 기록된 기능 추가 제안 목록입니다.<br />
+        Claude가 황금키워드를 발견했을 때 기존 도구에 기능으로 추가하면 좋겠다고 판단하면 여기에 쌓입니다.
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[['all', '전체'], ['proposed', '검토 중'], ['building', '개발 중'], ['done', '완료'], ['rejected', '보류']].map(([v, l]) => (
+          <button key={v} onClick={() => setStatusFilter(v)} style={{
+            padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            background: statusFilter === v ? '#e63946' : '#27272a',
+            color: statusFilter === v ? '#fff' : '#a1a1aa',
+            fontSize: 13, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+          }}>{l}</button>
+        ))}
+        <button onClick={load} style={{
+          padding: '5px 14px', borderRadius: 8, border: '1px solid #3f3f46',
+          background: 'none', color: '#71717a', fontSize: 13, cursor: 'pointer',
+          fontFamily: "'Outfit', sans-serif",
+        }}>🔄 새로고침</button>
+      </div>
+      {loading ? (
+        <div style={{ color: '#71717a', fontSize: 13, padding: 20, textAlign: 'center' }}>로딩 중...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ color: '#52525b', fontSize: 14, padding: 40, textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>💡</div>
+          아직 기록된 아이디어가 없습니다.<br />
+          <span style={{ fontSize: 12, color: '#3f3f46', marginTop: 6, display: 'block' }}>
+            Claude가 글 작성 중 suggest_feature 툴을 호출하면 여기에 나타납니다.
+          </span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(idea => {
+            const s = STATUS_LABELS[idea.status] || STATUS_LABELS.proposed
+            return (
+              <div key={idea.id} style={{
+                background: '#1c1c1e', borderRadius: 12, padding: '16px 20px',
+                border: '1px solid #2a2a2a',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: '#27272a', color: '#a1a1aa',
+                      }}>{idea.tool_id}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: '#f0f0f0' }}>{idea.feature_name}</span>
+                    </div>
+                    {idea.keyword && (
+                      <div style={{ fontSize: 12, color: '#71717a', marginBottom: 6 }}>
+                        🔑 키워드: <span style={{ color: '#a1a1aa' }}>{idea.keyword}</span>
+                        {idea.total ? <span style={{ marginLeft: 8 }}>검색수 <strong style={{ color: '#e63946' }}>{fmt(idea.total)}</strong></span> : ''}
+                        {idea.competition ? <span style={{ marginLeft: 8 }}>경쟁도 {idea.competition}</span> : ''}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 13, color: '#a1a1aa', lineHeight: 1.7 }}>{idea.notes}</div>
+                    <div style={{ fontSize: 11, color: '#3f3f46', marginTop: 8 }}>
+                      {idea.created_at ? new Date(idea.created_at).toLocaleDateString('ko-KR') : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999,
+                      background: s.bg, color: s.color, border: `1px solid ${s.color}40`,
+                      whiteSpace: 'nowrap',
+                    }}>{s.label}</span>
+                    <select
+                      value={idea.status}
+                      onChange={e => handleStatusChange(idea.id, e.target.value)}
+                      style={{
+                        background: '#27272a', border: '1px solid #3f3f46', color: '#a1a1aa',
+                        borderRadius: 6, padding: '4px 8px', fontSize: 12,
+                        cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                      }}
+                    >
+                      <option value="proposed">검토 중</option>
+                      <option value="building">개발 중</option>
+                      <option value="done">완료</option>
+                      <option value="rejected">보류</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function KeywordPanel({ token }) {
   const [hintList, setHintList]           = useState([])
   const [loading, setLoading]             = useState({})
@@ -293,6 +429,7 @@ export default function KeywordPanel({ token }) {
           ['golden', '🏆 황금키워드'],
           ['picks', '⭐ 찜한 키워드'],
           ['used', '✅ 사용 키워드'],
+          ['ideas', '💡 아이디어 제안'],
         ].map(([id, label]) => (
           <button key={id} onClick={() => handleTabChange(id)} style={{
             padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -372,6 +509,7 @@ export default function KeywordPanel({ token }) {
                             <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                             <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                             <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                             <th style={S.th}>경쟁</th>
                             <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                           </tr>
@@ -432,6 +570,7 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                 </tr>
@@ -448,6 +587,7 @@ export default function KeywordPanel({ token }) {
                       <td style={S.tdNum}>{fmt(item.mobile)}</td>
                       <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
                       <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                      <td style={{ ...S.tdNum, fontSize: 12, color: '#71717a' }}>{item.doc_count != null ? fmt(item.doc_count) : '-'}</td>
                       <td style={{ ...S.td, textAlign: 'center' }}>
                         <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
                           background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
@@ -499,6 +639,7 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                 </tr>
@@ -514,6 +655,7 @@ export default function KeywordPanel({ token }) {
                       <td style={S.tdNum}>{fmt(item.pc)}</td>
                       <td style={S.tdNum}>{fmt(item.mobile)}</td>
                       <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                      <td style={{ ...S.tdNum, fontSize: 12, color: '#71717a' }}>{item.doc_count != null ? fmt(item.doc_count) : '-'}</td>
                       <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
                       <td style={{ ...S.td, textAlign: 'center' }}>
                         <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
@@ -549,6 +691,7 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
                   <th style={S.th}>메모</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>사용 처리</th>
@@ -602,6 +745,7 @@ export default function KeywordPanel({ token }) {
                   <th style={S.th}>그룹</th>
                   <th style={S.th}>키워드</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>사용한 글</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>되돌리기</th>
                 </tr>
@@ -683,6 +827,11 @@ export default function KeywordPanel({ token }) {
             )}
           </div>
         </div>
+      )}
+
+
+      {tab === 'ideas' && (
+        <FeatureIdeasTab token={token} showToast={showToast} />
       )}
 
       {toast && (

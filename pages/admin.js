@@ -7,6 +7,7 @@ import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
 import ContentLogPanel from '../components/admin/ContentLogPanel'
 import KeywordPanel from '../components/admin/KeywordPanel'
+import BoardAdminPanel from '../components/admin/BoardAdminPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
 const TAB_LABELS = {
@@ -18,6 +19,8 @@ const TAB_LABELS = {
   blog_menu: '📋 게시판 메뉴관리',
   content_log: '🗂️ 발행 기록',
   keyword: '🔍 키워드 관리',
+  free_board: '💬 자유게시판',
+  requests: '📬 부탁해요',
   password: '🔑 비밀번호 변경',
 }
 
@@ -239,6 +242,10 @@ export default function Admin() {
             {/* ── 키워드 관리 */}
             {activeTab === 'keyword' && (
               <KeywordPanel token={adminToken} />
+            )}
+
+            {(activeTab === 'free_board' || activeTab === 'requests') && (
+              <BoardAdminPanel adminToken={adminToken} postType={activeTab === 'free_board' ? 'free' : 'request'} />
             )}
 
             {activeTab === 'password' && (

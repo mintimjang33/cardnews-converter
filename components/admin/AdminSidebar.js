@@ -8,6 +8,8 @@ const NAV = [
   { id: 'blog_admin',  label: '게시판 관리',   icon: '📝' },
   { id: 'blog_menu',   label: '게시판 메뉴관리', icon: '📋' },
   { id: 'content_log', label: '발행 기록',     icon: '🗂️' },
+  { id: 'free_board',  label: '자유게시판',   icon: '💬' },
+  { id: 'requests',    label: '부탁해요',     icon: '📬' },
   { id: 'keyword',     label: '키워드 관리',   icon: '🔍' },
   { id: 'password',    label: '비밀번호 변경', icon: '🔑' },
 ]
