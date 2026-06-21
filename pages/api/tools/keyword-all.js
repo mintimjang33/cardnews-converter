@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   try {
     const { data, error } = await supabase
       .from('keyword_stats')
-      .select('hint, keyword, pc, mobile, total, competition')
+      .select('hint, keyword, pc, mobile, total, competition, doc_count')
       .order('total', { ascending: false })
       .limit(Number(limit))
 

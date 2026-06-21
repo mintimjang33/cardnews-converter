@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     // TOP 키워드 조회
     const { data: topData, error: topError } = await supabase
       .from('keyword_stats')
-      .select('keyword, pc, mobile, total, competition')
+      .select('keyword, pc, mobile, total, competition, doc_count')
       .eq('hint', hint)
       .order('total', { ascending: false })
       .limit(Number(limit))

@@ -509,8 +509,8 @@ export default function KeywordPanel({ token }) {
                             <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                             <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                             <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
-                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                             <th style={S.th}>경쟁</th>
+                            <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                             <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                           </tr>
                         </thead>
@@ -523,6 +523,7 @@ export default function KeywordPanel({ token }) {
                               <td style={S.tdNum}>{fmt(item.mobile)}</td>
                               <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
                               <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                              <td style={{ ...S.tdNum, fontSize: 12, color: '#71717a' }}>{item.doc_count != null ? fmt(item.doc_count) : '-'}</td>
                               <td style={{ ...S.td, textAlign: 'center' }}>
                                 <button onClick={e => { e.stopPropagation(); handlePick(row.hint, item) }} style={{
                                   background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
@@ -570,8 +571,8 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
-                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                 </tr>
               </thead>
@@ -639,8 +640,8 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
-                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
                 </tr>
               </thead>
@@ -655,8 +656,8 @@ export default function KeywordPanel({ token }) {
                       <td style={S.tdNum}>{fmt(item.pc)}</td>
                       <td style={S.tdNum}>{fmt(item.mobile)}</td>
                       <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
-                      <td style={{ ...S.tdNum, fontSize: 12, color: '#71717a' }}>{item.doc_count != null ? fmt(item.doc_count) : '-'}</td>
                       <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                      <td style={{ ...S.tdNum, fontSize: 12, color: '#71717a' }}>{item.doc_count != null ? fmt(item.doc_count) : '-'}</td>
                       <td style={{ ...S.td, textAlign: 'center' }}>
                         <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
                           background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
@@ -691,7 +692,6 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
-                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>경쟁</th>
                   <th style={S.th}>메모</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>사용 처리</th>
@@ -745,7 +745,6 @@ export default function KeywordPanel({ token }) {
                   <th style={S.th}>그룹</th>
                   <th style={S.th}>키워드</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
-                  <th style={{ ...S.th, textAlign: 'right' }}>문서수</th>
                   <th style={S.th}>사용한 글</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>되돌리기</th>
                 </tr>
