@@ -5,14 +5,20 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 7개:
+// 노출 툴 8개:
 //   - get_publish_log     : 발행 기록 조회 (중복 방지용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase)
-//   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출)
+//   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출, 저장 안 함)
+//   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
 //   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
+//
+// save_keyword_data가 쓰는 keyword_stats 테이블은 이미 존재합니다
+// (pages/api/tools/keyword-volume.js, keyword-top.js 등 admin API와 공유) —
+// 별도 테이블 생성이 필요 없고, onConflict 'hint,keyword'로 upsert해 기존
+// admin 수집 로직과 동일한 방식으로 동작합니다.
 //
 // tool_info 테이블 (Supabase에 최초 1회 생성 필요):
 //
@@ -194,7 +200,9 @@ const baseHandler = createMcpHandler(
         title: '네이버 키워드 실시간 검색량 조회',
         description:
           '네이버 검색광고 키워드도구로 키워드별 월간 검색량(PC/모바일 합산)과 경쟁정도를 ' +
-          '실시간으로 조회한다. 캐시에 없는 새 후보 키워드를 즉석에서 비교할 때 사용한다.',
+          '실시간으로 조회한다. 캐시에 없는 새 후보 키워드를 즉석에서 비교할 때 사용한다. ' +
+          '조회 결과 중 나중에도 쓸만한 키워드가 있으면 save_keyword_data로 캐시에 저장해두면, ' +
+          '다음 글 작성 때 get_keyword_data로 다시 불러와 재활용할 수 있다.',
         inputSchema: {
           hintKeywords: z.string().describe('쉼표로 구분된 한글 키워드 문자열, 최대 5개. 예: "유튜브썸네일,온라인타이머,포모도로타이머"'),
         },
@@ -209,6 +217,57 @@ const baseHandler = createMcpHandler(
           return { content: [{ type: 'text', text: JSON.stringify({ query: keywords, results }, null, 2) }] }
         } catch (err) {
           return { content: [{ type: 'text', text: `오류: ${err.message || '키워드 조회 중 오류가 발생했습니다.'}` }], isError: true }
+        }
+      }
+    )
+
+    server.registerTool(
+      'save_keyword_data',
+      {
+        title: '키워드 검색량 데이터 저장 (TOP 키워드 캐시)',
+        description:
+          'naver_keyword_volume으로 실시간 조회한 키워드 검색량 결과를 도구(tool_id)의 TOP 키워드 ' +
+          '캐시(keyword_stats)에 저장한다. naver_keyword_volume의 응답에 있는 results 배열을 그대로 ' +
+          '넘기면 된다. 같은 도구·키워드 조합은 최신 값으로 덮어쓴다(upsert) — 여러 번 호출해도 안전하다. ' +
+          '저장해두면 다음 글 작성 때 get_keyword_data로 바로 불러와 재사용할 수 있어, 매번 실시간 조회를 ' +
+          '반복하지 않아도 된다. 도구와 직접 관련 없어 보이는 키워드까지 전부 저장해도 무방하다 — ' +
+          '연결고리·각도 판단은 글 작성 시점에 get_keyword_data를 다시 호출해서 한다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).describe('도구 코드'),
+          keywords: z.array(z.object({
+            keyword: z.string(),
+            monthlySearchPc: z.number().optional(),
+            monthlySearchMobile: z.number().optional(),
+            monthlySearchTotal: z.number().optional(),
+            competition: z.string().optional(),
+          })).min(1).describe('naver_keyword_volume 응답의 results 배열을 그대로 전달'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ tool_id, keywords }) => {
+        const hint = TOOL_HINTS[tool_id]
+        const rows = keywords.map(k => {
+          const pc = k.monthlySearchPc || 0
+          const mobile = k.monthlySearchMobile || 0
+          const total = k.monthlySearchTotal != null ? k.monthlySearchTotal : pc + mobile
+          return {
+            hint,
+            keyword: k.keyword,
+            pc,
+            mobile,
+            total,
+            competition: k.competition || '-',
+          }
+        })
+        const { error } = await supabase
+          .from('keyword_stats')
+          .upsert(rows, { onConflict: 'hint,keyword' })
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        return {
+          content: [{
+            type: 'text',
+            text: `✅ ${tool_id}(${hint}) TOP 키워드 캐시에 ${rows.length}개 저장됨. 다음 글 작성 때 get_keyword_data로 바로 조회 가능.`,
+          }],
         }
       }
     )
