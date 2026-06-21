@@ -5,15 +5,24 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 8개:
+// 노출 툴 9개:
 //   - get_publish_log     : 발행 기록 조회 (중복 방지용, STEP 1에서 가장 먼저 호출)
-//   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase)
+//   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
+//   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람 (도구 간 우연한 연결 발견용)
 //   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출, 저장 안 함)
 //   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
 //   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
+//
+// get_keyword_data는 hint(도구 그룹)로 좁혀서 보고, search_keyword_data는 hint 구분 없이
+// keyword_stats 전체를 본다 — 한 도구를 조사하다 다른 도구에도 쓸만한 키워드가 우연히
+// 걸리는 경우가 많아서, 그런 "예상 못 한 연결"을 놓치지 않으려고 별도로 분리했습니다.
+// (참고: admin 화면 KeywordPanel.js의 hint 표기 — voice-down은 "보이스", text-down은
+// "텍스트" — 가 TOOL_HINTS의 "음성타이핑"/"글자수세기"와 다릅니다. get_keyword_data만 쓰면
+// 이 불일치 때문에 데이터가 안 보일 수 있는데, search_keyword_data는 hint를 안 가리고
+// 전체를 보기 때문에 이 불일치의 영향을 받지 않습니다.)
 //
 // save_keyword_data가 쓰는 keyword_stats 테이블은 이미 존재합니다
 // (pages/api/tools/keyword-volume.js, keyword-top.js 등 admin API와 공유) —
@@ -269,6 +278,42 @@ const baseHandler = createMcpHandler(
             text: `✅ ${tool_id}(${hint}) TOP 키워드 캐시에 ${rows.length}개 저장됨. 다음 글 작성 때 get_keyword_data로 바로 조회 가능.`,
           }],
         }
+      }
+    )
+
+    server.registerTool(
+      'search_keyword_data',
+      {
+        title: '전체 키워드 데이터 검색/열람 (도구·hint 구분 없음)',
+        description:
+          'get_keyword_data처럼 특정 도구(hint)로 좁혀서 보지 않고, keyword_stats 테이블 전체를 ' +
+          '대상으로 검색·열람한다. 한 도구를 조사하다가 다른 도구에도 쓸만한 키워드가 우연히 걸리는 ' +
+          '경우가 많기 때문에, 저장된 그룹(hint) 이름이 무엇이든 상관없이 전부 뒤져서 찾는다. query를 ' +
+          '주면 키워드에 그 문자열이 포함된 것만, 비우면 검색량이 높은 순으로 전체를 반환한다. 결과의 ' +
+          '[ ] 안 값은 그 키워드가 현재 어느 hint 그룹에 저장돼 있는지 보여준다 — 글 작성 중인 도구의 ' +
+          'hint와 달라도 연결고리가 있으면 그대로 써도 된다.',
+        inputSchema: {
+          query: z.string().optional().describe('키워드에 포함될 부분 문자열. 비우면 전체 반환'),
+          limit: z.number().int().min(1).max(300).optional().describe('최대 개수 (기본 100)'),
+        },
+      },
+      async ({ query, limit }) => {
+        let q = supabase
+          .from('keyword_stats')
+          .select('hint, keyword, pc, mobile, total, competition')
+          .order('total', { ascending: false })
+          .limit(limit || 100)
+        if (query) q = q.ilike('keyword', `%${query}%`)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data || !data.length) {
+          return { content: [{ type: 'text', text: '검색 결과 없음' }] }
+        }
+        const lines = [`검색 결과 (${data.length}건, 검색량 순, hint 구분 없이 전체 대상):`]
+        data.forEach(k =>
+          lines.push(`- [${k.hint}] ${k.keyword} · 합계 ${fmt(k.total)} (PC ${fmt(k.pc)} / 모바일 ${fmt(k.mobile)})${k.competition ? ' · 경쟁도 ' + k.competition : ''}`)
+        )
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
     )
 
