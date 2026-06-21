@@ -5,11 +5,12 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 4개:
+// 노출 툴 5개:
 //   - get_publish_log     : 발행 기록 조회 (중복 방지용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase)
 //   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출)
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기 (쓰기 작업)
+//   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //
 // 필요한 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY   - 기존 admin API들과 동일하게 사용
@@ -223,6 +224,58 @@ const baseHandler = createMcpHandler(
         const { data, error } = await supabase.from('content_log').insert([row]).select().single()
         if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
         return { content: [{ type: 'text', text: `✅ 기록 추가됨: ${tool} / ${angle} / ${title}` }] }
+      }
+    )
+
+    server.registerTool(
+      'create_blog_post',
+      {
+        title: '블로그 글 실제 발행 (본문 포함)',
+        description:
+          '작성한 블로그 글 본문 전체를 실제로 사이트에 올린다. 기본 상태는 published라 호출 즉시 ' +
+          '사이트에 공개된다 — 사람 검수 단계 없음. STEP 3에서 글을 완성한 뒤 호출하고, 보통 ' +
+          'add_publish_log와 함께(같이) 호출한다. status를 draft로 주면 admin에 임시저장만 되고 ' +
+          '공개되지 않는다.',
+        inputSchema: {
+          title: z.string().describe('글 제목, 20~55자'),
+          slug: z.string().describe('URL 슬러그, 영문 소문자+하이픈'),
+          summary: z.string().optional().describe('SEO 요약, 80~120자'),
+          content: z.string().describe('본문 마크다운 전체 (표·SVG·FAQ·CTA 포함)'),
+          category: z.enum(TOOL_CODES).describe('카테고리(=도구 코드)'),
+          tags: z.array(z.string()).optional().describe('태그 5~8개 권장'),
+          cover_image: z.string().optional().describe('커버 이미지 URL'),
+          status: z.enum(['published', 'draft', 'scheduled']).optional()
+            .describe('기본값 published(즉시 공개). draft면 admin에만 저장되고 비공개.'),
+          scheduled_at: z.string().optional().describe('status가 scheduled일 때만 사용, ISO 날짜'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ title, slug, summary, content, category, tags, cover_image, status, scheduled_at }) => {
+        const finalStatus = status || 'published'
+        const nowIso = new Date().toISOString()
+        const row = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+          type: 'blog',
+          title,
+          slug,
+          summary: summary || null,
+          content,
+          category,
+          tags: Array.isArray(tags) ? tags : [],
+          cover_image: cover_image || null,
+          author: null,
+          status: finalStatus,
+          scheduled_at: finalStatus === 'scheduled' ? (scheduled_at || null) : null,
+          published_at: finalStatus === 'published' ? nowIso : null,
+          created_at: nowIso,
+          updated_at: nowIso,
+        }
+        const { data, error } = await supabase.from('blog_posts').insert([row]).select().single()
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        const liveNote = finalStatus === 'published'
+          ? `✅ 발행 완료 — https://cardnews-converter.vercel.app/blog/${slug} 에서 바로 확인 가능`
+          : `✅ ${finalStatus === 'draft' ? '임시저장(draft)' : '예약(scheduled)'} 완료 — admin에서 확인 필요`
+        return { content: [{ type: 'text', text: liveNote }] }
       }
     )
   },
