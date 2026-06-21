@@ -39,6 +39,10 @@ export default function KeywordPanel({ token }) {
   const [allKwLimit, setAllKwLimit] = useState(100)
   const [allKwLoading, setAllKwLoading]   = useState(false)
   const [allKwLoaded, setAllKwLoaded]     = useState(false)
+  const [goldenKeywords, setGoldenKeywords]         = useState([])
+  const [goldenLoading, setGoldenLoading]           = useState(false)
+  const [goldenLoaded, setGoldenLoaded]             = useState(false)
+  const [goldenCompetition, setGoldenCompetition]   = useState('낮음')
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -73,9 +77,30 @@ export default function KeywordPanel({ token }) {
     setAllKwLoading(false)
   }
 
+  const loadGolden = async (comp) => {
+    setGoldenLoading(true)
+    try {
+      const c = comp || goldenCompetition
+      const res = await fetch(`/api/tools/keyword-golden?competition=${encodeURIComponent(c)}&limit=200`, {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      setGoldenKeywords(data.results || [])
+      setGoldenLoaded(true)
+    } catch (e) { console.error(e) }
+    setGoldenLoading(false)
+  }
+
+  const handleGoldenCompetitionChange = (c) => {
+    setGoldenCompetition(c)
+    setGoldenLoaded(false)
+    loadGolden(c)
+  }
+
   const handleTabChange = (t) => {
     setTab(t)
     if (t === 'all') loadAllKeywords()
+    if (t === 'golden' && !goldenLoaded) loadGolden()
   }
 
   const handleLimitChange = (lim) => {
@@ -185,11 +210,44 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
+  const handleUnmarkUsed = async (toolId, keyword) => {
+    try {
+      const res = await fetch('/api/tools/keyword-picks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ tool_id: toolId, keyword, unmark: true }),
+      })
+      if (!res.ok) throw new Error('되돌리기 실패')
+      loadPicks()
+      showToast('↩️ 미사용으로 되돌림')
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
+
+  const handleMarkUsed = async (item) => {
+    const title = window.prompt('이 키워드를 사용한 글 제목을 입력하세요')
+    if (!title) return
+    const slug = window.prompt('슬러그 (선택, 비워도 됩니다)') || ''
+    try {
+      const res = await fetch('/api/tools/keyword-picks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ tool_id: item.tool_id, keyword: item.keyword, used_in_title: title, used_in_slug: slug }),
+      })
+      if (!res.ok) throw new Error('처리 실패')
+      loadPicks()
+      showToast('✅ 사용 처리됨')
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
+
   const labelMap = Object.fromEntries(BASE_TOOLS.map(t => [t.hint, t.label]))
 
   const allRows = [...hintList]
     .sort((a, b) => a.hint.localeCompare(b.hint, 'ko'))
     .map(h => ({ ...h, label: labelMap[h.hint] || h.hint }))
+
+  const pendingPicks = picks.filter(p => !p.used_at)
+  const usedPicks = picks.filter(p => p.used_at)
+    .sort((a, b) => new Date(b.used_at).getTime() - new Date(a.used_at).getTime())
 
   const S = {
     th: { fontSize: 12, color: '#71717a', fontWeight: 600, padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #2a2a2a' },
@@ -228,8 +286,14 @@ export default function KeywordPanel({ token }) {
         <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>수집하면 아래 목록에 새 항목으로 추가됩니다.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[['top', '📊 수집 현황'], ['all', '📈 전체 순위'], ['picks', '⭐ 찜한 키워드']].map(([id, label]) => (
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          ['top', '📊 수집 현황'],
+          ['all', '📈 전체 순위'],
+          ['golden', '🏆 황금키워드'],
+          ['picks', '⭐ 찜한 키워드'],
+          ['used', '✅ 사용 키워드'],
+        ].map(([id, label]) => (
           <button key={id} onClick={() => handleTabChange(id)} style={{
             padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
             background: tab === id ? '#e63946' : '#27272a',
@@ -400,14 +464,81 @@ export default function KeywordPanel({ token }) {
         </div>
       )}
 
+      {tab === 'golden' && (
+        <div>
+          <div style={{ fontSize: 12, color: '#71717a', marginBottom: 12, lineHeight: 1.6 }}>
+            검색량은 높고 경쟁은 낮은 키워드를 그룹(도구) 구분 없이 전체에서 찾아 보여줍니다.
+            아래일수록 합계가 낮아지니, <b style={{ color: '#f0f0f0' }}>위쪽일수록 더 좋은 후보</b>예요.
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            {['낮음', '중간', '높음', 'all'].map(c => (
+              <button key={c} onClick={() => handleGoldenCompetitionChange(c)} style={{
+                padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: goldenCompetition === c ? '#e63946' : '#27272a',
+                color: goldenCompetition === c ? '#fff' : '#a1a1aa',
+                fontSize: 13, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+              }}>{c === 'all' ? '전체' : '경쟁 ' + c}</button>
+            ))}
+            <span style={{ fontSize: 12, color: '#52525b', alignSelf: 'center', marginLeft: 8 }}>
+              {goldenKeywords.length.toLocaleString()}개 표시
+            </span>
+          </div>
+          {goldenLoading ? (
+            <div style={{ color: '#71717a', fontSize: 13, padding: 20, textAlign: 'center' }}>로딩 중...</div>
+          ) : goldenKeywords.length === 0 ? (
+            <div style={{ color: '#52525b', fontSize: 14, padding: 20, textAlign: 'center' }}>
+              이 경쟁도에 해당하는 키워드가 없어요.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>순위</th>
+                  <th style={S.th}>그룹</th>
+                  <th style={S.th}>키워드</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={S.th}>경쟁</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
+                </tr>
+              </thead>
+              <tbody>
+                {goldenKeywords.map((item, i) => {
+                  const isPicked = picks.some(p => p.keyword === item.keyword && p.tool_id === item.hint)
+                  return (
+                    <tr key={`${item.hint}-${item.keyword}`} style={{ background: isPicked ? '#1a1a00' : 'transparent' }}>
+                      <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
+                      <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.hint}</td>
+                      <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
+                      <td style={S.tdNum}>{fmt(item.pc)}</td>
+                      <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                      <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                      <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                      <td style={{ ...S.td, textAlign: 'center' }}>
+                        <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
+                          background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
+                        }}>
+                          {isPicked ? '⭐' : '☆'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {tab === 'picks' && (
         <div>
           {picksLoading ? (
             <div style={{ color: '#71717a', fontSize: 13, padding: 20 }}>로딩 중...</div>
-          ) : picks.length === 0 ? (
+          ) : pendingPicks.length === 0 ? (
             <div style={{ color: '#52525b', fontSize: 14, padding: 20, textAlign: 'center' }}>
-              아직 찜한 키워드가 없어요.<br/>
-              <span style={{ fontSize: 12, marginTop: 6, display: 'block' }}>수집 현황 탭에서 ☆ 버튼으로 찜해두세요!</span>
+              아직 쓸 차례를 기다리는 찜 키워드가 없어요.<br/>
+              <span style={{ fontSize: 12, marginTop: 6, display: 'block' }}>수집 현황 / 전체 순위 / 황금키워드 탭에서 ☆ 버튼으로 찜해두세요!</span>
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
@@ -419,11 +550,13 @@ export default function KeywordPanel({ token }) {
                   <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
                   <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
                   <th style={S.th}>경쟁</th>
+                  <th style={S.th}>메모</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>사용 처리</th>
                   <th style={{ ...S.th, textAlign: 'center' }}>해제</th>
                 </tr>
               </thead>
               <tbody>
-                {picks.map(item => (
+                {pendingPicks.map(item => (
                   <tr key={`${item.tool_id}-${item.keyword}`}>
                     <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.tool_id}</td>
                     <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
@@ -431,10 +564,67 @@ export default function KeywordPanel({ token }) {
                     <td style={S.tdNum}>{fmt(item.mobile)}</td>
                     <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
                     <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                    <td style={{ ...S.td, fontSize: 12, color: '#a1a1aa', maxWidth: 200 }}>{item.memo || '-'}</td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      <button onClick={() => handleMarkUsed(item)} style={{
+                        background: '#16a34a22', border: '1px solid #16a34a55', color: '#4ade80',
+                        borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        fontFamily: "'Outfit', sans-serif",
+                      }}>✅ 사용함</button>
+                    </td>
                     <td style={{ ...S.td, textAlign: 'center' }}>
                       <button onClick={() => handleUnpick(item.tool_id, item.keyword)} style={{
                         background: 'none', border: 'none', cursor: 'pointer', fontSize: 16,
                       }}>⭐</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {tab === 'used' && (
+        <div>
+          {picksLoading ? (
+            <div style={{ color: '#71717a', fontSize: 13, padding: 20 }}>로딩 중...</div>
+          ) : usedPicks.length === 0 ? (
+            <div style={{ color: '#52525b', fontSize: 14, padding: 20, textAlign: 'center' }}>
+              아직 사용 처리된 키워드가 없어요.<br/>
+              <span style={{ fontSize: 12, marginTop: 6, display: 'block' }}>찜한 키워드 탭의 "✅ 사용함" 버튼으로 기록해두세요!</span>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1c1c1e', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>사용일</th>
+                  <th style={S.th}>그룹</th>
+                  <th style={S.th}>키워드</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                  <th style={S.th}>사용한 글</th>
+                  <th style={{ ...S.th, textAlign: 'center' }}>되돌리기</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usedPicks.map(item => (
+                  <tr key={`${item.tool_id}-${item.keyword}`}>
+                    <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{formatDate(item.used_at)}</td>
+                    <td style={{ ...S.td, fontSize: 12, color: '#71717a' }}>{item.tool_id}</td>
+                    <td style={{ ...S.td, fontWeight: 700, color: '#f0f0f0' }}>{item.keyword}</td>
+                    <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                    <td style={{ ...S.td, fontSize: 13, color: '#d4d4d8' }}>
+                      {item.used_in_title || '-'}
+                      {item.used_in_slug && (
+                        <div style={{ fontSize: 11, color: '#52525b' }}>/blog/{item.used_in_slug}</div>
+                      )}
+                    </td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      <button onClick={() => handleUnmarkUsed(item.tool_id, item.keyword)} style={{
+                        background: 'none', border: '1px solid #3f3f46', color: '#a1a1aa',
+                        borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        fontFamily: "'Outfit', sans-serif",
+                      }}>↩️ 되돌리기</button>
                     </td>
                   </tr>
                 ))}
