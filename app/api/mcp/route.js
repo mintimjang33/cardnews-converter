@@ -5,7 +5,7 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 12개:
+// 노출 툴 14개:
 //   - get_publish_log     : 발행 기록 조회 (메모 포함, 중복 방지 + 키워드 사용 추적용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
 //   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람, competition 필터로 황금키워드 탐색
@@ -14,6 +14,8 @@
 //   - pick_keyword        : 나중에 쓸 키워드를 찜(bookmark)해두기, 계획 메모 포함 (쓰기 작업)
 //   - search_keyword_picks: 찜해둔 키워드 검색/열람, 기본은 미사용만 (그룹 구분 없음)
 //   - mark_keyword_used   : 찜 키워드를 글에 실제로 썼을 때 사용 처리 — 날짜·글 자동 기록 (쓰기 작업)
+//   - suggest_feature     : 새 도구가 아니라 "기존 도구에 기능 추가" 제안을 검토 메모와 함께 기록 (쓰기 작업)
+//   - get_feature_ideas   : suggest_feature로 기록해둔 기능 추가 제안 목록 조회
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
@@ -26,11 +28,32 @@
 //   add column if not exists used_in_title text,
 //   add column if not exists used_in_slug text;
 //
+// suggest_feature/get_feature_ideas가 쓰는 feature_ideas 테이블도 최초 1회 생성 필요:
+//
+// create table if not exists feature_ideas (
+//   id text primary key,
+//   tool_id text not null,            -- 기능을 추가할 기존 도구 코드 (예: text-down)
+//   feature_name text not null,       -- 추가할 기능 이름 (예: "맞춤법 검사")
+//   keyword text,                     -- 근거가 된 키워드
+//   pc integer, mobile integer, total integer, competition text,
+//   notes text not null,              -- 구현 가능성 검토 결과 (비용/약관/대안 등)
+//   status text not null default 'proposed',  -- proposed | building | done | rejected
+//   created_at timestamptz not null default now()
+// );
+//
+// "새 도구 만들기" vs "기존 도구에 기능 추가"는 의도적으로 분리했습니다 — 황금키워드가 발견됐다고
+// 무조건 새 카테고리(DEFAULT_CATEGORIES)를 늘리는 게 아니라, 기존 도구와 결이 비슷하면
+// suggest_feature로 "기능 추가" 후보로만 남겨둡니다. 정말 완전히 새로운 도구가 필요하다고
+// 판단되면 그건 사람이 직접 사이트 도구 목록(DEFAULT_CATEGORIES)에 추가하고 TOOL_HINTS도
+// 같이 갱신해야 합니다 (Claude가 임의로 새 카테고리를 만들지 않음).
+//
 // 황금키워드 운영 흐름 (검색량 높고 경쟁 낮은 키워드로 트래픽을 모으는 전략):
 //   1. search_keyword_data(competition: "낮음")로 경쟁 낮은 후보를 검색량 순으로 훑어본다.
 //      (admin 화면에서는 "🏆 황금키워드" 탭에서 같은 데이터를 사람이 직접 봄)
-//   2. 지금 바로 쓸 게 아니면 pick_keyword로 찜해두고, memo에 "이런 글로 연결하면 좋겠다"를 적어둔다.
-//   3. 글감을 정할 때마다 search_keyword_picks(기본 미사용만)로 찜 목록을 먼저 훑어, 오늘 쓸 만한 게 있는지 확인한다.
+//   2. 글감으로만 쓸 거면 pick_keyword로 찜, "이미 있는 도구에 기능으로 추가하면 좋겠다" 싶으면
+//      suggest_feature로 검토 메모와 함께 기록한다.
+//   3. 글감을 정할 때마다 search_keyword_picks(기본 미사용만)·get_feature_ideas로 먼저 훑어,
+//      오늘 쓸 만한 게 있는지 확인한다.
 //   4. 찜 키워드를 실제로 글에 썼으면 mark_keyword_used를 호출한다 — used_at(날짜)·used_in_title/slug(어느 글)이
 //      구조화된 컬럼으로 남기 때문에, admin "✅ 사용 키워드" 탭과 search_keyword_picks(include_used: true)에서
 //      "그 키워드를 며칠에 어디에 썼는지"가 그대로 조회된다. (add_publish_log의 memo에도 같은 내용을 짧게
@@ -469,6 +492,84 @@ const baseHandler = createMcpHandler(
             text: `✅ 사용 처리됨: [${group}] ${keyword} → "${used_in_title}" (${nowIso.slice(0, 10)})`,
           }],
         }
+      }
+    )
+
+    server.registerTool(
+      'suggest_feature',
+      {
+        title: '기존 도구 기능 추가 제안 기록',
+        description:
+          '새 도구를 따로 만드는 게 아니라, 이미 있는 도구(tool_id)에 기능 하나를 추가하면 좋겠다는 ' +
+          '제안을 기록한다. 검색량 높은 키워드인데 새 카테고리를 만들 정도는 아니고 기존 도구와 결이 ' +
+          '비슷할 때 사용한다 (예: "맞춤법검사" 키워드 → text-down에 맞춤법 검사 기능 추가). notes에는 ' +
+          '실제 구현 가능성 검토 결과를 적는다 — 외부 API 이용약관·비용·안정성 문제, 대안 구현 방법, ' +
+          '추천 방향 등을 짧게 정리해서 남기면, 나중에 get_feature_ideas로 다시 볼 때 처음부터 다시 ' +
+          '조사하지 않아도 된다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).describe('기능을 추가할 기존 도구'),
+          feature_name: z.string().describe('추가할 기능 이름. 예: "맞춤법 검사"'),
+          keyword: z.string().optional().describe('이 제안의 근거가 된 키워드'),
+          pc: z.number().optional(),
+          mobile: z.number().optional(),
+          total: z.number().optional(),
+          competition: z.string().optional(),
+          notes: z.string().describe('구현 가능성 검토 결과 — 비용, 약관/법적 리스크, 대안, 추천 방향 등'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ tool_id, feature_name, keyword, pc, mobile, total, competition, notes }) => {
+        const row = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+          tool_id,
+          feature_name,
+          keyword: keyword || null,
+          pc: pc || null,
+          mobile: mobile || null,
+          total: total || null,
+          competition: competition || null,
+          notes,
+          status: 'proposed',
+          created_at: new Date().toISOString(),
+        }
+        const { error } = await supabase.from('feature_ideas').insert([row])
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        return {
+          content: [{
+            type: 'text',
+            text: `💡 기능 제안 기록됨: [${tool_id}] ${feature_name}${keyword ? ' (키워드: ' + keyword + ')' : ''}`,
+          }],
+        }
+      }
+    )
+
+    server.registerTool(
+      'get_feature_ideas',
+      {
+        title: '기능 추가 제안 목록 조회',
+        description:
+          'suggest_feature로 기록해둔 기능 추가 제안들을 조회한다. 새 글감을 정하거나 사이트 로드맵을 ' +
+          '검토할 때, 이미 검토해둔 제안이 있는지 먼저 확인하는 용도로 쓴다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).optional().describe('특정 도구로만 필터링하고 싶을 때'),
+          status: z.enum(['proposed', 'building', 'done', 'rejected']).optional().describe('상태로 필터링 (기본: 전체)'),
+        },
+      },
+      async ({ tool_id, status }) => {
+        let q = supabase.from('feature_ideas').select('*').order('created_at', { ascending: false })
+        if (tool_id) q = q.eq('tool_id', tool_id)
+        if (status) q = q.eq('status', status)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data || !data.length) {
+          return { content: [{ type: 'text', text: '기록된 기능 제안 없음' }] }
+        }
+        const lines = [`💡 기능 추가 제안 (${data.length}건):`]
+        data.forEach(f => {
+          const vol = f.total ? ` · 검색량 합계 ${fmt(f.total)}${f.competition ? '(경쟁 ' + f.competition + ')' : ''}` : ''
+          lines.push(`- [${f.tool_id}/${f.status}] ${f.feature_name}${f.keyword ? ' (키워드: ' + f.keyword + ')' : ''}${vol}\n  └ ${f.notes}`)
+        })
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
     )
 
