@@ -5,16 +5,26 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 9개:
-//   - get_publish_log     : 발행 기록 조회 (중복 방지용, STEP 1에서 가장 먼저 호출)
+// 노출 툴 11개:
+//   - get_publish_log     : 발행 기록 조회 (메모 포함, 중복 방지 + 키워드 사용 추적용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
-//   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람 (도구 간 우연한 연결 발견용)
+//   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람, competition 필터로 황금키워드 탐색
 //   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출, 저장 안 함)
 //   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
-//   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기 (쓰기 작업)
+//   - pick_keyword        : 나중에 쓸 키워드를 찜(bookmark)해두기, 계획 메모 포함 (쓰기 작업)
+//   - search_keyword_picks: 찜해둔 키워드 전체를 그룹 구분 없이 검색/열람
+//   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
 //   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
+//
+// 황금키워드 운영 흐름 (검색량 높고 경쟁 낮은 키워드로 트래픽을 모으는 전략):
+//   1. search_keyword_data(competition: "낮음")로 경쟁 낮은 후보를 검색량 순으로 훑어본다.
+//   2. 지금 바로 쓸 게 아니면 pick_keyword로 찜해두고, memo에 "이런 글로 연결하면 좋겠다"를 적어둔다.
+//   3. 글감을 정할 때마다 search_keyword_picks로 찜 목록을 먼저 훑어, 오늘 쓸 만한 게 있는지 확인한다.
+//   4. 찜 키워드를 실제로 글에 썼으면, add_publish_log의 memo에 어떤 키워드를 썼는지 남긴다 —
+//      날짜(created_at)와 글(title/slug)이 자동으로 같이 남기 때문에, get_publish_log만 다시 봐도
+//      "그 키워드를 며칠에 어디에 썼는지"가 그대로 추적된다.
 //
 // get_keyword_data는 hint(도구 그룹)로 좁혀서 보고, search_keyword_data는 hint 구분 없이
 // keyword_stats 전체를 본다 — 한 도구를 조사하다 다른 도구에도 쓸만한 키워드가 우연히
@@ -138,8 +148,10 @@ const baseHandler = createMcpHandler(
       {
         title: '블로그 발행 기록 조회',
         description:
-          '지금까지 발행한 블로그 글 기록(도구/각도/제목/슬러그/발행일)을 가져온다. ' +
-          '오늘의 글감을 정하기 전, STEP 1에서 가장 먼저 호출해서 중복을 피하는 데 쓴다.',
+          '지금까지 발행한 블로그 글 기록(도구/각도/제목/슬러그/발행일/메모)을 가져온다. ' +
+          '오늘의 글감을 정하기 전, STEP 1에서 가장 먼저 호출해서 중복을 피하는 데 쓴다. ' +
+          '메모에는 보통 그 글에서 어떤 찜 키워드를 어떻게 썼는지 적혀 있어, 황금키워드를 ' +
+          '언제·어느 글에 썼는지 추적하는 용도로도 쓸 수 있다.',
         inputSchema: {
           tool_id: z.enum(TOOL_CODES).optional().describe('특정 도구로만 필터링하고 싶을 때'),
           limit: z.number().int().min(1).max(500).optional().describe('최대 개수 (기본 200)'),
@@ -156,7 +168,8 @@ const baseHandler = createMcpHandler(
         }
         const lines = [`발행 기록 (${data.length}건, 최신순):`]
         data.forEach(l => {
-          lines.push(`- 도구: ${l.tool} / 각도: ${l.angle} / 제목: ${l.title} / 슬러그: ${l.slug}${l.published_at ? ' / 발행일: ' + l.published_at : ''}`)
+          const dateStr = l.published_at || (l.created_at ? l.created_at.slice(0, 10) : '')
+          lines.push(`- 도구: ${l.tool} / 각도: ${l.angle} / 제목: ${l.title} / 슬러그: ${l.slug}${dateStr ? ' / 날짜: ' + dateStr : ''}${l.memo ? ' / 메모: ' + l.memo : ''}`)
         })
         return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
@@ -289,21 +302,24 @@ const baseHandler = createMcpHandler(
           'get_keyword_data처럼 특정 도구(hint)로 좁혀서 보지 않고, keyword_stats 테이블 전체를 ' +
           '대상으로 검색·열람한다. 한 도구를 조사하다가 다른 도구에도 쓸만한 키워드가 우연히 걸리는 ' +
           '경우가 많기 때문에, 저장된 그룹(hint) 이름이 무엇이든 상관없이 전부 뒤져서 찾는다. query를 ' +
-          '주면 키워드에 그 문자열이 포함된 것만, 비우면 검색량이 높은 순으로 전체를 반환한다. 결과의 ' +
-          '[ ] 안 값은 그 키워드가 현재 어느 hint 그룹에 저장돼 있는지 보여준다 — 글 작성 중인 도구의 ' +
-          'hint와 달라도 연결고리가 있으면 그대로 써도 된다.',
+          '주면 키워드에 그 문자열이 포함된 것만, 비우면 검색량이 높은 순으로 전체를 반환한다. competition을 ' +
+          '주면 그 경쟁도만 걸러서 본다 — 예를 들어 competition: "낮음"으로 호출하면 검색량은 정렬돼 있으니 ' +
+          '위쪽이 곧 "검색량 높고 경쟁 낮은" 황금키워드 후보다. 결과의 [ ] 안 값은 그 키워드가 현재 어느 ' +
+          'hint 그룹에 저장돼 있는지 보여준다 — 글 작성 중인 도구의 hint와 달라도 연결고리가 있으면 그대로 써도 된다.',
         inputSchema: {
           query: z.string().optional().describe('키워드에 포함될 부분 문자열. 비우면 전체 반환'),
+          competition: z.string().optional().describe('경쟁도로 필터링 (예: "낮음"). 황금키워드 찾을 때 사용'),
           limit: z.number().int().min(1).max(300).optional().describe('최대 개수 (기본 100)'),
         },
       },
-      async ({ query, limit }) => {
+      async ({ query, competition, limit }) => {
         let q = supabase
           .from('keyword_stats')
           .select('hint, keyword, pc, mobile, total, competition')
           .order('total', { ascending: false })
           .limit(limit || 100)
         if (query) q = q.ilike('keyword', `%${query}%`)
+        if (competition) q = q.eq('competition', competition)
         const { data, error } = await q
         if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
         if (!data || !data.length) {
@@ -318,18 +334,105 @@ const baseHandler = createMcpHandler(
     )
 
     server.registerTool(
+      'pick_keyword',
+      {
+        title: '키워드 찜하기 (나중에 쓸 글감 bookmark)',
+        description:
+          '검색량 높고 경쟁 낮은 "황금키워드"처럼 지금 당장은 안 쓰더라도 나중에 글로 쓰고 싶은 ' +
+          '키워드를 찜해둔다(keyword_picks에 upsert, 같은 group+keyword는 최신 값으로 덮어씀). memo에 ' +
+          '"이 키워드면 이런 글을 써야겠다"는 계획을 짧게 적어두면, 나중에 search_keyword_picks로 ' +
+          '다시 볼 때 바로 떠올릴 수 있다. group은 keyword_stats의 hint 값을 그대로 쓰거나, 마땅한 ' +
+          'hint가 없으면 새 이름을 자유롭게 지어도 된다 — 정확한 분류보다 나중에 다시 찾을 수 있게 ' +
+          '기록해두는 것이 목적이다.',
+        inputSchema: {
+          group: z.string().describe('이 키워드를 묶을 그룹/hint 이름. keyword_stats에 있던 hint를 그대로 쓰는 걸 권장'),
+          keyword: z.string(),
+          pc: z.number().optional(),
+          mobile: z.number().optional(),
+          total: z.number().optional(),
+          competition: z.string().optional(),
+          memo: z.string().optional().describe('어떤 글로 연결할지 계획 메모. 예: "text-down 맞춤법검사기 연계 글로 쓰면 좋음"'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ group, keyword, pc, mobile, total, competition, memo }) => {
+        const row = {
+          tool_id: group,
+          hint: group,
+          keyword,
+          pc: pc || 0,
+          mobile: mobile || 0,
+          total: total != null ? total : (pc || 0) + (mobile || 0),
+          competition: competition || null,
+          memo: memo || null,
+        }
+        const { error } = await supabase
+          .from('keyword_picks')
+          .upsert(row, { onConflict: 'tool_id,keyword' })
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        return {
+          content: [{
+            type: 'text',
+            text: `⭐ 찜 완료: [${group}] ${keyword}${memo ? ' — ' + memo : ''}`,
+          }],
+        }
+      }
+    )
+
+    server.registerTool(
+      'search_keyword_picks',
+      {
+        title: '찜한 키워드 전체 검색/열람 (그룹 구분 없음)',
+        description:
+          'pick_keyword로 찜해둔 키워드를 그룹(hint) 구분 없이 전체 열람·검색한다. 어떤 황금키워드를 ' +
+          '찜해뒀는지, 어떤 계획(memo)을 적어뒀는지 한눈에 다시 확인할 때 쓴다. 글감을 정하기 전에 ' +
+          '한 번씩 호출해서 "찜해둔 것 중 오늘 쓸 만한 게 있는지" 확인하면 좋다.',
+        inputSchema: {
+          query: z.string().optional().describe('키워드 또는 메모에 포함될 부분 문자열. 비우면 전체 반환'),
+        },
+      },
+      async ({ query }) => {
+        let q = supabase
+          .from('keyword_picks')
+          .select('tool_id, keyword, pc, mobile, total, competition, memo')
+          .order('total', { ascending: false })
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        let rows = data || []
+        if (query) {
+          const needle = query.toLowerCase()
+          rows = rows.filter(r =>
+            (r.keyword || '').toLowerCase().includes(needle) || (r.memo || '').toLowerCase().includes(needle)
+          )
+        }
+        if (!rows.length) {
+          return { content: [{ type: 'text', text: '찜한 키워드 없음' }] }
+        }
+        const lines = [`⭐ 찜한 키워드 (${rows.length}개):`]
+        rows.forEach(p =>
+          lines.push(`- [${p.tool_id}] ${p.keyword} · 합계 ${fmt(p.total)} (PC ${fmt(p.pc)} / 모바일 ${fmt(p.mobile)})${p.competition ? ' · 경쟁도 ' + p.competition : ''}${p.memo ? ' · 메모: ' + p.memo : ''}`)
+        )
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
       'add_publish_log',
       {
         title: '블로그 발행 기록 추가',
         description:
           '새로 작성한 블로그 글 1편을 발행 기록에 남긴다. STEP 3에서 최종 아티팩트를 ' +
-          '출력한 직후 호출해서, 같은 도구·각도를 다음에 또 쓰지 않도록 한다.',
+          '출력한 직후 호출해서, 같은 도구·각도를 다음에 또 쓰지 않도록 한다. 이 글에서 ' +
+          'pick_keyword로 찜해뒀던 황금키워드를 실제로 썼다면, memo에 어떤 키워드를 어떻게 ' +
+          '썼는지 짧게 남긴다(예: "찜 키워드 \'맞춤법검사기\' 사용"). created_at이 자동으로 ' +
+          '날짜를 남기기 때문에, 이렇게 하면 "그 키워드를 며칠에 어느 글에 썼는지"가 ' +
+          'get_publish_log 조회만으로 그대로 추적된다.',
         inputSchema: {
           tool: z.enum(TOOL_CODES),
           angle: z.string().describe('키워드 각도, 예: "다운로드 방법"'),
           title: z.string(),
           slug: z.string(),
-          memo: z.string().optional(),
+          memo: z.string().optional().describe('이 글에서 사용한 찜 키워드나 특이사항 메모'),
         },
         annotations: { destructiveHint: false, idempotentHint: false },
       },
