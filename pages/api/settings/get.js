@@ -71,13 +71,15 @@ export default async function handler(req, res) {
     const map = {}
     for (const row of data || []) map[row.key] = row.value
     res.status(200).json({
-      cooldown:  map['site:cooldown']    ?? DEFAULTS.cooldown,
-      adsOn:     map['site:ads_on']      ?? DEFAULTS.adsOn,
-      terms:     map['site:terms']       ?? DEFAULTS.terms,
-      privacy:   map['site:privacy']     ?? DEFAULTS.privacy,
-      termsEn:   map['site:terms_en']    ?? null,
-      privacyEn: map['site:privacy_en']  ?? null,
-      adSlots:   map['site:ad_slots']    ?? DEFAULTS.adSlots,
+      cooldown:      map['site:cooldown']       ?? DEFAULTS.cooldown,
+      adsOn:         map['site:ads_on']         ?? DEFAULTS.adsOn,
+      spellingOn:    map['site:spelling_on'] === true || map['site:spelling_on'] === 'true' ? true : false,
+      spellingLimit: map['site:spelling_limit'] ?? 10000,
+      terms:         map['site:terms']          ?? DEFAULTS.terms,
+      privacy:       map['site:privacy']        ?? DEFAULTS.privacy,
+      termsEn:       map['site:terms_en']       ?? null,
+      privacyEn:     map['site:privacy_en']     ?? null,
+      adSlots:       map['site:ad_slots']       ?? DEFAULTS.adSlots,
     })
   } catch {
     res.status(200).json(DEFAULTS)
