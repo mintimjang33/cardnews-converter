@@ -78,6 +78,7 @@ export default function Admin() {
   }
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [toast, setToast] = useState('')
+  const [modal, setModal] = useState(false)
 
   const [cooldownDur, setCooldownDur] = useState(12)
   const [adsOn, setAdsOn] = useState(true)
@@ -287,7 +288,7 @@ export default function Admin() {
                   )}
                 </div>
 
-                <button onClick={async () => { await saveSettings(); showToast('✅ 저장되었습니다') }} style={{ padding: '10px 28px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={async () => { await saveSettings(); setModal(true) }} style={{ padding: '10px 28px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   저장
                 </button>
               </div>
@@ -351,6 +352,19 @@ export default function Admin() {
       </div>
 
       <Toast msg={toast} />
+
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1f1f1f', border: '1px solid #333', borderRadius: 14, padding: '32px 40px', textAlign: 'center', minWidth: 280 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: '#f0f0f0', marginBottom: 6 }}>저장되었습니다</div>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>설정이 성공적으로 저장되었습니다.</div>
+            <button onClick={() => setModal(false)} style={{ padding: '10px 32px', background: '#e63946', color: '#fff', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
