@@ -162,6 +162,7 @@ export default function KeywordPanel({ token }) {
   const [hintList, setHintList]           = useState([])
   const [loadingKw, setLoadingKw]         = useState({})   // 키워드 업데이트 로딩
   const [loadingDoc, setLoadingDoc]       = useState({})   // 문서수 업데이트 로딩
+  const [docProgress, setDocProgress]     = useState({})   // {hint: {filled, stillNull, total}}
   const [expanded, setExpanded]           = useState(null)
   const [topData, setTopData]             = useState({})
   const [topLoading, setTopLoading]       = useState({})
@@ -181,6 +182,13 @@ export default function KeywordPanel({ token }) {
   const [goldenLoaded, setGoldenLoaded]             = useState(false)
   const [goldenCompetition, setGoldenCompetition]   = useState('낮음')
 
+  // ── 전체 자동 배치 ──────────────────────────────────────────────
+  const [batchStatus, setBatchStatus]   = useState(null)   // {daily_limit, today_used, remaining, total_null, hints[]}
+  const [batchRunning, setBatchRunning] = useState(false)
+  const [batchProgress, setBatchProgress] = useState(null) // {filled, stillNull, dailyUsed, dailyRemaining}
+  const [batchPriority, setBatchPriority] = useState('search_volume')
+  const [batchChunk, setBatchChunk]     = useState(100)
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   const loadStats = () => {
@@ -191,6 +199,66 @@ export default function KeywordPanel({ token }) {
   }
 
   useEffect(() => { loadStats() }, [token])
+
+  const loadBatchStatus = async () => {
+    try {
+      const res = await fetch('/api/tools/doc-batch', { headers: { 'x-admin-token': token } })
+      const data = await res.json()
+      if (res.ok) setBatchStatus(data)
+    } catch (e) { console.error(e) }
+  }
+
+  useEffect(() => { loadBatchStatus() }, [token])
+
+  const handleRunBatch = async () => {
+    if (batchRunning) return
+    setBatchRunning(true)
+    setBatchProgress({ filled: 0, stillNull: null, dailyUsed: null, dailyRemaining: null })
+
+    let totalFilled = 0
+    let continueLoop = true
+
+    try {
+      while (continueLoop) {
+        const res = await fetch('/api/tools/doc-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({ chunk: batchChunk, priority: batchPriority }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || '오류')
+
+        totalFilled += data.filled || 0
+        continueLoop = !data.done
+
+        setBatchProgress({
+          filled: totalFilled,
+          stillNull: data.still_null,
+          dailyUsed: data.today_used,
+          dailyRemaining: data.remaining,
+          reason: data.reason,
+        })
+
+        if (!continueLoop) break
+
+        // 배치 사이 잠깐 쉬기 (서버 부하 + rate limit 방지)
+        await new Promise(r => setTimeout(r, 400))
+      }
+
+      loadStats()
+      loadBatchStatus()
+      const prog = batchProgress
+      if (batchProgress?.reason === 'daily_limit') {
+        showToast(`⚠️ 일일 한도 도달 — 오늘 ${totalFilled}개 수집 완료`)
+      } else {
+        showToast(`✅ 전체 문서수 수집 완료! ${totalFilled}개`)
+      }
+    } catch (e) {
+      showToast(`❌ 배치 오류: ${e.message}`)
+    }
+
+    setBatchRunning(false)
+  }
 
   const loadPicks = async () => {
     setPicksLoading(true)
@@ -279,17 +347,48 @@ export default function KeywordPanel({ token }) {
 
   const handleUpdateDocCount = async (hint) => {
     setLoadingDoc(l => ({ ...l, [hint]: true }))
+    setDocProgress(p => ({ ...p, [hint]: { filled: 0, stillNull: null, total: null } }))
+
+    const CHUNK = 50
+    let totalFilled = 0
+
     try {
-      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&mode=doc_only`, {
-        headers: { 'x-admin-token': token },
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '오류')
+      // 첫 호출로 전체 null 규모 파악 후 청크 루프
+      let done = false
+      while (!done) {
+        const res = await fetch(
+          `/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&mode=doc_only&chunk=${CHUNK}`,
+          { headers: { 'x-admin-token': token } }
+        )
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || '오류')
+
+        totalFilled += data.filled || 0
+        done = data.done
+
+        setDocProgress(p => ({
+          ...p,
+          [hint]: {
+            filled: totalFilled,
+            stillNull: data.still_null,
+            total: (data.still_null || 0) + totalFilled,
+          },
+        }))
+
+        // 아직 남아있으면 잠깐 쉬었다가 다음 청크
+        if (!done) await new Promise(r => setTimeout(r, 300))
+      }
+
       loadStats()
       setTopData(d => ({ ...d, [hint]: null }))
-      showToast(`✅ "${hint}" 문서수 ${data.filled}개 수집 완료!`)
-    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+      showToast(`✅ "${hint}" 문서수 ${totalFilled}개 수집 완료!`)
+    } catch (e) {
+      showToast(`❌ 문서수 오류: ${e.message}`)
+    }
+
     setLoadingDoc(l => ({ ...l, [hint]: false }))
+    // 완료 후 3초 뒤 진행 표시 제거
+    setTimeout(() => setDocProgress(p => { const n = { ...p }; delete n[hint]; return n }), 3000)
   }
 
   const handleAdd = async () => {
@@ -416,25 +515,96 @@ export default function KeywordPanel({ token }) {
       {allRows.length > 0 && (() => {
         const totalKeywords = allRows.reduce((sum, r) => sum + (r.count || 0), 0)
         const totalWithDoc  = allRows.reduce((sum, r) => sum + (r.doc_count_filled || 0), 0)
+
+        // 일일 한도 계산
+        const dailyLimit     = batchStatus?.daily_limit || 25000
+        const liveUsed       = batchProgress?.dailyUsed ?? batchStatus?.today_used ?? null
+        const liveRemaining  = batchProgress?.dailyRemaining ?? batchStatus?.remaining ?? null
+        const WARNING_THRESH = 5000
+        const isWarning      = liveRemaining != null && liveRemaining <= WARNING_THRESH
+        const isDanger       = liveRemaining != null && liveRemaining <= 1000
+        const usedPct        = liveUsed != null ? Math.min(100, Math.round((liveUsed / dailyLimit) * 100)) : null
+
         return (
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div style={{
-              background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
-              padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 13, color: '#71717a' }}>전체 수집 키워드</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: '#e63946' }}>{totalKeywords.toLocaleString()}</span>
-              <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
+          <>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+              {/* 전체 수집 키워드 */}
+              <div style={{
+                background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
+                padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: 13, color: '#71717a' }}>전체 수집 키워드</span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: '#e63946' }}>{totalKeywords.toLocaleString()}</span>
+                <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
+              </div>
+              {/* 도구 그룹 */}
+              <div style={{
+                background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
+                padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: 13, color: '#71717a' }}>도구 그룹</span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: '#f0f0f0' }}>{allRows.length}</span>
+                <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
+              </div>
+              {/* 오늘 남은 API 한도 */}
+              {liveRemaining != null && (
+                <div style={{
+                  background: isDanger ? '#1a0505' : isWarning ? '#1c1400' : '#1c1c1e',
+                  border: `1px solid ${isDanger ? '#7f1d1d' : isWarning ? '#78350f' : '#3f3f46'}`,
+                  borderRadius: 10,
+                  padding: '10px 18px',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  minWidth: 220,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, color: isDanger ? '#fca5a5' : isWarning ? '#fbbf24' : '#71717a' }}>
+                        {isDanger ? '🚨' : isWarning ? '⚠️' : '📡'} 오늘 남은 한도
+                      </span>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: isDanger ? '#ef4444' : isWarning ? '#f59e0b' : '#4ade80' }}>
+                        {liveRemaining.toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#52525b' }}>/ {dailyLimit.toLocaleString()}</span>
+                    </div>
+                    {/* 게이지 바 */}
+                    <div style={{ height: 4, background: '#27272a', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${usedPct}%`,
+                        background: isDanger ? '#ef4444' : isWarning ? '#f59e0b' : '#22c55e',
+                        borderRadius: 2,
+                        transition: 'width 0.4s, background 0.3s',
+                      }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#52525b' }}>
+                      사용 {(liveUsed || 0).toLocaleString()}개 ({usedPct}%)
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <div style={{
-              background: '#1c1c1e', border: '1px solid #3f3f46', borderRadius: 10,
-              padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 13, color: '#71717a' }}>도구 그룹</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: '#f0f0f0' }}>{allRows.length}</span>
-              <span style={{ fontSize: 13, color: '#52525b' }}>개</span>
-            </div>
-          </div>
+            {/* 경고 배너 */}
+            {isWarning && (
+              <div style={{
+                background: isDanger ? '#1a0505' : '#1c1400',
+                border: `1px solid ${isDanger ? '#ef4444' : '#f59e0b'}`,
+                borderRadius: 8, padding: '10px 16px', marginBottom: 12,
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 18 }}>{isDanger ? '🚨' : '⚠️'}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isDanger ? '#fca5a5' : '#fbbf24' }}>
+                    {isDanger
+                      ? `API 한도 거의 소진 — 오늘 ${liveRemaining.toLocaleString()}개만 남았습니다`
+                      : `API 한도 주의 — 오늘 ${liveRemaining.toLocaleString()}개 남음 (5,000개 이하)`}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#71717a', marginTop: 2 }}>
+                    다른 서비스에서도 이 API를 사용 중입니다. 대량 수집 전 확인하세요.
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )
       })()}
 
@@ -464,6 +634,163 @@ export default function KeywordPanel({ token }) {
         <div style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>수집하면 아래 목록에 새 항목으로 추가됩니다.</div>
       </div>
 
+      {/* ── 문서수 전체 자동 배치 카드 ─────────────────────────────── */}
+      <div style={{
+        background: '#0f1f10', border: `1px solid ${batchRunning ? '#22c55e' : '#1a3d24'}`,
+        borderRadius: 12, padding: '18px 20px', marginBottom: 20,
+        transition: 'border-color 0.3s',
+      }}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#4ade80', marginBottom: 3 }}>
+              🚀 문서수 전체 자동 수집
+            </div>
+            <div style={{ fontSize: 12, color: '#374c3a' }}>
+              검색량 높은 미수집 키워드부터 일일 한도 내에서 자동으로 수집합니다
+            </div>
+          </div>
+          {/* 일일 사용량 게이지 */}
+          {batchStatus && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, minWidth: 160 }}>
+              <div style={{ fontSize: 11, color: '#374c3a', display: 'flex', gap: 6 }}>
+                <span>오늘 사용</span>
+                <b style={{ color: (batchProgress?.dailyUsed ?? batchStatus.today_used) > batchStatus.daily_limit * 0.8 ? '#fbbf24' : '#4ade80' }}>
+                  {((batchProgress?.dailyUsed ?? batchStatus.today_used) || 0).toLocaleString()}
+                </b>
+                <span style={{ color: '#1a3d24' }}>/</span>
+                <span>{batchStatus.daily_limit.toLocaleString()}</span>
+              </div>
+              <div style={{ width: 160, height: 6, background: '#1a3d24', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.round(((batchProgress?.dailyUsed ?? batchStatus.today_used) / batchStatus.daily_limit) * 100))}%`,
+                  background: (batchProgress?.dailyUsed ?? batchStatus.today_used) > batchStatus.daily_limit * 0.8 ? '#fbbf24' : '#22c55e',
+                  borderRadius: 3, transition: 'width 0.4s',
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#374c3a' }}>
+                남은 한도 <b style={{ color: '#a1a1aa' }}>
+                  {((batchProgress?.dailyRemaining ?? batchStatus.remaining) || 0).toLocaleString()}
+                </b>개
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 설정 + 실행 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+          {/* 우선순위 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: 10, color: '#374c3a', fontWeight: 700 }}>우선순위</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[
+                ['search_volume', '📊 검색량 순'],
+                ['null_ratio', '📉 미수집 비율'],
+                ['hint_order', '🗂 그룹 순서'],
+              ].map(([v, l]) => (
+                <button key={v} onClick={() => !batchRunning && setBatchPriority(v)} style={{
+                  padding: '4px 10px', borderRadius: 6, border: 'none', cursor: batchRunning ? 'default' : 'pointer',
+                  background: batchPriority === v ? '#16a34a' : '#1a3d24',
+                  color: batchPriority === v ? '#fff' : '#4a7c59',
+                  fontSize: 11, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+                  opacity: batchRunning ? 0.5 : 1,
+                }}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {/* 청크 크기 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: 10, color: '#374c3a', fontWeight: 700 }}>한 번에</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[50, 100, 200].map(n => (
+                <button key={n} onClick={() => !batchRunning && setBatchChunk(n)} style={{
+                  padding: '4px 10px', borderRadius: 6, border: 'none', cursor: batchRunning ? 'default' : 'pointer',
+                  background: batchChunk === n ? '#16a34a' : '#1a3d24',
+                  color: batchChunk === n ? '#fff' : '#4a7c59',
+                  fontSize: 11, fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+                  opacity: batchRunning ? 0.5 : 1,
+                }}>{n}개</button>
+              ))}
+            </div>
+          </div>
+          {/* 실행 버튼 */}
+          <button
+            onClick={handleRunBatch}
+            disabled={batchRunning || (batchStatus?.remaining === 0)}
+            style={{
+              marginLeft: 'auto',
+              background: batchRunning ? '#15803d' : batchStatus?.remaining === 0 ? '#1a3d24' : '#16a34a',
+              color: batchStatus?.remaining === 0 && !batchRunning ? '#374c3a' : '#fff',
+              border: 'none', borderRadius: 8, padding: '9px 20px',
+              fontSize: 13, fontWeight: 800,
+              cursor: batchRunning ? 'wait' : batchStatus?.remaining === 0 ? 'default' : 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+              minWidth: 120,
+            }}
+          >
+            {batchRunning ? '수집 중...' : batchStatus?.remaining === 0 ? '오늘 한도 완료' : '▶ 자동 수집 시작'}
+          </button>
+        </div>
+
+        {/* 진행 상태 */}
+        {(batchRunning || batchProgress) && (
+          <div style={{ background: '#071208', borderRadius: 8, padding: '12px 14px', marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 700 }}>
+                {batchRunning ? '⏳ 수집 중...' : batchProgress?.reason === 'all_filled' ? '✅ 전체 완료!' : batchProgress?.reason === 'daily_limit' ? '⚠️ 오늘 한도 도달' : '완료'}
+              </span>
+              <span style={{ fontSize: 12, color: '#374c3a' }}>
+                수집 <b style={{ color: '#4ade80' }}>{(batchProgress?.filled || 0).toLocaleString()}</b>개
+                {batchProgress?.stillNull != null && (
+                  <span> · 남은 미수집 <b style={{ color: batchProgress.stillNull > 0 ? '#f87171' : '#4ade80' }}>{batchProgress.stillNull.toLocaleString()}</b>개</span>
+                )}
+              </span>
+            </div>
+            {batchProgress?.stillNull != null && batchStatus && (
+              <div style={{ height: 6, background: '#1a3d24', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: (() => {
+                    const total = (batchProgress.filled || 0) + (batchProgress.stillNull || 0)
+                    return total > 0 ? `${Math.round((batchProgress.filled / total) * 100)}%` : '0%'
+                  })(),
+                  background: '#22c55e', borderRadius: 3, transition: 'width 0.4s',
+                }} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 그룹별 미수집 현황 (접힌 상태, 클릭하면 펼침) */}
+        {batchStatus?.hints?.length > 0 && !batchRunning && (
+          <details style={{ marginTop: 10 }}>
+            <summary style={{ fontSize: 12, color: '#374c3a', cursor: 'pointer', userSelect: 'none' }}>
+              그룹별 미수집 현황 ({batchStatus.total_null?.toLocaleString()}개 남음) ▸
+            </summary>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {batchStatus.hints.map(h => (
+                <div key={h.hint} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: '#52525b', minWidth: 90 }}>{h.hint}</span>
+                  <div style={{ flex: 1, height: 4, background: '#1a3d24', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.round(h.nullRatio * 100)}%`,
+                      background: h.nullRatio > 0.5 ? '#f87171' : '#22c55e',
+                      borderRadius: 2,
+                    }} />
+                  </div>
+                  <span style={{ color: '#f87171', minWidth: 50, textAlign: 'right' }}>
+                    {h.nullCount.toLocaleString()}개
+                  </span>
+                  <span style={{ color: '#374c3a' }}>({Math.round(h.nullRatio * 100)}%)</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
           ['top', '📊 수집 현황'],
@@ -490,6 +817,7 @@ export default function KeywordPanel({ token }) {
             const docNeedsUpdate = (row.null_doc_count || 0) > 0    // 문서수: 미수집 남음
             const isLoadingKw    = loadingKw[row.hint]
             const isLoadingDoc   = loadingDoc[row.hint]
+            const docProg        = docProgress[row.hint]             // 진행 상태
             const isExpanded     = expanded === row.hint
             const topList        = topData[row.hint] || []
 
@@ -557,24 +885,50 @@ export default function KeywordPanel({ token }) {
                       {isLoadingKw ? '수집 중...' : kwNeedsUpdate ? '🔄 키워드' : '✓ 키워드'}
                     </button>
                     {/* 문서수 업데이트 버튼 — 초록색, 미수집 있을 때 활성 */}
-                    <button
-                      onClick={e => { e.stopPropagation(); docNeedsUpdate && !isLoadingDoc && handleUpdateDocCount(row.hint) }}
-                      disabled={isLoadingDoc || !docNeedsUpdate}
-                      title={docNeedsUpdate ? `미수집 ${row.null_doc_count}개 문서수 수집` : '문서수 수집 완료'}
-                      style={{
-                        background: isLoadingDoc ? '#15803d' : docNeedsUpdate ? '#16a34a' : '#0f2318',
-                        color: docNeedsUpdate ? '#fff' : '#374c3a',
-                        border: `1px solid ${docNeedsUpdate ? '#22c55e' : '#1a3d24'}`,
-                        borderRadius: 8, padding: '7px 13px',
-                        fontSize: 12, fontWeight: 700,
-                        cursor: isLoadingDoc ? 'wait' : docNeedsUpdate ? 'pointer' : 'default',
-                        opacity: isLoadingDoc ? 0.7 : 1, whiteSpace: 'nowrap',
-                        fontFamily: "'Outfit', sans-serif",
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {isLoadingDoc ? '수집 중...' : docNeedsUpdate ? `📄 문서수` : '✓ 문서수'}
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); docNeedsUpdate && !isLoadingDoc && handleUpdateDocCount(row.hint) }}
+                        disabled={isLoadingDoc || !docNeedsUpdate}
+                        title={docNeedsUpdate ? `미수집 ${row.null_doc_count}개 문서수 수집` : '문서수 수집 완료'}
+                        style={{
+                          background: isLoadingDoc ? '#15803d' : docNeedsUpdate ? '#16a34a' : '#0f2318',
+                          color: docNeedsUpdate ? '#fff' : '#374c3a',
+                          border: `1px solid ${docNeedsUpdate ? '#22c55e' : '#1a3d24'}`,
+                          borderRadius: 8, padding: '7px 13px',
+                          fontSize: 12, fontWeight: 700,
+                          cursor: isLoadingDoc ? 'wait' : docNeedsUpdate ? 'pointer' : 'default',
+                          opacity: isLoadingDoc ? 0.7 : 1, whiteSpace: 'nowrap',
+                          fontFamily: "'Outfit', sans-serif",
+                          transition: 'all 0.15s',
+                          minWidth: 80,
+                        }}
+                      >
+                        {isLoadingDoc
+                          ? (docProg?.total
+                              ? `${docProg.filled}/${docProg.total}`
+                              : '수집 중...')
+                          : docNeedsUpdate ? `📄 문서수` : '✓ 문서수'
+                        }
+                      </button>
+                      {/* 진행 바 */}
+                      {isLoadingDoc && docProg?.total > 0 && (
+                        <div style={{ width: 80, height: 4, background: '#1a3d24', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${Math.round((docProg.filled / docProg.total) * 100)}%`,
+                            background: '#22c55e',
+                            borderRadius: 2,
+                            transition: 'width 0.3s',
+                          }} />
+                        </div>
+                      )}
+                      {/* 완료 직후 남은 실패 키워드 안내 */}
+                      {!isLoadingDoc && docProg?.stillNull > 0 && (
+                        <div style={{ fontSize: 10, color: '#f87171', whiteSpace: 'nowrap' }}>
+                          {docProg.stillNull}개 재시도 필요
+                        </div>
+                      )}
+                    </div>
                     <button onClick={e => { e.stopPropagation(); setConfirmDelete({ type: 'delete', hint: row.hint }) }} style={{
                       background: 'none', border: '1px solid #3f3f46', borderRadius: 8,
                       color: '#71717a', fontSize: 13, padding: '7px 10px',

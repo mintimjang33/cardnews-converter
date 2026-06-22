@@ -1,12 +1,12 @@
 /**
  * /api/tools/keyword-volume
  * 네이버 검색광고 API — 연관 키워드 검색량 + 네이버 블로그 문서수 조회
- * Supabase에 저장 + 정렬 반환
  *
- * GET /api/tools/keyword-volume?keyword=썸네일
- *
- * 문서수(doc_count)는 아직 조회 안 된 키워드(null)만 새로 가져옵니다.
- * 환경변수: NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
+ * mode=all         : 검색량 + 문서수(null만) 한번에
+ * mode=keyword_only: 검색량만 갱신
+ * mode=doc_only    : 문서수만 채우기 — 한 번에 chunk개씩 처리 (타임아웃 방지)
+ *   ?chunk=50      : 한 번에 처리할 개수 (기본 50, 최대 100)
+ *   ?offset=0      : 시작 위치 (프론트가 순차 호출할 때 사용)
  */
 
 import crypto from 'crypto'
@@ -33,8 +33,8 @@ function parseCount(val) {
   return Number(val) || 0
 }
 
-// 네이버 블로그 문서수 조회 (개별)
-async function fetchDocCount(keyword) {
+// 네이버 블로그 문서수 조회 (개별) — 재시도 1회 포함
+async function fetchDocCount(keyword, retryOnFail = true) {
   const clientId = process.env.NAVER_CLIENT_ID
   const clientSecret = process.env.NAVER_CLIENT_SECRET
   if (!clientId || !clientSecret) return null
@@ -46,9 +46,14 @@ async function fetchDocCount(keyword) {
           'X-Naver-Client-Id': clientId,
           'X-Naver-Client-Secret': clientSecret,
         },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(8000),
       }
     )
+    // 429(Rate limit) 또는 5xx → 잠깐 대기 후 1회 재시도
+    if ((res.status === 429 || res.status >= 500) && retryOnFail) {
+      await new Promise(r => setTimeout(r, 1200))
+      return fetchDocCount(keyword, false)
+    }
     if (!res.ok) return null
     const data = await res.json()
     return data.total ?? null
@@ -57,64 +62,110 @@ async function fetchDocCount(keyword) {
   }
 }
 
-// 50개씩 배치 병렬 처리
-async function fetchDocCountBatch(keywords) {
-  const BATCH = 50
-  const results = []
-  for (let i = 0; i < keywords.length; i += BATCH) {
-    const batch = keywords.slice(i, i + BATCH)
-    const counts = await Promise.all(batch.map(kw => fetchDocCount(kw)))
-    results.push(...counts)
+// 배치 처리 — 동시 요청 수 제한(concurrency)으로 Rate limit 방지
+async function fetchDocCountBatch(keywords, concurrency = 10) {
+  const results = new Array(keywords.length).fill(null)
+  let idx = 0
+
+  async function worker() {
+    while (idx < keywords.length) {
+      const i = idx++
+      results[i] = await fetchDocCount(keywords[i])
+      // 요청 사이 살짝 텀 주기
+      await new Promise(r => setTimeout(r, 50))
+    }
   }
+
+  const workers = Array.from({ length: Math.min(concurrency, keywords.length) }, () => worker())
+  await Promise.all(workers)
   return results
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const { keyword, mode = 'all' } = req.query
-  // mode: 'all'(기본) | 'keyword_only'(검색량만) | 'doc_only'(문서수만)
+  const {
+    keyword,
+    mode = 'all',
+    chunk: chunkParam = '50',
+    offset: offsetParam = '0',
+  } = req.query
+
   if (!keyword) return res.status(400).json({ error: 'keyword 파라미터가 필요합니다' })
 
-  // ── doc_only: 검색광고 API 없이 문서수만 채우기 ────────────────────
+  const chunkSize = Math.min(parseInt(chunkParam, 10) || 50, 100)
+  const offset    = parseInt(offsetParam, 10) || 0
+
+  // ── doc_only: 문서수만 chunk 단위로 채우기 ─────────────────────────
   if (mode === 'doc_only') {
     try {
-      // doc_count가 null인 키워드만 DB에서 가져옴
-      const { data: nullRows, error: fetchErr } = await supabase
+      // null 키워드 전체 목록 조회 (offset 포함)
+      const { data: nullRows, error: fetchErr, count } = await supabase
         .from('keyword_stats')
-        .select('keyword')
+        .select('keyword', { count: 'exact' })
+        .eq('hint', keyword)
+        .is('doc_count', null)
+        .order('keyword')
+        .range(offset, offset + chunkSize - 1)
+
+      if (fetchErr) throw new Error(fetchErr.message)
+
+      // 전체 null 개수를 한 번 더 조회 (range 전체 기준)
+      const { count: totalNull } = await supabase
+        .from('keyword_stats')
+        .select('*', { count: 'exact', head: true })
         .eq('hint', keyword)
         .is('doc_count', null)
 
-      if (fetchErr) throw new Error(fetchErr.message)
       if (!nullRows || nullRows.length === 0) {
-        return res.status(200).json({ keyword, mode, filled: 0, message: '모든 문서수 수집 완료' })
+        return res.status(200).json({
+          keyword, mode,
+          chunk: chunkSize, offset,
+          total_null: totalNull || 0,
+          filled: 0,
+          still_null: totalNull || 0,
+          done: true,
+          message: '모든 문서수 수집 완료',
+        })
       }
 
       const nullKeywords = nullRows.map(r => r.keyword)
-      const counts = await fetchDocCountBatch(nullKeywords)
+      const counts = await fetchDocCountBatch(nullKeywords, 10)
 
+      // 성공한 것만 DB 업데이트
       const updates = nullKeywords
         .map((kw, i) => ({ keyword: kw, doc_count: counts[i] }))
         .filter(u => u.doc_count != null)
 
       if (updates.length > 0) {
-        for (const u of updates) {
-          await supabase
-            .from('keyword_stats')
-            .update({ doc_count: u.doc_count })
-            .eq('hint', keyword)
-            .eq('keyword', u.keyword)
-        }
+        await supabase
+          .from('keyword_stats')
+          .upsert(
+            updates.map(u => ({ hint: keyword, keyword: u.keyword, doc_count: u.doc_count })),
+            { onConflict: 'hint,keyword', ignoreDuplicates: false }
+          )
       }
+
+      // 처리 후 남은 null 개수
+      const { count: remainNull } = await supabase
+        .from('keyword_stats')
+        .select('*', { count: 'exact', head: true })
+        .eq('hint', keyword)
+        .is('doc_count', null)
+
+      const stillNull = remainNull || 0
+      const done = stillNull === 0
 
       res.setHeader('Cache-Control', 'no-store')
       return res.status(200).json({
-        keyword,
-        mode,
-        total_null: nullKeywords.length,
+        keyword, mode,
+        chunk: chunkSize,
+        offset,
+        processed: nullKeywords.length,
         filled: updates.length,
-        still_null: nullKeywords.length - updates.length,
+        failed: nullKeywords.length - updates.length,  // 조회 실패한 것
+        still_null: stillNull,
+        done,
       })
     } catch (err) {
       return res.status(500).json({ error: err.message })
@@ -139,7 +190,6 @@ export default async function handler(req, res) {
   const requestUrl = `${BASE_URL}${path}?hintKeywords=${encoded}&showDetail=1`
 
   try {
-    // 1. 네이버 검색광고 API — 전체 키워드 검색량 조회
     const response = await fetch(requestUrl, {
       method,
       headers: {
@@ -170,7 +220,6 @@ export default async function handler(req, res) {
       }
     }).sort((a, b) => b.total - a.total)
 
-    // 2. 기존 doc_count 조회
     const keywordList = parsed.map(i => i.keyword)
     const { data: existing } = await supabase
       .from('keyword_stats')
@@ -185,17 +234,14 @@ export default async function handler(req, res) {
     let fetchedCount = 0
 
     if (mode === 'all') {
-      // all: doc_count null인 것만 새로 조회
       const needsDocCount = parsed.filter(item => existingMap[item.keyword] == null)
       fetchedCount = needsDocCount.length
       if (needsDocCount.length > 0) {
-        const counts = await fetchDocCountBatch(needsDocCount.map(i => i.keyword))
+        const counts = await fetchDocCountBatch(needsDocCount.map(i => i.keyword), 10)
         needsDocCount.forEach((item, i) => { docCountMap[item.keyword] = counts[i] })
       }
     }
-    // keyword_only: doc_count 조회 없이 기존 값 유지
 
-    // 3. upsert
     const withDocCount = parsed.map(item => ({
       ...item,
       doc_count: docCountMap[item.keyword] !== undefined
