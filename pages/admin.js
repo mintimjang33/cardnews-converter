@@ -12,6 +12,7 @@ import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
 const TAB_LABELS = {
   settings: '🔧 서비스 설정',
+  spelling: '✏️ 맞춤법 검사',
   legal: '📜 약관 관리',
   adsense: '📢 광고 관리',
   blog_write: '✍️ 게시판 글쓰기',
@@ -80,6 +81,9 @@ export default function Admin() {
 
   const [cooldownDur, setCooldownDur] = useState(12)
   const [adsOn, setAdsOn] = useState(true)
+  const [spellingOn, setSpellingOn] = useState(false)
+  const [spellingLimit, setSpellingLimit] = useState(10000)
+  const [spellingUsage, setSpellingUsage] = useState(null)
   const [saved, setSaved] = useState(false)
 
   const [terms, setTerms] = useState('')
@@ -107,6 +111,11 @@ export default function Admin() {
       const data = await res.json()
       if (data.cooldown !== undefined) setCooldownDur(data.cooldown)
       if (data.adsOn !== undefined) setAdsOn(data.adsOn)
+      if (data.spellingOn !== undefined) setSpellingOn(data.spellingOn)
+      if (data.spellingLimit !== undefined) setSpellingLimit(data.spellingLimit)
+      // 오늘 사용량 조회
+      fetch('/api/tools/spelling-usage', { headers: { 'x-admin-token': tok } })
+        .then(r => r.json()).then(d => setSpellingUsage(d)).catch(() => {})
       if (data.terms !== undefined) setTerms(data.terms)
       if (data.privacy !== undefined) setPrivacy(data.privacy)
       if (data.termsEn !== undefined && data.termsEn !== null) setTermsEn(data.termsEn)
@@ -122,7 +131,7 @@ export default function Admin() {
       await fetch('/api/settings/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-        body: JSON.stringify({ cooldown: cooldownDur, adsOn }),
+        body: JSON.stringify({ cooldown: cooldownDur, adsOn, spellingOn, spellingLimit }),
       })
       setSaved(true); setTimeout(() => setSaved(false), 2500)
     } catch {}
@@ -212,6 +221,75 @@ export default function Admin() {
                     {saved ? '✅ 저장됨' : '저장하기'}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'spelling' && (
+              <div style={{ maxWidth: 520 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>✏️ 맞춤법 검사 설정</h2>
+
+                {/* 활성/비활성 토글 */}
+                <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 15 }}>기능 활성화</div>
+                      <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                        {spellingOn ? '🟢 현재 활성 상태 — 사용자가 맞춤법 검사를 이용할 수 있습니다' : '🔴 현재 비활성 — 애드센스 승인 후 켜주세요'}
+                      </div>
+                    </div>
+                    <Toggle value={spellingOn} onChange={setSpellingOn} />
+                  </div>
+                </div>
+
+                {/* 일일 한도 설정 */}
+                <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>일일 API 비용 한도</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <input
+                      type="number" min={1000} max={100000} step={1000}
+                      value={spellingLimit}
+                      onChange={e => setSpellingLimit(Number(e.target.value))}
+                      style={{ width: 120, padding: '8px 12px', fontSize: 14, border: '1px solid #ddd', borderRadius: 8 }}
+                    />
+                    <span style={{ fontSize: 14, color: '#555' }}>원 / 일</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>
+                    한도 초과 시 그날은 맞춤법 검사 기능이 자동으로 꺼집니다
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 12, color: '#888', background: '#fafaf8', padding: '10px 14px', borderRadius: 8, lineHeight: 1.8 }}>
+                    💡 300자 기준 1회 약 0.08원 (GPT-4o-mini)<br/>
+                    {spellingLimit.toLocaleString()}원 한도 = 하루 약 {Math.floor(spellingLimit / 0.08).toLocaleString()}회 호출 가능
+                  </div>
+                </div>
+
+                {/* 오늘 사용량 */}
+                <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '20px 24px', marginBottom: 20 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>오늘 사용량</div>
+                  {spellingUsage ? (
+                    <div style={{ display: 'flex', gap: 20 }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: '#e63946' }}>{spellingUsage.call_count ?? 0}회</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>총 호출</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: '#e63946' }}>{Math.round((spellingUsage.cost_usd ?? 0) * 1400).toLocaleString()}원</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>누적 비용</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: spellingUsage.cost_usd * 1400 >= spellingLimit ? '#e63946' : '#22c55e' }}>
+                          {Math.round((spellingUsage.cost_usd ?? 0) * 1400 / spellingLimit * 100)}%
+                        </div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>한도 대비</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: '#aaa' }}>오늘 사용 내역이 없습니다</div>
+                  )}
+                </div>
+
+                <button onClick={handleSave} style={{ padding: '10px 28px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                  저장
+                </button>
               </div>
             )}
 

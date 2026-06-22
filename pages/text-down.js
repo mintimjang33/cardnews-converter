@@ -243,20 +243,37 @@ export default function TextDown() {
     { pattern: /([가-힣])(씩|마다|조차|부터|까지|마저|라도|이라도|만큼|처럼|보다|에서|에게|에게서|로부터|에서부터)/g, fix: '$1$2', desc: '조사는 앞 단어에 붙여쓰기' },
   ]
 
-  const runSpacingCheck = () => {
+  const [spellingLoading, setSpellingLoading] = useState(false)
+  const [spellingError, setSpellingError] = useState('')
+
+  const runSpacingCheck = async () => {
     if (!spacingInput.trim()) return
-    const issues = []
-    let fixed = spacingInput
-    SPACING_RULES.forEach(rule => {
-      const matches = [...spacingInput.matchAll(new RegExp(rule.pattern.source, 'g'))]
-      if (matches.length > 0) {
-        issues.push({ desc: rule.desc, count: matches.length, example: matches[0][0], suggestion: matches[0][0].replace(rule.pattern, rule.fix) })
+    if (spacingInput.length > 300) {
+      setSpellingError('300자를 초과할 수 없습니다.')
+      return
+    }
+    setSpellingLoading(true)
+    setSpellingError('')
+    setSpacingResult(null)
+    try {
+      const res = await fetch('/api/tools/spelling-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: spacingInput }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSpellingError(data.error || '오류가 발생했습니다.')
+        return
       }
-      fixed = fixed.replace(rule.pattern, rule.fix)
-    })
-    setSpacingResult(issues)
-    setSpacingFixed(fixed)
-    triggerCooldown()
+      setSpacingResult(data.changes || [])
+      setSpacingFixed(data.corrected || spacingInput)
+      triggerCooldown()
+    } catch (e) {
+      setSpellingError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setSpellingLoading(false)
+    }
   }
 
   const runClean = () => {
@@ -442,15 +459,21 @@ export default function TextDown() {
             <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.spacingTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.spacingDesc}</p></div>
             <textarea style={S.textarea} value={spacingInput} onChange={e => { setSpacingInput(e.target.value); setSpacingResult(null) }} placeholder={t.phSpacing} />
             <div style={S.actions}>
-              <button style={S.btn(true)} onClick={runSpacingCheck}>{t.btnSpacingCheck}</button>
-              {spacingResult && spacingFixed && (
+              <button style={S.btn(true)} onClick={runSpacingCheck} disabled={spellingLoading}>
+                {spellingLoading ? '검사 중...' : t.btnSpacingCheck}
+              </button>
+              {spacingResult !== null && spacingFixed && (
                 <>
                   <button style={S.btn(false)} onClick={() => { setSpacingInput(spacingFixed); setSpacingResult(null) }}>{t.spacingApply}</button>
                   <button style={S.btn(false)} onClick={() => copy(spacingFixed)}>{t.spacingCopyFixed}</button>
                 </>
               )}
+              <span style={{ fontSize: 12, color: '#aaa', marginLeft: 'auto' }}>{spacingInput.length}/300</span>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
+            {spellingError && (
+              <div style={{ padding: '12px 16px', fontSize: 13, color: '#e63946', background: '#fff0f0', borderTop: '1px solid #ffd0d0' }}>{spellingError}</div>
+            )}
             {spacingResult !== null && (
               <div style={{ padding: '14px 16px' }}>
                 {spacingResult.length === 0 ? (
@@ -461,12 +484,11 @@ export default function TextDown() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {spacingResult.map((issue, i) => (
                         <div key={i} style={{ padding: '10px 12px', background: '#fff8f0', border: '1px solid #ffe0b2', borderRadius: 8, fontSize: 13 }}>
-                          <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 4 }}>{issue.desc}</div>
+                          <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 4 }}>{issue.reason}</div>
                           <div style={{ color: '#555' }}>
-                            <span style={{ background: '#ffcdd2', padding: '1px 6px', borderRadius: 4, marginRight: 6 }}>{issue.example}</span>
+                            <span style={{ background: '#ffcdd2', padding: '1px 6px', borderRadius: 4, marginRight: 6 }}>{issue.original}</span>
                             →
-                            <span style={{ background: '#c8e6c9', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>{issue.suggestion}</span>
-                            <span style={{ color: '#999', marginLeft: 8 }}>({issue.count}건)</span>
+                            <span style={{ background: '#c8e6c9', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>{issue.fixed}</span>
                           </div>
                         </div>
                       ))}

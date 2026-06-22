@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 const NAV = [
   { id: 'settings',    label: '서비스 설정',   icon: '🔧' },
+  { id: 'spelling',    label: '맞춤법 검사',   icon: '✏️' },
   { id: 'legal',       label: '약관 관리',     icon: '📜' },
   { id: 'adsense',     label: '광고 관리',     icon: '📢' },
   { id: 'blog_write',  label: '게시판 글쓰기', icon: '✍️' },

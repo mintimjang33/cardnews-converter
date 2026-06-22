@@ -43,6 +43,8 @@ const DEFAULTS = {
   terms: DEFAULT_TERMS,
   privacy: DEFAULT_PRIVACY,
   adSlots: DEFAULT_AD_SLOTS,
+  spellingOn: false,
+  spellingLimit: 10000,
 }
 
 // Supabase 없이도 기본값 반환
@@ -77,7 +79,9 @@ export default async function handler(req, res) {
       privacy:   map['site:privacy']     ?? DEFAULTS.privacy,
       termsEn:   map['site:terms_en']    ?? null,
       privacyEn: map['site:privacy_en']  ?? null,
-      adSlots:   map['site:ad_slots']    ?? DEFAULTS.adSlots,
+      adSlots:      map['site:ad_slots']       ?? DEFAULTS.adSlots,
+      spellingOn:   map['site:spelling_on']   ?? DEFAULTS.spellingOn,
+      spellingLimit: map['site:spelling_limit'] ?? DEFAULTS.spellingLimit,
     })
   } catch {
     res.status(200).json(DEFAULTS)
