@@ -11,11 +11,13 @@ export default async function handler(req, res) {
   if (!process.env.ADMIN_SECRET_TOKEN || token !== process.env.ADMIN_SECRET_TOKEN) {
     return res.status(401).json({ error: '인증 실패' })
   }
-  const { cooldown, adsOn, terms, privacy, termsEn, privacyEn, adSlots } = req.body
+  const { cooldown, adsOn, spellingOn, spellingLimit, terms, privacy, termsEn, privacyEn, adSlots } = req.body
   try {
     const rows = []
     if (cooldown !== undefined)  rows.push({ key: 'site:cooldown',    value: cooldown })
-    if (adsOn !== undefined)     rows.push({ key: 'site:ads_on',      value: adsOn })
+    if (adsOn !== undefined)        rows.push({ key: 'site:ads_on',       value: adsOn })
+    if (spellingOn !== undefined)   rows.push({ key: 'site:spelling_on',  value: spellingOn })
+    if (spellingLimit !== undefined)rows.push({ key: 'site:spelling_limit',value: spellingLimit })
     if (terms !== undefined)     rows.push({ key: 'site:terms',       value: terms })
     if (privacy !== undefined)   rows.push({ key: 'site:privacy',     value: privacy })
     if (termsEn !== undefined)   rows.push({ key: 'site:terms_en',    value: termsEn })
