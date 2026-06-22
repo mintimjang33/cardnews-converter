@@ -19,6 +19,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── 일일 사용량 기록 (doc_batch_log) ────────────────────────────
+function todayStr() {
+  return new Date().toISOString().slice(0, 10)
+}
+async function addTodayUsed(count) {
+  if (!count || count <= 0) return
+  try {
+    const today = todayStr()
+    const { data: existing } = await supabase
+      .from('doc_batch_log')
+      .select('used')
+      .eq('date', today)
+      .single()
+    const newUsed = (existing?.used || 0) + count
+    await supabase
+      .from('doc_batch_log')
+      .upsert({ date: today, used: newUsed, updated_at: new Date().toISOString() }, { onConflict: 'date' })
+  } catch (e) {
+    console.error('doc_batch_log 기록 오류:', e.message)
+  }
+}
+
 function makeSignature(timestamp, method, path, secretKey) {
   const message = `${timestamp}.${method}.${path}`
   return crypto.createHmac('sha256', secretKey).update(message).digest('base64')
@@ -156,6 +178,9 @@ export default async function handler(req, res) {
       const stillNull = remainNull || 0
       const done = stillNull === 0
 
+      // 사용량 기록 (시도한 건수 전부 차감)
+      await addTodayUsed(nullKeywords.length)
+
       res.setHeader('Cache-Control', 'no-store')
       return res.status(200).json({
         keyword, mode,
@@ -163,7 +188,7 @@ export default async function handler(req, res) {
         offset,
         processed: nullKeywords.length,
         filled: updates.length,
-        failed: nullKeywords.length - updates.length,  // 조회 실패한 것
+        failed: nullKeywords.length - updates.length,
         still_null: stillNull,
         done,
       })
@@ -257,6 +282,11 @@ export default async function handler(req, res) {
     }
 
     const results = withDocCount.map(({ hint, ...rest }) => rest)
+
+    // all 모드에서 문서수 새로 수집한 경우 사용량 기록
+    if (mode === 'all' && fetchedCount > 0) {
+      await addTodayUsed(fetchedCount)
+    }
 
     res.setHeader('Cache-Control', 'no-store')
     return res.status(200).json({
