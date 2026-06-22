@@ -5,7 +5,7 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 14개:
+// 노출 툴 15개:
 //   - get_publish_log     : 발행 기록 조회 (메모 포함, 중복 방지 + 키워드 사용 추적용, STEP 1에서 가장 먼저 호출)
 //   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
 //   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람, competition 필터로 황금키워드 탐색
@@ -18,6 +18,7 @@
 //   - get_feature_ideas   : suggest_feature로 기록해둔 기능 추가 제안 목록 조회
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
 //   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
+//   - update_blog_post    : 발행된 글의 특정 필드 수정 — slug로 대상 지정, 전달된 필드만 업데이트 (쓰기 작업)
 //   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
 //   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
 //
@@ -696,6 +697,58 @@ const baseHandler = createMcpHandler(
           ? `✅ 발행 완료 — https://cardnews-converter.vercel.app/blog/${slug} 에서 바로 확인 가능`
           : `✅ ${finalStatus === 'draft' ? '임시저장(draft)' : '예약(scheduled)'} 완료 — admin에서 확인 필요`
         return { content: [{ type: 'text', text: liveNote }] }
+      }
+    )
+
+    server.registerTool(
+      'update_blog_post',
+      {
+        title: '발행된 글 수정',
+        description:
+          '발행된 블로그 글의 특정 필드를 수정한다. slug로 대상 글을 찾고, 전달된 필드만 업데이트한다 — ' +
+          '넘기지 않은 필드는 기존 값 그대로 유지된다. 수정 즉시 사이트에 반영되므로 호출 전 ' +
+          '변경 내용을 사용자에게 한 번 확인받는 것을 권장한다. 커버 이미지 교체, 본문·제목·태그·요약 수정, ' +
+          '상태 변경 등 모든 글 수정 작업에 사용한다.',
+        inputSchema: {
+          slug: z.string().describe('수정할 글의 URL 슬러그 (필수, 대상 글 식별자)'),
+          title: z.string().optional().describe('새 제목'),
+          summary: z.string().optional().describe('새 SEO 요약'),
+          content: z.string().optional().describe('새 본문 마크다운 전체'),
+          cover_image: z.string().optional().describe('새 커버 이미지 URL'),
+          tags: z.array(z.string()).optional().describe('새 태그 배열'),
+          status: z.enum(['published', 'draft']).optional().describe('글 상태 변경'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ slug, title, summary, content, cover_image, tags, status }) => {
+        const patch = {}
+        if (title !== undefined)       patch.title = title
+        if (summary !== undefined)     patch.summary = summary
+        if (content !== undefined)     patch.content = content
+        if (cover_image !== undefined) patch.cover_image = cover_image
+        if (tags !== undefined)        patch.tags = tags
+        if (status !== undefined)      patch.status = status
+        if (Object.keys(patch).length === 0) {
+          return { content: [{ type: 'text', text: '오류: 수정할 필드가 없습니다. title/summary/content/cover_image/tags/status 중 하나 이상을 전달해주세요.' }], isError: true }
+        }
+        patch.updated_at = new Date().toISOString()
+
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .update(patch)
+          .eq('slug', slug)
+          .select('slug, title, status')
+          .single()
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data) return { content: [{ type: 'text', text: `슬러그 '${slug}'에 해당하는 글을 찾을 수 없습니다.` }], isError: true }
+
+        const changedFields = Object.keys(patch).filter(k => k !== 'updated_at').join(', ')
+        return {
+          content: [{
+            type: 'text',
+            text: `✅ 수정 완료\n제목: ${data.title}\nslug: ${data.slug}\n변경 필드: ${changedFields}\n라이브 URL: https://cardnews-converter.vercel.app/blog/${data.slug}`,
+          }],
+        }
       }
     )
 
