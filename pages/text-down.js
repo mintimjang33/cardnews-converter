@@ -7,6 +7,8 @@ import { findAdSlot } from '../lib/adSlots'
 
 const TOOLS_KO = [
   { id: 'counter', label: '글자수 세기' },
+  { id: 'words',   label: '단어수 세기' },
+  { id: 'spacing', label: '띄어쓰기 검사' },
   { id: 'clean',   label: '공백 정리' },
   { id: 'case',    label: '대소문자 변환' },
   { id: 'remove',  label: '텍스트 제거' },
@@ -15,6 +17,8 @@ const TOOLS_KO = [
 ]
 const TOOLS_EN = [
   { id: 'counter', label: 'Character Count' },
+  { id: 'words',   label: 'Word Count' },
+  { id: 'spacing', label: 'Spacing Check' },
   { id: 'clean',   label: 'Clean Spaces' },
   { id: 'case',    label: 'Change Case' },
   { id: 'remove',  label: 'Remove Text' },
@@ -28,10 +32,23 @@ const I18N = {
     metaDesc: '글자수 세기, 공백 제거, 텍스트 비교 등 무료 온라인 텍스트 도구',
     tools: TOOLS_KO,
     // counter
-    counterTitle: '글자수 세기', counterDesc: '공백 포함/제외 글자수, 단어수, 줄수를 실시간으로 세어줍니다',
+    counterTitle: '글자수 세기', counterDesc: '공백 포함/제외 글자수, 문장수, 줄수를 실시간으로 세어줍니다',
     statTotal: '글자수(공백포함)', statNospace: '글자수(공백제외)', statWords: '단어수', statSentences: '문장수', statLines: '줄수', statBytes: '바이트',
     btnReset: '초기화', btnCopy: '복사', btnCopyResult: '결과 복사', toastCopied: '복사됨!',
     phCounter: '텍스트를 여기에 붙여넣으세요...',
+    // words
+    wordsTitle: '단어수 세기', wordsDesc: '단어, 고유 단어, 단락 수를 분석하고 자주 쓴 단어를 보여줍니다',
+    statWordCount: '단어수', statUniqueWords: '고유 단어수', statAvgWordLen: '평균 단어 길이', statParagraphs: '단락수',
+    wordsFreqTitle: '자주 쓴 단어 TOP 10',
+    phWords: '텍스트를 여기에 붙여넣으세요...',
+    // spacing
+    spacingTitle: '띄어쓰기 검사', spacingDesc: '자주 틀리는 띄어쓰기 패턴을 검사하고 교정안을 제안합니다',
+    phSpacing: '검사할 텍스트를 입력하세요...',
+    btnSpacingCheck: '검사하기',
+    spacingOk: '✅ 발견된 오류가 없습니다.',
+    spacingIssueLabel: '발견된 항목',
+    spacingApply: '모두 적용',
+    spacingCopyFixed: '교정본 복사',
     // clean
     cleanTitle: '공백 / 줄바꿈 정리', cleanDesc: '불필요한 공백, 빈 줄을 제거합니다',
     optSpace: '연속 공백 제거', optEmpty: '빈 줄 제거', optTrim: '앞뒤 공백 제거',
@@ -63,10 +80,23 @@ const I18N = {
     metaDesc: 'Character counter, whitespace cleaner, text diff and more — free online text tools',
     tools: TOOLS_EN,
     // counter
-    counterTitle: 'Character Count', counterDesc: 'Count characters (with/without spaces), words, sentences, and lines in real time',
+    counterTitle: 'Character Count', counterDesc: 'Count characters (with/without spaces), sentences, and lines in real time',
     statTotal: 'Chars (with spaces)', statNospace: 'Chars (no spaces)', statWords: 'Words', statSentences: 'Sentences', statLines: 'Lines', statBytes: 'Bytes',
     btnReset: 'Reset', btnCopy: 'Copy', btnCopyResult: 'Copy Result', toastCopied: 'Copied!',
     phCounter: 'Paste your text here...',
+    // words
+    wordsTitle: 'Word Count', wordsDesc: 'Analyze word count, unique words, paragraphs and top frequent words',
+    statWordCount: 'Words', statUniqueWords: 'Unique Words', statAvgWordLen: 'Avg Word Length', statParagraphs: 'Paragraphs',
+    wordsFreqTitle: 'Top 10 Frequent Words',
+    phWords: 'Paste your text here...',
+    // spacing
+    spacingTitle: 'Spacing Check', spacingDesc: 'Check common Korean spacing errors and get correction suggestions',
+    phSpacing: 'Enter text to check...',
+    btnSpacingCheck: 'Check',
+    spacingOk: '✅ No issues found.',
+    spacingIssueLabel: 'Issues found',
+    spacingApply: 'Apply All',
+    spacingCopyFixed: 'Copy Fixed',
     // clean
     cleanTitle: 'Clean Spaces / Line Breaks', cleanDesc: 'Remove unnecessary spaces and blank lines',
     optSpace: 'Remove extra spaces', optEmpty: 'Remove blank lines', optTrim: 'Trim leading/trailing spaces',
@@ -135,6 +165,10 @@ export default function TextDown() {
   const [diffB, setDiffB] = useState('')
   const [diffHtml, setDiffHtml] = useState('')
   const [toast, setToast] = useState('')
+  const [wordsText, setWordsText] = useState('')
+  const [spacingInput, setSpacingInput] = useState('')
+  const [spacingResult, setSpacingResult] = useState(null)
+  const [spacingFixed, setSpacingFixed] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
@@ -181,6 +215,48 @@ export default function TextDown() {
     sentences: counterText.trim() ? (counterText.match(/[.!?。！？]+/g) || []).length : 0,
     lines:     counterText ? counterText.split('\n').length : 0,
     bytes:     new Blob([counterText]).size,
+  }
+
+  // 단어수 세기 계산
+  const wTokens = wordsText.trim() ? wordsText.trim().split(/\s+/) : []
+  const wUnique = new Set(wTokens.map(w => w.replace(/[^가-힣a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean))
+  const wAvgLen = wTokens.length > 0 ? (wTokens.reduce((s, w) => s + w.replace(/[^가-힣a-zA-Z0-9]/g, '').length, 0) / wTokens.length).toFixed(1) : 0
+  const wParagraphs = wordsText.trim() ? wordsText.split(/
+{2,}/).filter(p => p.trim()).length : 0
+  const wFreq = (() => {
+    const freq = {}
+    wTokens.forEach(w => {
+      const k = w.replace(/[^가-힣a-zA-Z0-9]/g, '').toLowerCase()
+      if (k.length > 1) freq[k] = (freq[k] || 0) + 1
+    })
+    return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  })()
+
+  // 띄어쓰기 검사 규칙
+  const SPACING_RULES = [
+    { pattern: /([가-힣])(이다|이고|이며|이라|이란|이면|이어서|이지만|이지|이니|이나|인데|이야|이에|이라도|이라면|이라서|이라고|이라는|이라야|이어도|이어야|이어서|이거나|이고도|이고서|이고야|이기도|이기에|이기는|이기가|이기를|이기로|이기까지)/g, fix: '$1 $2', desc: '"이다/이고" 앞 띄어쓰기' },
+    { pattern: /([가-힣])(하다|하고|하며|하여|해서|하니|하지만|하지|하면|하는|한다|할|함|했|하게|하기|하거나|하더라|하더니|하도록|하자|하자마자|하자고|하고서|하고도|하고야|하고는|하고나서)/g, fix: '$1 $2', desc: '"하다/하고" 앞 띄어쓰기' },
+    { pattern: /([가-힣])(것|거|건|걸|게|곳|데|때|적|줄|지|수|만|뿐|듯|법|척|체|양|만큼|정도|즈음|나름|대로|따라|위해|통해|인해|관해|대해|비해|따른|의한|위한|통한|관한)/g, fix: '$1 $2', desc: '의존명사 앞 띄어쓰기' },
+    { pattern: /([가-힣])(안|밖|앞|뒤|위|아래|속|밑|옆|사이|가운데|주위|주변|곁|내|외)/g, fix: '$1 $2', desc: '방향/장소 명사 앞 띄어쓰기' },
+    { pattern: /(못)(하다|하고|하며|하여|하지|하면|하는|한다|할|함)/g, fix: '$1 $2', desc: '"못하다" 띄어쓰기' },
+    { pattern: /(안)(하다|하고|하며|하여|하지|하면|하는|한다|할|함)/g, fix: '$1 $2', desc: '"안하다" 띄어쓰기' },
+    { pattern: /([가-힣])(씩|마다|조차|부터|까지|마저|라도|이라도|만큼|처럼|보다|에서|에게|에게서|로부터|에서부터)/g, fix: '$1$2', desc: '조사는 앞 단어에 붙여쓰기' },
+  ]
+
+  const runSpacingCheck = () => {
+    if (!spacingInput.trim()) return
+    const issues = []
+    let fixed = spacingInput
+    SPACING_RULES.forEach(rule => {
+      const matches = [...spacingInput.matchAll(new RegExp(rule.pattern.source, 'g'))]
+      if (matches.length > 0) {
+        issues.push({ desc: rule.desc, count: matches.length, example: matches[0][0], suggestion: matches[0][0].replace(rule.pattern, rule.fix) })
+      }
+      fixed = fixed.replace(rule.pattern, rule.fix)
+    })
+    setSpacingResult(issues)
+    setSpacingFixed(fixed)
+    triggerCooldown()
   }
 
   const runClean = () => {
@@ -326,6 +402,83 @@ export default function TextDown() {
               <button style={S.btn(false)} onClick={() => copy(counterText)}>{t.btnCopy}</button>
               {toast && <span style={S.toast}>{toast}</span>}
             </div>
+          </div>
+        )}
+
+        {/* Word Count */}
+        {tool === 'words' && (
+          <div style={S.panel}>
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.wordsTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.wordsDesc}</p></div>
+            <textarea style={S.textarea} value={wordsText} onChange={e => setWordsText(e.target.value)} placeholder={t.phWords} />
+            <div style={S.statsBar}>
+              <div style={S.stat}>{t.statWordCount} <strong>{wTokens.length.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statUniqueWords} <strong>{wUnique.size.toLocaleString()}</strong></div>
+              <div style={S.stat}>{t.statAvgWordLen} <strong>{wAvgLen}</strong></div>
+              <div style={S.stat}>{t.statParagraphs} <strong>{wParagraphs}</strong></div>
+            </div>
+            {wFreq.length > 0 && (
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #f0f0ea' }}>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>{t.wordsFreqTitle}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {wFreq.map(([word, count], i) => (
+                    <span key={word} style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: i === 0 ? '#1a1a1a' : i < 3 ? '#f0f0ea' : '#fafaf8', color: i === 0 ? '#fff' : '#555', border: '1px solid #e5e5e0' }}>
+                      {word} <strong>{count}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={S.actions}>
+              <button style={S.btn(false)} onClick={() => setWordsText('')}>{t.btnReset}</button>
+              <button style={S.btn(false)} onClick={() => copy(wordsText)}>{t.btnCopy}</button>
+              {toast && <span style={S.toast}>{toast}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Spacing Check */}
+        {tool === 'spacing' && (
+          <div style={S.panel}>
+            <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.spacingTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.spacingDesc}</p></div>
+            <textarea style={S.textarea} value={spacingInput} onChange={e => { setSpacingInput(e.target.value); setSpacingResult(null) }} placeholder={t.phSpacing} />
+            <div style={S.actions}>
+              <button style={S.btn(true)} onClick={runSpacingCheck}>{t.btnSpacingCheck}</button>
+              {spacingResult && spacingFixed && (
+                <>
+                  <button style={S.btn(false)} onClick={() => { setSpacingInput(spacingFixed); setSpacingResult(null) }}>{t.spacingApply}</button>
+                  <button style={S.btn(false)} onClick={() => copy(spacingFixed)}>{t.spacingCopyFixed}</button>
+                </>
+              )}
+              {toast && <span style={S.toast}>{toast}</span>}
+            </div>
+            {spacingResult !== null && (
+              <div style={{ padding: '14px 16px' }}>
+                {spacingResult.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#22c55e' }}>{t.spacingOk}</p>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>{t.spacingIssueLabel} {spacingResult.length}건</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {spacingResult.map((issue, i) => (
+                        <div key={i} style={{ padding: '10px 12px', background: '#fff8f0', border: '1px solid #ffe0b2', borderRadius: 8, fontSize: 13 }}>
+                          <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 4 }}>{issue.desc}</div>
+                          <div style={{ color: '#555' }}>
+                            <span style={{ background: '#ffcdd2', padding: '1px 6px', borderRadius: 4, marginRight: 6 }}>{issue.example}</span>
+                            →
+                            <span style={{ background: '#c8e6c9', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>{issue.suggestion}</span>
+                            <span style={{ color: '#999', marginLeft: 8 }}>({issue.count}건)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12, padding: '12px 14px', background: '#f8f8f6', border: '1px solid #e5e5e0', borderRadius: 8, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#1a1a1a' }}>
+                      <div style={{ fontSize: 11, color: '#aaa', marginBottom: 6 }}>교정 결과</div>
+                      {spacingFixed}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
