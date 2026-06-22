@@ -287,7 +287,7 @@ export default function Admin() {
                   )}
                 </div>
 
-                <button onClick={handleSave} style={{ padding: '10px 28px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={saveSettings} style={{ padding: '10px 28px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   저장
                 </button>
               </div>
