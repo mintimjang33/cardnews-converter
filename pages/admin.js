@@ -114,7 +114,7 @@ export default function Admin() {
       if (data.spellingOn !== undefined) setSpellingOn(data.spellingOn)
       if (data.spellingLimit !== undefined) setSpellingLimit(data.spellingLimit)
       // 오늘 사용량 조회
-      fetch('/api/tools/spelling-usage', { headers: { 'x-admin-token': tok } })
+      fetch('/api/tools/spelling-usage', { headers: { 'x-admin-token': token } })
         .then(r => r.json()).then(d => setSpellingUsage(d)).catch(() => {})
       if (data.terms !== undefined) setTerms(data.terms)
       if (data.privacy !== undefined) setPrivacy(data.privacy)
