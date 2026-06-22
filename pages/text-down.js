@@ -221,8 +221,7 @@ export default function TextDown() {
   const wTokens = wordsText.trim() ? wordsText.trim().split(/\s+/) : []
   const wUnique = new Set(wTokens.map(w => w.replace(/[^가-힣a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean))
   const wAvgLen = wTokens.length > 0 ? (wTokens.reduce((s, w) => s + w.replace(/[^가-힣a-zA-Z0-9]/g, '').length, 0) / wTokens.length).toFixed(1) : 0
-  const wParagraphs = wordsText.trim() ? wordsText.split(/
-{2,}/).filter(p => p.trim()).length : 0
+  const wParagraphs = wordsText.trim() ? wordsText.split(/\n{2,}/).filter(p => p.trim()).length : 0
   const wFreq = (() => {
     const freq = {}
     wTokens.forEach(w => {
