@@ -147,6 +147,7 @@ export default function TextDown() {
   const [cooldown, setCooldown] = useState(0)
   const [maxCooldown, setMaxCooldown] = useState(12)
   const [showCooldownAd, setShowCooldownAd] = useState(false)
+  const [spellingOn, setSpellingOn] = useState(false)
 
   const [counterText, setCounterText] = useState('')
   const [cleanInput, setCleanInput]   = useState('')
@@ -182,6 +183,7 @@ export default function TextDown() {
       if (d.adsOn !== undefined) setAdsOn(d.adsOn)
       if (d.cooldown) setMaxCooldown(d.cooldown)
       if (d.adSlots !== undefined) setAdSlots(d.adSlots)
+      if (d.spellingOn !== undefined) setSpellingOn(d.spellingOn)
     }).catch(() => {}).finally(() => setSettingsLoaded(true))
   }, [])
 
@@ -245,34 +247,35 @@ export default function TextDown() {
   const [spellingLoading, setSpellingLoading] = useState(false)
   const [spellingError, setSpellingError] = useState('')
 
-  const runSpacingCheck = async () => {
+  const runSpacingCheck = () => {
     if (!spacingInput.trim()) return
-    if (spacingInput.length > 300) {
-      setSpellingError('300자를 초과할 수 없습니다.')
-      return
-    }
-    setSpellingLoading(true)
     setSpellingError('')
     setSpacingResult(null)
-    try {
-      const res = await fetch('/api/tools/spelling-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: spacingInput }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setSpellingError(data.error || '오류가 발생했습니다.')
-        return
+
+    let corrected = spacingInput
+    const changes = []
+
+    SPACING_RULES.forEach(({ pattern, fix, desc }) => {
+      const regex = new RegExp(pattern.source, pattern.flags)
+      let match
+      while ((match = regex.exec(spacingInput)) !== null) {
+        const original = match[0]
+        const fixed = original.replace(new RegExp(pattern.source, pattern.flags.replace('g', '')), fix)
+        if (original !== fixed) {
+          changes.push({ original, fixed, reason: desc })
+        }
       }
-      setSpacingResult(data.changes || [])
-      setSpacingFixed(data.corrected || spacingInput)
-      triggerCooldown()
-    } catch (e) {
-      setSpellingError('네트워크 오류가 발생했습니다.')
-    } finally {
-      setSpellingLoading(false)
-    }
+      corrected = corrected.replace(new RegExp(pattern.source, pattern.flags), fix)
+    })
+
+    // 중복 제거
+    const unique = changes.filter((c, i, arr) =>
+      arr.findIndex(x => x.original === c.original && x.fixed === c.fixed) === i
+    )
+
+    setSpacingResult(unique)
+    setSpacingFixed(corrected)
+    triggerCooldown()
   }
 
   const runClean = () => {
@@ -371,7 +374,10 @@ export default function TextDown() {
 
         {/* 탭 */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-          {t.tools.map(item => (
+          {[
+            ...t.tools,
+            ...(spellingOn ? [{ id: 'spelling', label: lang === 'ko' ? '맞춤법 검사' : 'Spell Check' }] : [])
+          ].map(item => (
             <button key={item.id}
               style={{ padding: '7px 14px', fontSize: 13, border: `1px solid ${tool === item.id ? '#1a1a1a' : '#e0e0da'}`, background: tool === item.id ? '#1a1a1a' : '#fff', color: tool === item.id ? '#fff' : '#555', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap' }}
               onClick={() => setTool(item.id)}>{item.label}
@@ -458,8 +464,8 @@ export default function TextDown() {
             <div style={S.panelHeader}><h2 style={{ fontSize: 15, fontWeight: 600 }}>{t.spacingTitle}</h2><p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t.spacingDesc}</p></div>
             <textarea style={S.textarea} value={spacingInput} onChange={e => { setSpacingInput(e.target.value); setSpacingResult(null) }} placeholder={t.phSpacing} />
             <div style={S.actions}>
-              <button style={S.btn(true)} onClick={runSpacingCheck} disabled={spellingLoading}>
-                {spellingLoading ? '검사 중...' : t.btnSpacingCheck}
+              <button style={S.btn(true)} onClick={runSpacingCheck}>
+                {t.btnSpacingCheck}
               </button>
               {spacingResult !== null && spacingFixed && (
                 <>
@@ -494,6 +500,72 @@ export default function TextDown() {
                     </div>
                     <div style={{ marginTop: 12, padding: '12px 14px', background: '#f8f8f6', border: '1px solid #e5e5e0', borderRadius: 8, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#1a1a1a' }}>
                       <div style={{ fontSize: 11, color: '#aaa', marginBottom: 6 }}>교정 결과</div>
+                      {spacingFixed}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Spell Check (맞춤법 검사) — spellingOn 활성화 시만 표시 */}
+        {tool === 'spelling' && spellingOn && (
+          <div style={S.panel}>
+            <div style={S.panelHeader}>
+              <h2 style={{ fontSize: 15, fontWeight: 600 }}>{lang === 'ko' ? '맞춤법 검사' : 'Spell Check'}</h2>
+              <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                {lang === 'ko' ? 'AI가 맞춤법 오류를 찾아 교정안을 제안합니다 (최대 300자)' : 'AI finds spelling errors and suggests corrections (max 300 chars)'}
+              </p>
+            </div>
+            <textarea
+              style={S.textarea}
+              value={spacingInput}
+              onChange={e => { setSpacingInput(e.target.value); setSpacingResult(null) }}
+              placeholder={lang === 'ko' ? '검사할 텍스트를 입력하세요...' : 'Enter text to check...'}
+            />
+            <div style={S.actions}>
+              <button style={S.btn(true)} onClick={runSpacingCheck} disabled={spellingLoading}>
+                {spellingLoading ? (lang === 'ko' ? '검사 중...' : 'Checking...') : (lang === 'ko' ? '검사하기' : 'Check')}
+              </button>              {spacingResult !== null && spacingFixed && (
+                <>
+                  <button style={S.btn(false)} onClick={() => { setSpacingInput(spacingFixed); setSpacingResult(null) }}>
+                    {lang === 'ko' ? '모두 적용' : 'Apply All'}
+                  </button>
+                  <button style={S.btn(false)} onClick={() => copy(spacingFixed)}>
+                    {lang === 'ko' ? '교정본 복사' : 'Copy Fixed'}
+                  </button>
+                </>
+              )}
+              <span style={{ fontSize: 12, color: '#aaa', marginLeft: 'auto' }}>{spacingInput.length}/300</span>
+              {toast && <span style={S.toast}>{toast}</span>}
+            </div>
+            {spellingError && (
+              <div style={{ padding: '12px 16px', fontSize: 13, color: '#e63946', background: '#fff0f0', borderTop: '1px solid #ffd0d0' }}>{spellingError}</div>
+            )}
+            {spacingResult !== null && (
+              <div style={{ padding: '14px 16px' }}>
+                {spacingResult.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#22c55e' }}>✅ {lang === 'ko' ? '발견된 오류가 없습니다.' : 'No issues found.'}</p>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>
+                      {lang === 'ko' ? `발견된 항목 ${spacingResult.length}건` : `${spacingResult.length} issue(s) found`}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {spacingResult.map((issue, i) => (
+                        <div key={i} style={{ padding: '10px 12px', background: '#fff8f0', border: '1px solid #ffe0b2', borderRadius: 8, fontSize: 13 }}>
+                          <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 4 }}>{issue.reason}</div>
+                          <div style={{ color: '#555' }}>
+                            <span style={{ background: '#ffcdd2', padding: '1px 6px', borderRadius: 4, marginRight: 6 }}>{issue.original}</span>
+                            →
+                            <span style={{ background: '#c8e6c9', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>{issue.fixed}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12, padding: '12px 14px', background: '#f8f8f6', border: '1px solid #e5e5e0', borderRadius: 8, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#1a1a1a' }}>
+                      <div style={{ fontSize: 11, color: '#aaa', marginBottom: 6 }}>{lang === 'ko' ? '교정 결과' : 'Corrected'}</div>
                       {spacingFixed}
                     </div>
                   </>
