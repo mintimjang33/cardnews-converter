@@ -221,7 +221,7 @@ export default function BlogPost() {
 
         {post.cover_image && (
           <img src={post.cover_image} alt={post.title}
-            style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 'var(--radius)', marginBottom: 28, display: 'block' }} />
+            style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 'var(--radius)', marginBottom: 28, display: 'block' }} referrerPolicy="no-referrer" />
         )}
 
         {post.category && (

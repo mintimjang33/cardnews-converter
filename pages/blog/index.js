@@ -120,7 +120,7 @@ export default function BlogIndex() {
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 {post.cover_image && (
-                  <img src={post.cover_image} alt={post.title}
+                  <img src={post.cover_image} alt={post.title} referrerPolicy="no-referrer"
                     style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
                 )}
                 <div style={{ padding: 18 }}>
