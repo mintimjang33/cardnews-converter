@@ -160,7 +160,8 @@ function FeatureIdeasTab({ token, showToast }) {
 
 export default function KeywordPanel({ token }) {
   const [hintList, setHintList]           = useState([])
-  const [loading, setLoading]             = useState({})
+  const [loadingKw, setLoadingKw]         = useState({})   // 키워드 업데이트 로딩
+  const [loadingDoc, setLoadingDoc]       = useState({})   // 문서수 업데이트 로딩
   const [expanded, setExpanded]           = useState(null)
   const [topData, setTopData]             = useState({})
   const [topLoading, setTopLoading]       = useState({})
@@ -260,10 +261,10 @@ export default function KeywordPanel({ token }) {
     setTopLoading(l => ({ ...l, [hint]: false }))
   }
 
-  const handleUpdateByHint = async (hint) => {
-    setLoading(l => ({ ...l, [hint]: true }))
+  const handleUpdateKeyword = async (hint) => {
+    setLoadingKw(l => ({ ...l, [hint]: true }))
     try {
-      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&limit=1000`, {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&mode=keyword_only`, {
         headers: { 'x-admin-token': token },
       })
       const data = await res.json()
@@ -271,9 +272,24 @@ export default function KeywordPanel({ token }) {
       loadStats()
       setTopData(d => ({ ...d, [hint]: null }))
       setAllKwLoaded(false)
-      showToast(`✅ "${hint}" 키워드 ${data.saved}개 저장 완료!`)
+      showToast(`✅ "${hint}" 검색량 ${data.saved}개 갱신 완료!`)
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
-    setLoading(l => ({ ...l, [hint]: false }))
+    setLoadingKw(l => ({ ...l, [hint]: false }))
+  }
+
+  const handleUpdateDocCount = async (hint) => {
+    setLoadingDoc(l => ({ ...l, [hint]: true }))
+    try {
+      const res = await fetch(`/api/tools/keyword-volume?keyword=${encodeURIComponent(hint)}&mode=doc_only`, {
+        headers: { 'x-admin-token': token },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '오류')
+      loadStats()
+      setTopData(d => ({ ...d, [hint]: null }))
+      showToast(`✅ "${hint}" 문서수 ${data.filled}개 수집 완료!`)
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+    setLoadingDoc(l => ({ ...l, [hint]: false }))
   }
 
   const handleAdd = async () => {
@@ -469,17 +485,19 @@ export default function KeywordPanel({ token }) {
       {tab === 'top' && (
         <div>
           {allRows.map(row => {
-            const days        = daysSince(row.collected_at)
-            const needsUpdate = days >= 15
-            const isLoading   = loading[row.hint]
-            const isExpanded  = expanded === row.hint
-            const topList     = topData[row.hint] || []
+            const days           = daysSince(row.collected_at)
+            const kwNeedsUpdate  = days >= 30                        // 키워드: 30일마다
+            const docNeedsUpdate = (row.null_doc_count || 0) > 0    // 문서수: 미수집 남음
+            const isLoadingKw    = loadingKw[row.hint]
+            const isLoadingDoc   = loadingDoc[row.hint]
+            const isExpanded     = expanded === row.hint
+            const topList        = topData[row.hint] || []
 
             return (
               <div key={row.hint} style={{ marginBottom: 8 }}>
                 <div style={{
                   background: '#1c1c1e',
-                  border: `1px solid ${isExpanded ? '#e63946' : needsUpdate ? '#7f1d1d' : '#2a2a2a'}`,
+                  border: `1px solid ${isExpanded ? '#e63946' : kwNeedsUpdate ? '#7f1d1d' : docNeedsUpdate ? '#14532d' : '#2a2a2a'}`,
                   borderRadius: isExpanded ? '10px 10px 0 0' : 10,
                   padding: '14px 18px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -488,16 +506,14 @@ export default function KeywordPanel({ token }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0', minWidth: 120 }}>{row.label}</span>
                     <div>
-                      <div style={{ fontSize: 13, color: needsUpdate ? '#f87171' : '#a1a1aa' }}>
-                        네이버 검색일: <b style={{ color: needsUpdate ? '#fca5a5' : '#d4d4d8' }}>{formatDate(row.collected_at)}</b>
-                        {row.collected_at && !needsUpdate && (() => {
-                          const nextDate = new Date(new Date(row.collected_at).getTime() + 15 * 86400000)
+                      <div style={{ fontSize: 13, color: kwNeedsUpdate ? '#f87171' : '#a1a1aa' }}>
+                        네이버 검색일: <b style={{ color: kwNeedsUpdate ? '#fca5a5' : '#d4d4d8' }}>{formatDate(row.collected_at)}</b>
+                        {row.collected_at && !kwNeedsUpdate && (() => {
+                          const nextDate = new Date(new Date(row.collected_at).getTime() + 30 * 86400000)
                           const daysLeft = Math.ceil((nextDate.getTime() - Date.now()) / 86400000)
-                          const isAllFilled = (row.null_doc_count || 0) === 0 && row.count > 0
-                          if (!isAllFilled) return null
                           return (
                             <span style={{ marginLeft: 10, fontSize: 12, color: '#52525b' }}>
-                              · 다음 업데이트 <b style={{ color: '#a1a1aa' }}>{formatDate(nextDate.toISOString())}</b>
+                              · 다음 키워드 업데이트 <b style={{ color: '#a1a1aa' }}>{formatDate(nextDate.toISOString())}</b>
                               <span style={{ color: '#3f3f46', marginLeft: 4 }}>({daysLeft}일 후)</span>
                             </span>
                           )
@@ -521,15 +537,43 @@ export default function KeywordPanel({ token }) {
                         {isExpanded ? '▲' : '▼'}
                       </span>
                     )}
-                    <button onClick={e => { e.stopPropagation(); handleUpdateByHint(row.hint) }} disabled={isLoading} style={{
-                      background: (needsUpdate || (row.null_doc_count || 0) > 0) ? '#e63946' : '#27272a',
-                      color: (needsUpdate || (row.null_doc_count || 0) > 0) ? '#fff' : '#a1a1aa',
-                      border: 'none', borderRadius: 8, padding: '8px 16px',
-                      fontSize: 13, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
-                      opacity: isLoading ? 0.6 : 1, whiteSpace: 'nowrap',
-                      fontFamily: "'Outfit', sans-serif",
-                    }}>
-                      {isLoading ? '수집 중...' : '업데이트'}
+                    {/* 키워드 업데이트 버튼 — 파란색, 30일마다 활성 */}
+                    <button
+                      onClick={e => { e.stopPropagation(); kwNeedsUpdate && !isLoadingKw && handleUpdateKeyword(row.hint) }}
+                      disabled={isLoadingKw || !kwNeedsUpdate}
+                      title={kwNeedsUpdate ? '검색량 갱신' : `수집 완료 (30일마다 갱신)`}
+                      style={{
+                        background: isLoadingKw ? '#1d4ed8' : kwNeedsUpdate ? '#2563eb' : '#1e293b',
+                        color: kwNeedsUpdate ? '#fff' : '#475569',
+                        border: `1px solid ${kwNeedsUpdate ? '#3b82f6' : '#334155'}`,
+                        borderRadius: 8, padding: '7px 13px',
+                        fontSize: 12, fontWeight: 700,
+                        cursor: isLoadingKw ? 'wait' : kwNeedsUpdate ? 'pointer' : 'default',
+                        opacity: isLoadingKw ? 0.7 : 1, whiteSpace: 'nowrap',
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {isLoadingKw ? '수집 중...' : kwNeedsUpdate ? '🔄 키워드' : '✓ 키워드'}
+                    </button>
+                    {/* 문서수 업데이트 버튼 — 초록색, 미수집 있을 때 활성 */}
+                    <button
+                      onClick={e => { e.stopPropagation(); docNeedsUpdate && !isLoadingDoc && handleUpdateDocCount(row.hint) }}
+                      disabled={isLoadingDoc || !docNeedsUpdate}
+                      title={docNeedsUpdate ? `미수집 ${row.null_doc_count}개 문서수 수집` : '문서수 수집 완료'}
+                      style={{
+                        background: isLoadingDoc ? '#15803d' : docNeedsUpdate ? '#16a34a' : '#0f2318',
+                        color: docNeedsUpdate ? '#fff' : '#374c3a',
+                        border: `1px solid ${docNeedsUpdate ? '#22c55e' : '#1a3d24'}`,
+                        borderRadius: 8, padding: '7px 13px',
+                        fontSize: 12, fontWeight: 700,
+                        cursor: isLoadingDoc ? 'wait' : docNeedsUpdate ? 'pointer' : 'default',
+                        opacity: isLoadingDoc ? 0.7 : 1, whiteSpace: 'nowrap',
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {isLoadingDoc ? '수집 중...' : docNeedsUpdate ? `📄 문서수` : '✓ 문서수'}
                     </button>
                     <button onClick={e => { e.stopPropagation(); setConfirmDelete({ type: 'delete', hint: row.hint }) }} style={{
                       background: 'none', border: '1px solid #3f3f46', borderRadius: 8,

@@ -72,9 +72,56 @@ async function fetchDocCountBatch(keywords) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const { keyword } = req.query
+  const { keyword, mode = 'all' } = req.query
+  // mode: 'all'(기본) | 'keyword_only'(검색량만) | 'doc_only'(문서수만)
   if (!keyword) return res.status(400).json({ error: 'keyword 파라미터가 필요합니다' })
 
+  // ── doc_only: 검색광고 API 없이 문서수만 채우기 ────────────────────
+  if (mode === 'doc_only') {
+    try {
+      // doc_count가 null인 키워드만 DB에서 가져옴
+      const { data: nullRows, error: fetchErr } = await supabase
+        .from('keyword_stats')
+        .select('keyword')
+        .eq('hint', keyword)
+        .is('doc_count', null)
+
+      if (fetchErr) throw new Error(fetchErr.message)
+      if (!nullRows || nullRows.length === 0) {
+        return res.status(200).json({ keyword, mode, filled: 0, message: '모든 문서수 수집 완료' })
+      }
+
+      const nullKeywords = nullRows.map(r => r.keyword)
+      const counts = await fetchDocCountBatch(nullKeywords)
+
+      const updates = nullKeywords
+        .map((kw, i) => ({ keyword: kw, doc_count: counts[i] }))
+        .filter(u => u.doc_count != null)
+
+      if (updates.length > 0) {
+        for (const u of updates) {
+          await supabase
+            .from('keyword_stats')
+            .update({ doc_count: u.doc_count })
+            .eq('hint', keyword)
+            .eq('keyword', u.keyword)
+        }
+      }
+
+      res.setHeader('Cache-Control', 'no-store')
+      return res.status(200).json({
+        keyword,
+        mode,
+        total_null: nullKeywords.length,
+        filled: updates.length,
+        still_null: nullKeywords.length - updates.length,
+      })
+    } catch (err) {
+      return res.status(500).json({ error: err.message })
+    }
+  }
+
+  // ── keyword_only / all: 검색광고 API 호출 ─────────────────────────
   const apiKey     = process.env.NAVER_AD_API_KEY
   const secretKey  = process.env.NAVER_AD_SECRET_KEY
   const customerId = process.env.NAVER_AD_CUSTOMER_ID
@@ -123,7 +170,7 @@ export default async function handler(req, res) {
       }
     }).sort((a, b) => b.total - a.total)
 
-    // 2. 이미 doc_count가 있는 키워드는 건너뜀 — DB에서 기존 데이터 조회
+    // 2. 기존 doc_count 조회
     const keywordList = parsed.map(i => i.keyword)
     const { data: existing } = await supabase
       .from('keyword_stats')
@@ -134,17 +181,21 @@ export default async function handler(req, res) {
     const existingMap = {}
     ;(existing || []).forEach(row => { existingMap[row.keyword] = row.doc_count })
 
-    // doc_count가 null인 것만 새로 조회
-    const needsDocCount = parsed.filter(item => existingMap[item.keyword] == null)
-    const skipCount = parsed.length - needsDocCount.length
-
     let docCountMap = {}
-    if (needsDocCount.length > 0) {
-      const counts = await fetchDocCountBatch(needsDocCount.map(i => i.keyword))
-      needsDocCount.forEach((item, i) => { docCountMap[item.keyword] = counts[i] })
-    }
+    let fetchedCount = 0
 
-    // 3. 전체 upsert — 검색량은 항상 최신으로, doc_count는 새로 조회한 것만 반영
+    if (mode === 'all') {
+      // all: doc_count null인 것만 새로 조회
+      const needsDocCount = parsed.filter(item => existingMap[item.keyword] == null)
+      fetchedCount = needsDocCount.length
+      if (needsDocCount.length > 0) {
+        const counts = await fetchDocCountBatch(needsDocCount.map(i => i.keyword))
+        needsDocCount.forEach((item, i) => { docCountMap[item.keyword] = counts[i] })
+      }
+    }
+    // keyword_only: doc_count 조회 없이 기존 값 유지
+
+    // 3. upsert
     const withDocCount = parsed.map(item => ({
       ...item,
       doc_count: docCountMap[item.keyword] !== undefined
@@ -164,10 +215,11 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store')
     return res.status(200).json({
       keyword,
+      mode,
       total_found: list.length,
       saved: withDocCount.length,
-      doc_count_fetched: needsDocCount.length,  // 새로 조회한 수
-      doc_count_skipped: skipCount,              // 기존 데이터 재사용한 수
+      doc_count_fetched: fetchedCount,
+      doc_count_skipped: parsed.length - fetchedCount,
       results,
     })
 
