@@ -7,7 +7,7 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://www.downtools.co.kr/api/sitemap.xml
+Sitemap: https://www.downtools.co.kr/sitemap.xml
 `
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
