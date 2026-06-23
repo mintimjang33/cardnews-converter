@@ -6,7 +6,7 @@ export default function App({ Component, pageProps }) {
     <>
       <Head>
         {/* 검색엔진 인증 */}
-        <meta name="google-site-verification" content="YOUR_GOOGLE_VERIFICATION_CODE" />
+        <meta name="google-site-verification" content="828Mf-hRlCpwvG4M6VOXjZidjk3eV0a5Pe4OVnXhq0Y" />
         <meta name="naver-site-verification" content="YOUR_NAVER_VERIFICATION_CODE" />
         <meta name="yandex-verification" content="YOUR_YANDEX_VERIFICATION_CODE" />
 
