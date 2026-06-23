@@ -19,6 +19,13 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      { source: '/sitemap.xml', destination: '/api/sitemap.xml' },
+      { source: '/robots.txt',  destination: '/api/robots.txt'  },
+    ]
+  },
+
   async headers() {
     return [
       {
