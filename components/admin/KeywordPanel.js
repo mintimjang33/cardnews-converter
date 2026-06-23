@@ -181,6 +181,8 @@ export default function KeywordPanel({ token }) {
   const [goldenLoading, setGoldenLoading]           = useState(false)
   const [goldenLoaded, setGoldenLoaded]             = useState(false)
   const [goldenCompetition, setGoldenCompetition]   = useState('낮음')
+  const [todayRows, setTodayRows]             = useState([])
+  const [todayLoading, setTodayLoading]       = useState(false)
 
   // ── 전체 자동 배치 ──────────────────────────────────────────────
   const [batchStatus, setBatchStatus]   = useState(null)   // {daily_limit, today_used, remaining, total_null, hints[]}
@@ -296,6 +298,16 @@ export default function KeywordPanel({ token }) {
     setGoldenLoading(false)
   }
 
+  const loadToday = async () => {
+    setTodayLoading(true)
+    try {
+      const res = await fetch('/api/tools/keyword-stats?mode=today', { headers: { 'x-admin-token': token } })
+      const data = await res.json()
+      setTodayRows(Array.isArray(data) ? data : [])
+    } catch (e) { console.error(e) }
+    setTodayLoading(false)
+  }
+
   const handleGoldenCompetitionChange = (c) => {
     setGoldenCompetition(c)
     setGoldenLoaded(false)
@@ -306,6 +318,7 @@ export default function KeywordPanel({ token }) {
     setTab(t)
     if (t === 'all') loadAllKeywords()
     if (t === 'golden' && !goldenLoaded) loadGolden()
+    if (t === 'today') loadToday()
   }
 
   const handleLimitChange = (lim) => {
@@ -840,6 +853,7 @@ export default function KeywordPanel({ token }) {
           ['top', '📊 수집 현황'],
           ['all', '📈 전체 순위'],
           ['golden', '🏆 황금키워드'],
+          ['today', '🔴 오늘 실시간'],
           ['picks', '⭐ 찜한 키워드'],
           ['used', '✅ 사용 키워드'],
           ['ideas', '💡 아이디어 제안'],
@@ -1212,6 +1226,76 @@ export default function KeywordPanel({ token }) {
           )}
         </div>
       )}
+
+      {tab === 'today' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.7 }}>
+              오늘 Claude가 <code style={{ color: '#e63946' }}>naver_keyword_volume</code>으로 실시간 조회한 키워드 목록입니다.<br />
+              ☆ 버튼으로 찜해두면 "찜한 키워드" 탭에서 관리할 수 있습니다.
+            </div>
+            <button onClick={loadToday} style={{
+              padding: '5px 14px', borderRadius: 8, border: '1px solid #3f3f46',
+              background: 'none', color: '#71717a', fontSize: 13, cursor: 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+            }}>🔄 새로고침</button>
+          </div>
+          {todayLoading ? (
+            <div style={{ color: '#71717a', fontSize: 13, padding: 20, textAlign: 'center' }}>로딩 중...</div>
+          ) : todayRows.length === 0 ? (
+            <div style={{ color: '#52525b', fontSize: 14, padding: 40, textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🔴</div>
+              오늘 실시간 조회한 키워드가 없어요.<br />
+              <span style={{ fontSize: 12, color: '#3f3f46', marginTop: 6, display: 'block' }}>
+                Claude와 대화 중 naver_keyword_volume 툴이 호출되면 여기에 나타납니다.
+              </span>
+            </div>
+          ) : (() => {
+            const groups = {}
+            todayRows.forEach(r => { if (!groups[r.hint]) groups[r.hint] = []; groups[r.hint].push(r) })
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {Object.entries(groups).map(([hint, rows]) => (
+                  <div key={hint} style={{ background: '#1c1c1e', border: '1px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#e63946' }}>🔍 {hint}</span>
+                      <span style={{ fontSize: 12, color: '#52525b' }}>연관 키워드 {rows.length}개</span>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead><tr>
+                        <th style={S.th}>순위</th><th style={S.th}>키워드</th>
+                        <th style={{ ...S.th, textAlign: 'right' }}>PC</th>
+                        <th style={{ ...S.th, textAlign: 'right' }}>모바일</th>
+                        <th style={{ ...S.th, textAlign: 'right' }}>합계</th>
+                        <th style={S.th}>경쟁</th>
+                        <th style={{ ...S.th, textAlign: 'center' }}>찜</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map((item, i) => (
+                          <tr key={item.keyword} style={{ background: item.picked ? '#1a1a00' : 'transparent' }}>
+                            <td style={{ ...S.td, color: '#52525b' }}>{i + 1}</td>
+                            <td style={{ ...S.td, fontWeight: 600, color: '#f0f0f0' }}>{item.keyword}</td>
+                            <td style={S.tdNum}>{fmt(item.pc)}</td>
+                            <td style={S.tdNum}>{fmt(item.mobile)}</td>
+                            <td style={{ ...S.tdNum, color: '#e63946' }}>{fmt(item.total)}</td>
+                            <td style={{ ...S.td, fontSize: 12 }}>{item.competition || '-'}</td>
+                            <td style={{ ...S.td, textAlign: 'center' }}>
+                              <button onClick={() => handlePick(item.hint, { ...item, picked: item.picked })} style={{
+                                background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
+                              }}>{item.picked ? '⭐' : '☆'}</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
 
       {tab === 'used' && (
         <div>

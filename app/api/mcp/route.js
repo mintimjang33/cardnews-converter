@@ -296,60 +296,27 @@ const baseHandler = createMcpHandler(
         }
         try {
           const results = await fetchNaverKeywordData(keywords)
-          return { content: [{ type: 'text', text: JSON.stringify({ query: keywords, results }, null, 2) }] }
+
+          // keyword_stats에 자동 저장 (hint = 조회한 키워드명)
+          const nowIso = new Date().toISOString()
+          for (const hint of keywords) {
+            const rows = results.filter(r => r.keyword).map(r => ({
+              hint,
+              keyword: r.keyword,
+              pc: r.monthlySearchPc || 0,
+              mobile: r.monthlySearchMobile || 0,
+              total: r.monthlySearchTotal || 0,
+              competition: r.competition || '-',
+              created_at: nowIso,
+            }))
+            if (rows.length > 0) {
+              await supabase.from('keyword_stats').upsert(rows, { onConflict: 'hint,keyword' })
+            }
+          }
+
+          return { content: [{ type: 'text', text: JSON.stringify({ query: keywords, saved: results.length, results }, null, 2) }] }
         } catch (err) {
           return { content: [{ type: 'text', text: `오류: ${err.message || '키워드 조회 중 오류가 발생했습니다.'}` }], isError: true }
-        }
-      }
-    )
-
-    server.registerTool(
-      'save_keyword_data',
-      {
-        title: '키워드 검색량 데이터 저장 (TOP 키워드 캐시)',
-        description:
-          'naver_keyword_volume으로 실시간 조회한 키워드 검색량 결과를 도구(tool_id)의 TOP 키워드 ' +
-          '캐시(keyword_stats)에 저장한다. naver_keyword_volume의 응답에 있는 results 배열을 그대로 ' +
-          '넘기면 된다. 같은 도구·키워드 조합은 최신 값으로 덮어쓴다(upsert) — 여러 번 호출해도 안전하다. ' +
-          '저장해두면 다음 글 작성 때 get_keyword_data로 바로 불러와 재사용할 수 있어, 매번 실시간 조회를 ' +
-          '반복하지 않아도 된다. 도구와 직접 관련 없어 보이는 키워드까지 전부 저장해도 무방하다 — ' +
-          '연결고리·각도 판단은 글 작성 시점에 get_keyword_data를 다시 호출해서 한다.',
-        inputSchema: {
-          tool_id: z.enum(TOOL_CODES).describe('도구 코드'),
-          keywords: z.array(z.object({
-            keyword: z.string(),
-            monthlySearchPc: z.number().optional(),
-            monthlySearchMobile: z.number().optional(),
-            monthlySearchTotal: z.number().optional(),
-            competition: z.string().optional(),
-          })).min(1).describe('naver_keyword_volume 응답의 results 배열을 그대로 전달'),
-        },
-        annotations: { destructiveHint: false, idempotentHint: true },
-      },
-      async ({ tool_id, keywords }) => {
-        const hint = TOOL_HINTS[tool_id]
-        const rows = keywords.map(k => {
-          const pc = k.monthlySearchPc || 0
-          const mobile = k.monthlySearchMobile || 0
-          const total = k.monthlySearchTotal != null ? k.monthlySearchTotal : pc + mobile
-          return {
-            hint,
-            keyword: k.keyword,
-            pc,
-            mobile,
-            total,
-            competition: k.competition || '-',
-          }
-        })
-        const { error } = await supabase
-          .from('keyword_stats')
-          .upsert(rows, { onConflict: 'hint,keyword' })
-        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
-        return {
-          content: [{
-            type: 'text',
-            text: `✅ ${tool_id}(${hint}) TOP 키워드 캐시에 ${rows.length}개 저장됨. 다음 글 작성 때 get_keyword_data로 바로 조회 가능.`,
-          }],
         }
       }
     )
@@ -475,84 +442,6 @@ const baseHandler = createMcpHandler(
         rows.forEach(p => {
           const usedNote = p.used_at ? ` · ✅ 사용됨(${p.used_at.slice(0, 10)}, ${p.used_in_title || p.used_in_slug || '글 정보 없음'})` : ''
           lines.push(`- [${p.tool_id}] ${p.keyword} · 합계 ${fmt(p.total)} (PC ${fmt(p.pc)} / 모바일 ${fmt(p.mobile)})${p.competition ? ' · 경쟁도 ' + p.competition : ''}${p.memo ? ' · 메모: ' + p.memo : ''}${usedNote}`)
-        })
-        return { content: [{ type: 'text', text: lines.join('\n') }] }
-      }
-    )
-
-    server.registerTool(
-      'suggest_feature',
-      {
-        title: '기존 도구 기능 추가 제안 기록',
-        description:
-          '새 도구를 따로 만드는 게 아니라, 이미 있는 도구(tool_id)에 기능 하나를 추가하면 좋겠다는 ' +
-          '제안을 기록한다. 검색량 높은 키워드인데 새 카테고리를 만들 정도는 아니고 기존 도구와 결이 ' +
-          '비슷할 때 사용한다 (예: "맞춤법검사" 키워드 → text-down에 맞춤법 검사 기능 추가). notes에는 ' +
-          '실제 구현 가능성 검토 결과를 적는다 — 외부 API 이용약관·비용·안정성 문제, 대안 구현 방법, ' +
-          '추천 방향 등을 짧게 정리해서 남기면, 나중에 get_feature_ideas로 다시 볼 때 처음부터 다시 ' +
-          '조사하지 않아도 된다.',
-        inputSchema: {
-          tool_id: z.enum(TOOL_CODES).describe('기능을 추가할 기존 도구'),
-          feature_name: z.string().describe('추가할 기능 이름. 예: "맞춤법 검사"'),
-          keyword: z.string().optional().describe('이 제안의 근거가 된 키워드'),
-          pc: z.number().optional(),
-          mobile: z.number().optional(),
-          total: z.number().optional(),
-          competition: z.string().optional(),
-          notes: z.string().describe('구현 가능성 검토 결과 — 비용, 약관/법적 리스크, 대안, 추천 방향 등'),
-        },
-        annotations: { destructiveHint: false, idempotentHint: false },
-      },
-      async ({ tool_id, feature_name, keyword, pc, mobile, total, competition, notes }) => {
-        const row = {
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-          tool_id,
-          feature_name,
-          keyword: keyword || null,
-          pc: pc || null,
-          mobile: mobile || null,
-          total: total || null,
-          competition: competition || null,
-          notes,
-          status: 'proposed',
-          created_at: new Date().toISOString(),
-        }
-        const { error } = await supabase.from('feature_ideas').insert([row])
-        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
-        return {
-          content: [{
-            type: 'text',
-            text: `💡 기능 제안 기록됨: [${tool_id}] ${feature_name}${keyword ? ' (키워드: ' + keyword + ')' : ''}`,
-          }],
-        }
-      }
-    )
-
-    server.registerTool(
-      'get_feature_ideas',
-      {
-        title: '기능 추가 제안 목록 조회',
-        description:
-          'suggest_feature로 기록해둔 기능 추가 제안들을 조회한다. 새 글감을 정하거나 사이트 로드맵을 ' +
-          '검토할 때, 이미 검토해둔 제안이 있는지 먼저 확인하는 용도로 쓴다.',
-        inputSchema: {
-          tool_id: z.enum(TOOL_CODES).optional().describe('특정 도구로만 필터링하고 싶을 때'),
-          status: z.enum(['proposed', 'building', 'done', 'rejected']).optional().describe('상태로 필터링 (기본: 전체)'),
-        },
-      },
-      async ({ tool_id, status }) => {
-        let q = supabase.from('feature_ideas').select('*').order('created_at', { ascending: false })
-        if (tool_id) q = q.eq('tool_id', tool_id)
-        if (status) q = q.eq('status', status)
-        const { data, error } = await q
-        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
-        if (!data || !data.length) {
-          return { content: [{ type: 'text', text: '기록된 기능 제안 없음' }] }
-        }
-        const lines = [`💡 기능 추가 제안 (${data.length}건):`]
-        data.forEach(f => {
-          const vol = f.total ? ` · 검색량 합계 ${fmt(f.total)}${f.competition ? '(경쟁 ' + f.competition + ')' : ''}` : ''
-          lines.push(`- [${f.tool_id}/${f.status}] ${f.feature_name}${f.keyword ? ' (키워드: ' + f.keyword + ')' : ''}${vol}\n  └ ${f.notes}`)
         })
         return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
