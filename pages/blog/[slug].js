@@ -198,11 +198,24 @@ export default function BlogPost() {
   return (
     <div className="light-theme">
       <Head>
-        <title>{post.title} - Blog</title>
-        <meta name="description" content={post.summary || post.title} />
-        <meta property="og:title" content={post.title} />
-        <meta property="og:description" content={post.summary || ''} />
-        {post.cover_image && <meta property="og:image" content={post.cover_image} />}
+        <title>{post.title} — DownTools</title>
+        <meta name="description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
+
+        <meta property="og:title" content={`${post.title} — DownTools`} />
+        <meta property="og:description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
+        <meta property="og:image" content={post.cover_image || 'https://www.downtools.co.kr/og-image.png'} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="DownTools" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title || 'DownTools'} />
+        <meta name="twitter:description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
+        <meta name="twitter:image" content={post.cover_image || 'https://www.downtools.co.kr/og-image.png'} />
+
+        <link rel="canonical" href={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
