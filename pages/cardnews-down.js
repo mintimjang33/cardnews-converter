@@ -72,6 +72,17 @@ export default function CardnewsDown() {
   const t = I18N[lang]
 
   useEffect(() => {
+    function handleGa4Message(e) {
+      if (!e.data || e.data.type !== 'ga4-event') return
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', e.data.event, e.data.params || {})
+      }
+    }
+    window.addEventListener('message', handleGa4Message)
+    return () => window.removeEventListener('message', handleGa4Message)
+  }, [])
+
+  useEffect(() => {
     let debounceTimer = null
     function handleMessage(e) {
       if (!e.data || e.data.type !== 'cardnews-height') return
