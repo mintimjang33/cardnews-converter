@@ -50,7 +50,9 @@ const TOOL_PANELS = {
           { done:false, text:'[월간] 색인 생성 현황 확인', desc:'색인이 생성되지 않은 페이지 원인 파악' },
           { done:false, text:'[월간] 검색 성과 (클릭수·노출수·CTR)', desc:'어떤 키워드로 유입되는지 확인' },
           { done:false, text:'[글 발행 시] URL 즉시 검사 요청', desc:'URL 검사 → 색인 생성 요청' },
+          { done:false, text:'[분기] 모바일 사용성 오류 확인', desc:'경험 → 모바일 사용성 — 터치 요소 간격·뷰포트 설정 등 오류 수정' },
           { done:false, text:'[분기] Core Web Vitals 점수 확인', desc:'LCP·INP·CLS 점수 확인 및 개선' },
+          { done:false, text:'🤖 [매일 자동] 사이트맵 URL 자동 색인 요청', desc:'GitHub Actions로 매일 오전 9시(KST) 자동 실행 — Indexing API로 전체 URL 색인 요청' },
         ]}
     ]
   },
@@ -64,6 +66,8 @@ const TOOL_PANELS = {
           { done:false, text:'측정 ID를 사이트 <head>에 삽입', desc:'_app.js에 Script 컴포넌트로 gtag.js 로드' },
           { done:false, text:'Search Console 연결', desc:'GA4 관리 → 속성 → Search Console 링크' },
           { done:false, text:'내부 트래픽(내 IP) 필터 설정', desc:'관리 → 데이터 필터 → 내부 트래픽 정의' },
+          { done:false, text:'목표/전환 이벤트 설정', desc:'뉴스레터 구독, 문의하기 클릭 등 중요 액션을 전환으로 표시' },
+          { done:false, text:'주간/월간 리포트 이메일 자동 발송 설정', desc:'GA4 → 리포트 → 공유 → 이메일 예약 전송 설정' },
         ]},
       { title:'📋 주기적으로 확인', color:'#3b82f6', bg:'#0a0f1a', border:'#1e3a8a',
         items:[
@@ -71,6 +75,8 @@ const TOOL_PANELS = {
           { done:false, text:'[주간] 유입 채널별 트래픽 분석', desc:'획득 → 트래픽 획득' },
           { done:false, text:'[주간] 인기 페이지 TOP 10 확인', desc:'참여 → 페이지 및 화면' },
           { done:false, text:'[월간] 이탈률·평균 참여 시간 확인', desc:'참여 시간 짧으면 도입부 개선' },
+          { done:false, text:'[월간] 기기별·지역별 접속 현황', desc:'모바일 비율이 높으면 모바일 UX를 우선 최적화' },
+          { done:false, text:'🤖 [자동] 주간/월간 리포트 이메일 수신 중', desc:'GA4 이메일 예약 전송으로 자동 발송 중' },
         ]}
     ]
   },
@@ -103,7 +109,9 @@ const TOOL_PANELS = {
           { done:false, text:'sitemap.xml 자동 생성 및 제출', desc:'새 글 발행 시 sitemap 자동 갱신 확인' },
           { done:false, text:'robots.txt 정상 설정 확인', desc:'/admin은 Disallow, /blog는 Allow' },
           { done:false, text:'canonical URL 태그 삽입', desc:'중복 페이지 문제 방지' },
+          { done:false, text:'HTTPS 적용 확인', desc:'HTTP 접속 시 자동으로 HTTPS 리다이렉트 되는지 확인' },
           { done:false, text:'모바일 반응형 확인', desc:'구글은 모바일 우선 색인' },
+          { done:false, text:'Core Web Vitals 점수 확인', desc:'서치콘솔 → 경험 → Core Web Vitals — LCP·INP·CLS 점수 확인 및 개선' },
         ]},
       { title:'✍️ 글 작성 시 매번 체크', color:'#06b6d4', bg:'#001a1f', border:'#155e75',
         items:[
@@ -111,6 +119,8 @@ const TOOL_PANELS = {
           { done:false, text:'메타 description 작성 (80~160자)', desc:'키워드 포함 + 클릭 유도 문구' },
           { done:false, text:'URL 슬러그를 짧고 명확하게', desc:'영문 소문자+하이픈, 한글 금지' },
           { done:false, text:'H2·H3 소제목으로 콘텐츠 구조화', desc:'목차 역할 + 구글이 구조 파악' },
+          { done:false, text:'이미지 alt 텍스트 입력', desc:'모든 이미지에 alt="설명" 추가 — 이미지 검색 유입 + 접근성 향상' },
+          { done:false, text:'내부 링크 2~3개 이상 삽입', desc:'관련 글로 연결 — 체류 시간 증가 + 구글 크롤러가 사이트 구조 파악 가능' },
           { done:false, text:'발행 후 서치콘솔 URL 색인 요청', desc:'URL 검사 → 색인 생성 요청' },
         ]}
     ]
@@ -119,15 +129,22 @@ const TOOL_PANELS = {
     label:'🌐 검색엔진 등록', color:'#059669', border:'#6ee7b7', bg:'#001a0a', activeBg:'#002510',
     link:'https://searchadvisor.naver.com', linkLabel:'네이버 서치어드바이저 →',
     sections:[
-      { title:'✅ 필수 등록', color:'#34d399', bg:'#002510', border:'#065f46',
+      { title:'필수 등록', color:'#34d399', bg:'#002510', border:'#065f46',
         items:[
           { done:false, text:'구글 서치콘솔 등록', desc:'소유권 인증 + sitemap 제출 + GA4 연결' },
           { done:false, text:'네이버 서치어드바이저 등록', desc:'소유권 인증 + sitemap 제출' },
           { done:false, text:'빙 웹마스터 도구 등록', desc:'구글 서치콘솔에서 가져오기 가능' },
         ]},
+      { title:'선택 등록', color:'#10b981', bg:'#001a0a', border:'#064e3b',
+        items:[
+          { done:false, text:'다음(카카오) 검색 등록', desc:'사이트 등록 신청' },
+          { done:false, text:'줌(ZUM) 등록', desc:'구글·다음 등록 시 자동 수집' },
+          { done:false, text:'얀덱스 웹마스터 등록', desc:'소유권 인증 · sitemap 제출' },
+        ]},
       { title:'🔧 등록 후 해야 할 것', color:'#10b981', bg:'#001a0a', border:'#064e3b',
         items:[
-          { done:false, text:'각 검색엔진에 sitemap.xml 제출', desc:'구글·네이버·빙 모두 제출' },
+          { done:false, text:'IndexNow 키 파일 확인', desc:'public/ 경로에 IndexNow 키 파일이 배포됐는지 브라우저에서 직접 확인' },
+          { done:false, text:'각 검색엔진에 sitemap.xml 제출', desc:'구글·네이버·빙·얀덱스 모두 제출' },
           { done:false, text:'소유권 인증 메타태그 삽입', desc:'구글·네이버 인증 메타태그 <head>에 추가' },
           { done:false, text:'ads.txt 파일 확인', desc:'/ads.txt 브라우저에서 직접 접근해서 확인' },
         ]}
@@ -141,6 +158,7 @@ const ROUTINES = {
     label:'📝 글 발행할 때마다', color:'#7c3aed', bg:'#0f0a1a', border:'#4c1d95',
     items:[
       { text:'서치콘솔 URL 색인 요청', link:'https://search.google.com/search-console', desc:'URL 검사 → 색인 생성 요청' },
+      { text:'IndexNow 핑 전송 확인', link:null, desc:'글 발행 시 자동 전송됨 — 발행 후 토스트 메시지에서 확인' },
       { text:'GA4 실시간 트래픽 확인', link:'https://analytics.google.com', desc:'발행 후 GA4 실시간 탭 확인' },
       { text:'OG태그 디버거 확인', link:'https://developers.facebook.com/tools/debug/', desc:'페이스북 공유 미리보기 테스트' },
     ]
@@ -159,7 +177,9 @@ const ROUTINES = {
     label:'🗓️ 매월 마지막 토요일', color:'#d97706', bg:'#1a1200', border:'#78500a',
     items:[
       { text:'애드센스 광고 위치 CTR 분석', link:'https://www.google.com/adsense', desc:'어떤 위치 광고가 잘 클릭되는지 파악' },
+      { text:'애드센스 모바일 광고 노출 확인', link:'https://www.google.com/adsense', desc:'반응형 광고 단위 정상 작동 여부' },
       { text:'서치콘솔 색인 현황 확인', link:'https://search.google.com/search-console', desc:'색인 안 된 페이지 원인 파악' },
+      { text:'서치콘솔 모바일 사용성 오류', link:'https://search.google.com/search-console', desc:'경험 → 모바일 사용성' },
       { text:'Core Web Vitals 점수 확인', link:'https://search.google.com/search-console', desc:'LCP·INP·CLS 점수 개선' },
       { text:'GA4 이탈률·참여 시간 확인', link:'https://analytics.google.com', desc:'참여 시간 짧은 글 도입부 개선' },
       { text:'GA4 기기별·지역별 접속 현황', link:'https://analytics.google.com', desc:'모바일 비율 높으면 UX 우선 최적화' },
