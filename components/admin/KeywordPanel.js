@@ -464,7 +464,6 @@ export default function KeywordPanel({ token }) {
   const handleSyncFromPublishLog = async () => {
     try {
       showToast('🔄 발행기록에서 동기화 중...')
-      // content_log에서 target_keyword 있는 항목 가져오기
       const res = await fetch('/api/admin/content-log?limit=500', {
         headers: { 'x-admin-token': token }
       })
@@ -474,6 +473,21 @@ export default function KeywordPanel({ token }) {
 
       let updated = 0
       for (const log of toSync) {
+        // 먼저 찜 등록(없으면 생성, 있으면 유지)
+        await fetch('/api/tools/keyword-picks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({
+            tool_id: log.tool,
+            hint: log.tool,
+            keyword: log.target_keyword,
+            pc: log.search_pc || 0,
+            mobile: log.search_mobile || 0,
+            total: log.search_total || 0,
+            competition: log.competition || '',
+          })
+        })
+        // 사용 처리
         const r = await fetch('/api/tools/keyword-picks', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
