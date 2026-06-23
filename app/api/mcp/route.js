@@ -13,7 +13,6 @@
 //   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
 //   - pick_keyword        : 나중에 쓸 키워드를 찜(bookmark)해두기, 계획 메모 포함 (쓰기 작업)
 //   - search_keyword_picks: 찜해둔 키워드 검색/열람, 기본은 미사용만 (그룹 구분 없음)
-//   - mark_keyword_used   : 찜 키워드를 글에 실제로 썼을 때 사용 처리 — 날짜·글 자동 기록 (쓰기 작업)
 //   - suggest_feature     : 새 도구가 아니라 "기존 도구에 기능 추가" 제안을 검토 메모와 함께 기록 (쓰기 작업)
 //   - get_feature_ideas   : suggest_feature로 기록해둔 기능 추가 제안 목록 조회
 //   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
@@ -55,7 +54,6 @@
 //      suggest_feature로 검토 메모와 함께 기록한다.
 //   3. 글감을 정할 때마다 search_keyword_picks(기본 미사용만)·get_feature_ideas로 먼저 훑어,
 //      오늘 쓸 만한 게 있는지 확인한다.
-//   4. 찜 키워드를 실제로 글에 썼으면 mark_keyword_used를 호출한다 — used_at(날짜)·used_in_title/slug(어느 글)이
 //      구조화된 컬럼으로 남기 때문에, admin "✅ 사용 키워드" 탭과 search_keyword_picks(include_used: true)에서
 //      "그 키워드를 며칠에 어디에 썼는지"가 그대로 조회된다. (add_publish_log의 memo에도 같은 내용을 짧게
 //      남겨두면 발행 기록 쪽에서도 한 번 더 확인할 수 있다.)
@@ -479,48 +477,6 @@ const baseHandler = createMcpHandler(
           lines.push(`- [${p.tool_id}] ${p.keyword} · 합계 ${fmt(p.total)} (PC ${fmt(p.pc)} / 모바일 ${fmt(p.mobile)})${p.competition ? ' · 경쟁도 ' + p.competition : ''}${p.memo ? ' · 메모: ' + p.memo : ''}${usedNote}`)
         })
         return { content: [{ type: 'text', text: lines.join('\n') }] }
-      }
-    )
-
-    server.registerTool(
-      'mark_keyword_used',
-      {
-        title: '찜 키워드 사용 처리 (날짜·글 자동 기록)',
-        description:
-          '찜해둔 키워드를 실제로 글에 썼을 때 호출해서 "사용됨"으로 표시한다. create_blog_post와 ' +
-          'add_publish_log 직후, 그 글에서 황금키워드를 실제로 썼다면 이어서 호출한다. 사용 시각이 ' +
-          '자동으로 기록되고(used_at), 어느 글에 썼는지(used_in_title/slug)도 같이 남아서 admin ' +
-          '"사용 키워드" 화면과 search_keyword_picks(include_used: true)에서 며칠에 어느 글에 그 ' +
-          '키워드를 썼는지 그대로 확인할 수 있다. 아직 pick_keyword로 찜해둔 적 없는 키워드를 즉석에서 ' +
-          '쓴 경우에도 호출할 수 있다 — 그 경우 사용 기록과 함께 새로 찜 항목이 생성된다.',
-        inputSchema: {
-          group: z.string().describe('pick_keyword에 쓴 것과 같은 그룹/hint 이름'),
-          keyword: z.string(),
-          used_in_title: z.string().describe('그 키워드를 사용한 글의 제목'),
-          used_in_slug: z.string().optional().describe('그 키워드를 사용한 글의 슬러그'),
-        },
-        annotations: { destructiveHint: false, idempotentHint: true },
-      },
-      async ({ group, keyword, used_in_title, used_in_slug }) => {
-        const nowIso = new Date().toISOString()
-        const row = {
-          tool_id: group,
-          hint: group,
-          keyword,
-          used_at: nowIso,
-          used_in_title: used_in_title || null,
-          used_in_slug: used_in_slug || null,
-        }
-        const { error } = await supabase
-          .from('keyword_picks')
-          .upsert(row, { onConflict: 'tool_id,keyword' })
-        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
-        return {
-          content: [{
-            type: 'text',
-            text: `✅ 사용 처리됨: [${group}] ${keyword} → "${used_in_title}" (${nowIso.slice(0, 10)})`,
-          }],
-        }
       }
     )
 

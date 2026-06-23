@@ -461,6 +461,36 @@ export default function KeywordPanel({ token }) {
     } catch (e) { showToast(`❌ 오류: ${e.message}`) }
   }
 
+  const handleSyncFromPublishLog = async () => {
+    try {
+      showToast('🔄 발행기록에서 동기화 중...')
+      // content_log에서 target_keyword 있는 항목 가져오기
+      const res = await fetch('/api/admin/content-log?limit=500', {
+        headers: { 'x-admin-token': token }
+      })
+      const logs = await res.json()
+      const toSync = logs.filter(l => l.target_keyword)
+      if (toSync.length === 0) { showToast('⚠️ 동기화할 키워드가 없습니다'); return }
+
+      let updated = 0
+      for (const log of toSync) {
+        const r = await fetch('/api/tools/keyword-picks', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({
+            tool_id: log.tool,
+            keyword: log.target_keyword,
+            used_in_title: log.title || null,
+            used_in_slug: log.slug || null,
+          })
+        })
+        if (r.ok) updated++
+      }
+      loadPicks()
+      showToast(`✅ ${updated}개 키워드 동기화 완료`)
+    } catch (e) { showToast(`❌ 오류: ${e.message}`) }
+  }
+
   const handleUnmarkUsed = async (toolId, keyword) => {
     try {
       const res = await fetch('/api/tools/keyword-picks', {
@@ -1171,6 +1201,13 @@ export default function KeywordPanel({ token }) {
 
       {tab === 'used' && (
         <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={handleSyncFromPublishLog} style={{
+              padding: '8px 18px', background: '#e63946', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+            }}>🔄 발행기록으로 업데이트</button>
+          </div>
           {picksLoading ? (
             <div style={{ color: '#71717a', fontSize: 13, padding: 20 }}>로딩 중...</div>
           ) : usedPicks.length === 0 ? (
