@@ -86,7 +86,8 @@ const TOOL_PANELS = {
     sections:[
       { title:'🚀 최초 셋팅', color:'#a78bfa', bg:'#150f25', border:'#4c1d95',
         items:[
-          { done:false, text:'og:title / og:description 추가', desc:'각 페이지마다 고유한 제목·설명 설정' },
+          { done:false, text:'og:title 추가', desc:'<meta property="og:title" content="사이트 제목" />' },
+          { done:false, text:'og:description 추가 (80~160자)', desc:'<meta property="og:description" content="사이트 설명..." />' },
           { done:false, text:'og:image 추가 (1200x630px 권장)', desc:'SNS 공유 시 표시되는 썸네일' },
           { done:false, text:'og:url / og:type / og:site_name 추가', desc:'og:type은 website' },
           { done:false, text:'Twitter Card 태그 추가', desc:'<meta name="twitter:card" content="summary_large_image" />' },
@@ -143,7 +144,6 @@ const TOOL_PANELS = {
         ]},
       { title:'🔧 등록 후 해야 할 것', color:'#10b981', bg:'#001a0a', border:'#064e3b',
         items:[
-          { done:false, text:'IndexNow 키 파일 확인', desc:'public/ 경로에 IndexNow 키 파일이 배포됐는지 브라우저에서 직접 확인' },
           { done:false, text:'각 검색엔진에 sitemap.xml 제출', desc:'구글·네이버·빙·얀덱스 모두 제출' },
           { done:false, text:'소유권 인증 메타태그 삽입', desc:'구글·네이버 인증 메타태그 <head>에 추가' },
           { done:false, text:'ads.txt 파일 확인', desc:'/ads.txt 브라우저에서 직접 접근해서 확인' },
