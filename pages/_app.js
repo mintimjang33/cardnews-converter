@@ -18,13 +18,13 @@ export default function App({ Component, pageProps }) {
         />
 
         {/* Google Analytics */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA4_ID" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-SCEZB3HBQG" />
         <script dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'YOUR_GA4_ID');
+            gtag('config', 'G-SCEZB3HBQG');
           `
         }} />
       </Head>
