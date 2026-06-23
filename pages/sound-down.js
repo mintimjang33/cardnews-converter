@@ -188,6 +188,12 @@ export default function SoundDown() {
   }
 
   const handleDownload = async (sound) => {
+    // GA4 다운로드 이벤트
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      function gtag(){window.dataLayer.push(arguments)}
+      gtag('event', 'download', { tool: 'sound-down', sound_name: sound.name })
+    }
     const dur = maxCooldown
     setCooldown(dur); setShowCooldownAd(true)
     localStorage.setItem('sd_cooldown_end', (Date.now() + dur * 1000).toString())

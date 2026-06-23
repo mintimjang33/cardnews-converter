@@ -74,8 +74,10 @@ export default function CardnewsDown() {
   useEffect(() => {
     function handleGa4Message(e) {
       if (!e.data || e.data.type !== 'ga4-event') return
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', e.data.event, e.data.params || {})
+      if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || []
+        function gtag(){window.dataLayer.push(arguments)}
+        gtag('event', e.data.event, e.data.params || {})
       }
     }
     window.addEventListener('message', handleGa4Message)

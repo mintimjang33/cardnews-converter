@@ -143,6 +143,12 @@ export default function ThumbDown() {
   }
 
   const handleDownload = async (thumbUrl, key) => {
+    // GA4 다운로드 이벤트
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      function gtag(){window.dataLayer.push(arguments)}
+      gtag('event', 'download', { tool: 'thumb-down', quality: key })
+    }
     try {
       const res = await fetch(`/api/tools/thumb-download?url=${encodeURIComponent(thumbUrl)}`)
       if (!res.ok) throw new Error()
