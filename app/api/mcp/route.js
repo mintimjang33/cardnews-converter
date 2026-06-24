@@ -698,6 +698,36 @@ const baseHandler = createMcpHandler(
         }
       }
     )
+
+    server.registerTool(
+      'update_system_prompt',
+      {
+        title: 'Claude 시스템 프롬프트(지침) 저장/수정',
+        description:
+          'admin에 저장된 Claude 프로젝트 지침을 덮어쓴다. ' +
+          '사용자가 대화 중 지침 수정을 요청할 때만 호출한다. ' +
+          '호출 전 반드시 변경 내용을 사용자에게 확인받는다. ' +
+          '저장 즉시 다음 대화부터 새 지침이 적용된다.',
+        inputSchema: {
+          content: z.string().describe('저장할 지침 전문'),
+        },
+        annotations: { destructiveHint: true, idempotentHint: true },
+      },
+      async ({ content }) => {
+        const { error } = await supabase
+          .from('system_prompts')
+          .upsert({ id: 'main', content, updated_at: nowKST() }, { onConflict: 'id' })
+        if (error) {
+          return { content: [{ type: 'text', text: `❌ 저장 실패: ${error.message}` }], isError: true }
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: '✅ 시스템 프롬프트 저장 완료 (' + nowKST() + ')\n저장된 내용:\n\n' + content,
+          }],
+        }
+      }
+    )
   },
   {},
   { basePath: '/api', maxDuration: 30, verboseLogs: true }
