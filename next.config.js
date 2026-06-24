@@ -19,6 +19,26 @@ const nextConfig = {
       },
     ],
   },
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        chunks: 'all',
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          admin: {
+            test: /[\\/]components[\\/]admin[\\/]/,
+            name: 'admin',
+            chunks: 'all',
+            priority: 30,
+            enforce: true,
+          },
+        },
+      }
+    }
+    return config
+  },
+
   async rewrites() {
     return [
       { source: '/sitemap.xml', destination: '/api/sitemap.xml' },
