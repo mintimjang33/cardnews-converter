@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -22,7 +27,7 @@ export default async function handler(req, res) {
     const { data, error } = await supabase.from('blog_categories').insert([{
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       label,
-      created_at: new Date().toISOString(),
+      created_at: nowKST(),
     }]).select().single()
     if (error) return res.status(500).json({ error: error.message })
     return res.status(200).json(data)

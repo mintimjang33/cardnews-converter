@@ -1,6 +1,11 @@
 // pages/api/sitemap.xml.js
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const BASE_URL = 'https://www.downtools.co.kr'
 
 const STATIC_PAGES = [
@@ -27,7 +32,7 @@ function getSupabase() {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const now = new Date().toISOString().slice(0, 10)
+  const now = nowKST().slice(0, 10)
 
   // 블로그 발행글 slug 목록 조회
   let blogUrls = []

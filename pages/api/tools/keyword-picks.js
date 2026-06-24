@@ -17,6 +17,11 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -57,7 +62,7 @@ export default async function handler(req, res) {
     if (!tool_id || !keyword) return res.status(400).json({ error: 'tool_id, keyword 필요' })
     const patch = unmark
       ? { used_at: null, used_in_title: null, used_in_slug: null }
-      : { used_at: new Date().toISOString(), used_in_title: used_in_title || null, used_in_slug: used_in_slug || null }
+      : { used_at: nowKST(), used_in_title: used_in_title || null, used_in_slug: used_in_slug || null }
     const { data, error } = await supabase
       .from('keyword_picks')
       .update(patch)

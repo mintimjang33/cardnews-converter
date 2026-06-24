@@ -19,6 +19,11 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -29,7 +34,7 @@ const DEFAULT_CHUNK = 50
 const MAX_CHUNK = 200
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return nowKST().slice(0, 10)
 }
 
 // 오늘 사용량 조회
@@ -58,7 +63,7 @@ async function addTodayUsed(count) {
     const newUsed = (existing?.used || 0) + count
     await supabase
       .from('doc_batch_log')
-      .upsert({ date: today, used: newUsed, updated_at: new Date().toISOString() }, { onConflict: 'date' })
+      .upsert({ date: today, used: newUsed, updated_at: nowKST() }, { onConflict: 'date' })
     return newUsed
   } catch (e) {
     console.error('doc_batch_log 업데이트 오류:', e.message)

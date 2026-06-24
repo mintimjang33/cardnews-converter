@@ -125,6 +125,11 @@ function fmt(n) { return (n || 0).toLocaleString('ko-KR') }
 const NAVER_BASE_URL = 'https://api.naver.com'
 const NAVER_URI = '/keywordstool'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 function buildNaverHeaders() {
   const apiKey = process.env.NAVER_AD_API_KEY
   const secretKey = process.env.NAVER_AD_SECRET_KEY
@@ -298,7 +303,7 @@ const baseHandler = createMcpHandler(
           const results = await fetchNaverKeywordData(keywords)
 
           // keyword_stats에 자동 저장 (hint = 조회한 키워드명)
-          const nowIso = new Date().toISOString()
+          const nowIso = nowKST()
           for (const hint of keywords) {
             const rows = results.filter(r => r.keyword).map(r => ({
               hint,
@@ -485,7 +490,7 @@ const baseHandler = createMcpHandler(
           search_total: search_total != null ? Number(search_total) : null,
           competition: competition || null,
           published_at: null,
-          created_at: new Date().toISOString(),
+          created_at: nowKST(),
         }
         const { data, error } = await supabase.from('content_log').insert([row]).select().single()
         if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
@@ -518,7 +523,7 @@ const baseHandler = createMcpHandler(
       },
       async ({ title, slug, summary, content, category, tags, cover_image, status, scheduled_at }) => {
         const finalStatus = status || 'published'
-        const nowIso = new Date().toISOString()
+        const nowIso = nowKST()
         const row = {
           id: Date.now().toString(36) + Math.random().toString(36).slice(2),
           type: 'blog',
@@ -576,7 +581,7 @@ const baseHandler = createMcpHandler(
         if (Object.keys(patch).length === 0) {
           return { content: [{ type: 'text', text: '오류: 수정할 필드가 없습니다. title/summary/content/cover_image/tags/status 중 하나 이상을 전달해주세요.' }], isError: true }
         }
-        patch.updated_at = new Date().toISOString()
+        patch.updated_at = nowKST()
 
         const { data, error } = await supabase
           .from('blog_posts')
@@ -648,7 +653,7 @@ const baseHandler = createMcpHandler(
         const row = {
           tool_id,
           description,
-          updated_at: new Date().toISOString(),
+          updated_at: nowKST(),
         }
         if (name) row.name = name
         if (path) row.path = path

@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,7 +20,7 @@ export default async function handler(req, res) {
 
   // 예약 발행 시간이 지난 글은 조회 시점에 자동으로 published 전환
   try {
-    const nowIso = new Date().toISOString()
+    const nowIso = nowKST()
     await supabase
       .from('blog_posts')
       .update({ status: 'published', published_at: nowIso })
@@ -65,7 +70,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: '인증 필요' })
     }
 
-    const nowIso = new Date().toISOString()
+    const nowIso = nowKST()
     const status = postType === 'blog' ? (body.status || 'draft') : 'published'
 
     // slug 자동 생성 (자유게시판/부탁해요)
@@ -116,7 +121,7 @@ export default async function handler(req, res) {
       status,
       scheduled_at: status === 'scheduled' ? (body.scheduled_at || null) : null,
       published_at: body.published_at || null,
-      updated_at: new Date().toISOString(),
+      updated_at: nowKST(),
     }
     const { data, error } = await supabase.from('blog_posts')
       .update(updateRow).eq('id', id).select().single()

@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { S, Toast } from './AdminUI'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
 // 도구 목록 (검색 수요 기준 순서 — 사이트에 새 도구 추가 시 여기에도 추가)
 const TOOLS = [
   { id: 'thumb-down',    label: '🖼 썸네일' },
@@ -21,7 +25,7 @@ export default function ContentLogPanel({ adminToken }) {
   const [promptOpen, setPromptOpen] = useState(false)
 
   // 수동 추가 폼 (보통은 Claude가 작성해주는 내용을 그대로 붙여넣는 용도)
-  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: new Date().toISOString().slice(0,10) })
+  const [form, setForm] = useState({ tool: 'cardnews-down', angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: nowKST().slice(0,10) })
   const [saving, setSaving] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [parseMsg, setParseMsg] = useState('')
@@ -150,7 +154,7 @@ export default function ContentLogPanel({ adminToken }) {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
-      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: new Date().toISOString().slice(0,10) })
+      setForm({ tool: form.tool, angle: '', title: '', slug: '', memo: '', targetKeyword: '', searchPc: '', searchMobile: '', searchTotal: '', competition: '', publishedAt: nowKST().slice(0,10) })
       setPasteText('')
       setParseMsg('')
       showToast('✅ 기록 추가됨')

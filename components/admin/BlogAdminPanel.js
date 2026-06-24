@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { DEFAULT_CATEGORIES } from '../../lib/blogCategories'
 import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+/** KST 기준 현재 Date 객체 반환 */
+function nowKSTDate() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000)
+}
+
 function slugify(text) {
   if (!text) return ''
   let r = text.trim().toLowerCase()
@@ -306,7 +315,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
     if (!form.content.trim()) { setMsg('❌ 내용을 입력해주세요'); setTimeout(()=>setMsg(''),3000); return }
     if (status === 'scheduled') {
       if (!form.scheduledAt) { setMsg('❌ 예약 날짜/시간을 입력해주세요'); setTimeout(()=>setMsg(''),3000); return }
-      if (new Date(form.scheduledAt) <= new Date()) { setMsg('❌ 예약 시간은 현재 이후여야 합니다'); setTimeout(()=>setMsg(''),3000); return }
+      if (new Date(form.scheduledAt) <= nowKSTDate()) { setMsg('❌ 예약 시간은 현재 이후여야 합니다'); setTimeout(()=>setMsg(''),3000); return }
     }
     setLoading(true)
     try {
@@ -319,7 +328,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
         status,
         scheduled_at: status === 'scheduled' ? new Date(form.scheduledAt).toISOString() : null,
         // 발행 시각: 이미 한 번 발행된 적 있으면 그 시각 유지, 처음 발행되는 거면 지금 시각
-        published_at: status === 'published' ? (form.publishedAt || new Date().toISOString()) : (form.publishedAt || null),
+        published_at: status === 'published' ? (form.publishedAt || nowKST()) : (form.publishedAt || null),
       }
       const method = editId ? 'PUT' : 'POST'
       if (editId) body.id = editId
@@ -340,8 +349,8 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   }
 
   // ── 루틴 달력
-  const getWeekKey = () => { const n=new Date(); const s=new Date(n.getFullYear(),0,1); return `${n.getFullYear()}-W${Math.ceil(((n-s)/86400000+s.getDay()+1)/7)}` }
-  const getMonthKey = () => { const n=new Date(); return `${n.getFullYear()}-M${n.getMonth()+1}` }
+  const getWeekKey = () => { const n=nowKSTDate(); const s=new Date(n.getFullYear(),0,1); return `${n.getFullYear()}-W${Math.ceil(((n-s)/86400000+s.getDay()+1)/7)}` }
+  const getMonthKey = () => { const n=nowKSTDate(); return `${n.getFullYear()}-M${n.getMonth()+1}` }
 
   const toggleRoutine = (periodKey, ii) => {
     const k = `${periodKey}__${ii}`
@@ -351,7 +360,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   }
 
   // ── 달력 계산
-  const now = new Date()
+  const now = nowKSTDate()
   const year = now.getFullYear(), month = now.getMonth(), today = now.getDate()
   const firstDay = new Date(year,month,1).getDay()
   const daysInMonth = new Date(year,month+1,0).getDate()

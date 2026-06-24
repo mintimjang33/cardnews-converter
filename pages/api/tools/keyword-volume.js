@@ -12,6 +12,11 @@
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 
+/** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
+}
+
 const BASE_URL = 'https://api.searchad.naver.com'
 
 const supabase = createClient(
@@ -21,7 +26,7 @@ const supabase = createClient(
 
 // ── 일일 사용량 기록 (doc_batch_log) ────────────────────────────
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return nowKST().slice(0, 10)
 }
 async function addTodayUsed(count) {
   if (!count || count <= 0) return
@@ -35,7 +40,7 @@ async function addTodayUsed(count) {
     const newUsed = (existing?.used || 0) + count
     await supabase
       .from('doc_batch_log')
-      .upsert({ date: today, used: newUsed, updated_at: new Date().toISOString() }, { onConflict: 'date' })
+      .upsert({ date: today, used: newUsed, updated_at: nowKST() }, { onConflict: 'date' })
   } catch (e) {
     console.error('doc_batch_log 기록 오류:', e.message)
   }
