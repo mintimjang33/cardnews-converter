@@ -124,7 +124,7 @@ function FeatureIdeasTab({ token, showToast }) {
                     )}
                     <div style={{ fontSize: 13, color: '#a1a1aa', lineHeight: 1.7 }}>{idea.notes}</div>
                     <div style={{ fontSize: 11, color: '#3f3f46', marginTop: 8 }}>
-                      {idea.created_at ? new Date(idea.created_at).toLocaleDateString('ko-KR') : ''}
+                      {idea.created_at ? new Date(idea.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>

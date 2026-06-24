@@ -703,7 +703,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                           {post.status==='published'?'✅ 발행':post.status==='scheduled'?'⏰ 예약':'📝 임시'}
                         </span>
                         {post.status==='scheduled' && post.scheduled_at && (
-                          <span style={{ fontSize:11, color:'#60a5fa' }}>{new Date(post.scheduled_at).toLocaleString('ko-KR')}</span>
+                          <span style={{ fontSize:11, color:'#60a5fa' }}>{new Date(post.scheduled_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
                         )}
                         {post.category && <span style={{ fontSize:11, color:'#888', background:'#1f1f1f', borderRadius:4, padding:'2px 8px', border:'1px solid #2a2a2a' }}>{post.category}</span>}
                       </div>

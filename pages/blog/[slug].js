@@ -246,7 +246,7 @@ export default function BlogPost() {
         <h1 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.3, marginBottom: 12, color: 'var(--text)' }}>{post.title}</h1>
 
         <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 28 }}>
-          {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : ''}
+          {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}
           {post.author ? ` · ${post.author}` : ''}
         </div>
 

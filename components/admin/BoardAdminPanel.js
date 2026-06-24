@@ -59,7 +59,7 @@ export default function BoardAdminPanel({ adminToken, postType }) {
                 <h3 style={{ fontSize: 16, fontWeight: 800, color: '#f0f0f0', margin: 0 }}>{selected.title}</h3>
               </div>
               <div style={{ fontSize: 12, color: '#52525b', marginBottom: 16 }}>
-                {selected.author_name || '익명'} · {selected.created_at ? new Date(selected.created_at).toLocaleString('ko-KR') : ''}
+                {selected.author_name || '익명'} · {selected.created_at ? new Date(selected.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}
               </div>
               <div style={{ fontSize: 14, color: '#d4d4d4', lineHeight: 1.8, whiteSpace: 'pre-wrap', borderTop: '1px solid #2a2a2a', paddingTop: 16 }}>
                 {selected.content}
@@ -110,7 +110,7 @@ export default function BoardAdminPanel({ adminToken, postType }) {
                 </div>
                 <div style={{ fontSize: 12, color: '#71717a', textAlign: 'center' }}>{post.author_name || '익명'}</div>
                 <div style={{ fontSize: 11, color: '#52525b', textAlign: 'right' }}>
-                  {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : ''}
+                  {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <button onClick={() => handleDelete(post.id)} style={{

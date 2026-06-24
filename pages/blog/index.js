@@ -140,7 +140,7 @@ export default function BlogIndex() {
                     </p>
                   )}
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10 }}>
-                    {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : ''}
+                    {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}
                   </div>
                 </div>
               </article>

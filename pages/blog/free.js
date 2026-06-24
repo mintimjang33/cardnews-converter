@@ -230,7 +230,7 @@ function PostDetail({ post, onClose }) {
       <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111', marginBottom: 10 }}>{post.title}</h2>
       <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#888', marginBottom: 20, flexWrap: 'wrap' }}>
         <span>{post.author_name || '익명'}</span>
-        <span>{post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : ''}</span>
+        <span>{post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}</span>
       </div>
       <div style={{ fontSize: 15, color: '#222', lineHeight: 1.9, whiteSpace: 'pre-wrap', borderTop: '1px solid #f0f0f0', paddingTop: 20 }}>
         {post.content}
@@ -374,7 +374,7 @@ export default function FreeBoardPage() {
                         {post.author_name || '익명'}
                       </div>
                       <div style={{ fontSize: 12, color: '#aaa', textAlign: 'right', alignSelf: 'center' }}>
-                        {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' }) : ''}
+                        {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }) : ''}
                       </div>
                     </div>
                   ))}
