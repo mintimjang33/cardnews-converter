@@ -5,10 +5,9 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <Head>
-        {/* Google Fonts - preconnect로 CLS 방지 */}
+        {/* Google Fonts preconnect */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" />
 
         {/* 검색엔진 인증 */}
         <meta name="google-site-verification" content="828Mf-hRlCpwvG4M6VOXjZidjk3eV0a5Pe4OVnXhq0Y" />
