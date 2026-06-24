@@ -273,7 +273,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const loadPosts = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/blog/posts?limit=100', { headers:{'x-admin-token': token()} })
+      const res = await fetch('/api/blog/posts?limit=500', { headers:{'x-admin-token': token()} })
       const data = await res.json()
       setPosts(Array.isArray(data) ? data : [])
     } catch {}
