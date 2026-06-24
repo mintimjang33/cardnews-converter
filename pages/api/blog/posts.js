@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       }
       return res.status(200).json(data)
     }
-    let q = supabase.from('blog_posts').select('*').order('created_at', { ascending: false })
+    let q = supabase.from('blog_posts').select('*').order('published_at', { ascending: false })
     if (!isAdmin) q = q.eq('status', 'published')
     if (category) q = q.eq('category', category)
     // post_type 필터: 기본은 blog만 (자유게시판/부탁해요는 별도)
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
       author: body.author || null,
       status,
       scheduled_at: status === 'scheduled' ? (body.scheduled_at || null) : null,
-      published_at: body.published_at || null,
+      published_at: (body.published_at && body.published_at !== '') ? body.published_at : undefined,
       updated_at: nowKST(),
     }
     const { data, error } = await supabase.from('blog_posts')
