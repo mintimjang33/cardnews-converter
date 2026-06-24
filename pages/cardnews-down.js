@@ -8,14 +8,14 @@ import { findAdSlot } from '../lib/adSlots'
 const I18N = {
   ko: {
     metaTitle: '카드뉴스 변환기 - HTML을 PNG + 영상으로 자동 변환',
-    metaDesc: 'Claude가 만들어준 카드뉴스 HTML을 PNG 7장과 TTS 음성, 영상으로 자동 변환하세요.',
+    metaDesc: 'AI가 생성한 카드뉴스 HTML 파일을 PNG 이미지 7장과 TTS 음성, MP4 영상으로 자동 변환해주는 무료 도구. 블로그·SNS 콘텐츠 제작에 최적화되어 있습니다.',
     iframeTitle: '카드뉴스 변환기',
     cooldownTitle: '변환 준비 중', cooldownSub: '아래 광고를 잠시 봐주세요 :)',
     adLabel: '광고',
   },
   en: {
     metaTitle: 'Card News Converter - Auto Convert HTML to PNG + Video',
-    metaDesc: 'Automatically convert your card news HTML into 7 PNG slides, TTS audio, and video.',
+    metaDesc: 'Free tool to automatically convert AI-generated card news HTML files into 7 PNG images, TTS audio, and MP4 video. Optimized for blog and social media content creation.',
     iframeTitle: 'Card News Converter',
     cooldownTitle: 'Getting ready...', cooldownSub: 'Please view the ad below while you wait :)',
     adLabel: 'Ad',

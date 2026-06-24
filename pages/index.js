@@ -37,7 +37,7 @@ const TOOLS = [
 const I18N = {
   ko: {
     metaTitle: 'DownTools - 무료 온라인 도구 모음',
-    metaDesc: 'YouTube 썸네일 다운로드, CC0 효과음, 타이머 등 무료 온라인 도구를 한 곳에서',
+    metaDesc: 'YouTube 썸네일 다운로드, CC0 무료 효과음, 카드뉴스 변환, 타이머, 글자수 세기, 음성 타이핑까지 — 크리에이터를 위한 무료 온라인 도구를 한 곳에서 모두 이용하세요.',
     badge: '무료 · 빠름 · 간편',
     heroTitle: '모든 온라인 도구를',
     heroHighlight: '한 곳에서',
@@ -47,7 +47,7 @@ const I18N = {
   },
   en: {
     metaTitle: 'DownTools - Free Online Tools Collection',
-    metaDesc: 'YouTube thumbnail downloader, CC0 sound effects, timer and more — all free online tools in one place',
+    metaDesc: 'YouTube thumbnail downloader, CC0 royalty-free sound effects, card news converter, timer, character counter, voice typing and more — all free online tools for creators in one place.',
     badge: 'Free · Fast · Easy',
     heroTitle: 'All Online Tools',
     heroHighlight: 'In One Place',

@@ -28,8 +28,8 @@ const TOOLS_EN = [
 
 const I18N = {
   ko: {
-    metaTitle: 'Text-Down · 무료 텍스트 도구',
-    metaDesc: '글자수 세기, 공백 제거, 텍스트 비교 등 무료 온라인 텍스트 도구',
+    metaTitle: 'Text-Down · 무료 텍스트 도구 | 글자수 세기 · 맞춤법 · 텍스트 변환',
+    metaDesc: '글자수 세기, 공백 제거, 줄바꿈 정리, 대소문자 변환, 텍스트 비교 등 글쓰기에 필요한 모든 텍스트 도구를 무료로 이용하세요. 로그인 없이 바로 사용 가능합니다.',
     tools: TOOLS_KO,
     // counter
     counterTitle: '글자수 세기', counterDesc: '공백 포함/제외 글자수, 문장수, 줄수를 실시간으로 세어줍니다',
@@ -76,8 +76,8 @@ const I18N = {
     adLabel: '광고',
   },
   en: {
-    metaTitle: 'Text-Down · Free Text Tools',
-    metaDesc: 'Character counter, whitespace cleaner, text diff and more — free online text tools',
+    metaTitle: 'Text-Down · Free Text Tools | Character Counter · Text Cleaner · Diff',
+    metaDesc: 'Character counter, whitespace cleaner, line break remover, case converter, text diff and more — all the text tools you need for writing, completely free with no sign-up required.',
     tools: TOOLS_EN,
     // counter
     counterTitle: 'Character Count', counterDesc: 'Count characters (with/without spaces), sentences, and lines in real time',
