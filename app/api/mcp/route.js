@@ -670,6 +670,34 @@ const baseHandler = createMcpHandler(
         return { content: [{ type: 'text', text: lines.join('\n') }] }
       }
     )
+
+    server.registerTool(
+      'get_system_prompt',
+      {
+        title: 'Claude 시스템 프롬프트(지침) 조회',
+        description:
+          'admin에 저장된 Claude 프로젝트 지침 전문을 가져온다. ' +
+          '대화를 시작할 때 가장 먼저 호출해서 지침을 로드하고, 그 내용대로 행동한다. ' +
+          '지침은 admin → 🤖 Claude 지침 메뉴에서 수정할 수 있다.',
+        inputSchema: {},
+      },
+      async () => {
+        const { data, error } = await supabase
+          .from('system_prompts')
+          .select('content, updated_at')
+          .eq('id', 'main')
+          .single()
+        if (error || !data) {
+          return { content: [{ type: 'text', text: '❌ 시스템 프롬프트를 불러오지 못했습니다. admin에서 저장했는지 확인해주세요.' }], isError: true }
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: '# 시스템 프롬프트 로드 완료 (저장일시: ' + data.updated_at + ')\n\n' + data.content,
+          }],
+        }
+      }
+    )
   },
   {},
   { basePath: '/api', maxDuration: 30, verboseLogs: true }

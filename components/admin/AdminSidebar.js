@@ -12,6 +12,7 @@ const NAV = [
   { id: 'free_board',  label: '자유게시판',   icon: '💬' },
   { id: 'requests',    label: '부탁해요',     icon: '📬' },
   { id: 'keyword',     label: '키워드 관리',   icon: '🔍' },
+  { id: 'system_prompt', label: 'Claude 지침', icon: '🤖' },
   { id: 'password',    label: '비밀번호 변경', icon: '🔑' },
 ]
 
