@@ -183,6 +183,19 @@ export default function VoiceDown() {
         <title>{t.metaTitle}</title>
         <meta name="description" content={t.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta property="og:title" content={t.metaTitle} />
+        <meta property="og:description" content={t.metaDesc} />
+        <meta property="og:image" content="https://www.downtools.co.kr/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content="https://www.downtools.co.kr/voice-down" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="DownTools" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={t.metaTitle} />
+        <meta name="twitter:description" content={t.metaDesc} />
+        <meta name="twitter:image" content="https://www.downtools.co.kr/og-image.png" />
+        <link rel="canonical" href="https://www.downtools.co.kr/voice-down" />
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
           <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`} crossOrigin="anonymous" />
         )}
