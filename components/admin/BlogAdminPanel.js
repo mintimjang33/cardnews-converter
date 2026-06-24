@@ -11,8 +11,14 @@ function nowKSTDate() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000)
 }
 
-function slugify(text) {
-  if (!text) return ''
+/** 날짜 문자열/ISO를 KST 기준 'YYYY-MM-DD' 반환 */
+function toKSTDateStr(dateVal) {
+  if (!dateVal) return ''
+  const d = new Date(dateVal)
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().slice(0, 10)
+}
+
   let r = text.trim().toLowerCase()
   if (/[가-힣]/.test(r)) {
     const eng = r.match(/[a-z0-9]+/g)
@@ -367,8 +373,8 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
   const dailyCount = {}
   posts.forEach(p => {
-    if (p.status === 'published' && p.created_at) {
-      const ds = p.created_at.slice(0,10)
+    if (p.status === 'published' && (p.published_at || p.created_at)) {
+      const ds = toKSTDateStr(p.published_at || p.created_at)
       if (ds.startsWith(monthStr)) dailyCount[parseInt(ds.slice(8,10))] = (dailyCount[parseInt(ds.slice(8,10))]||0)+1
     }
   })
@@ -703,7 +709,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                       </div>
                       <div style={{ fontSize:15, fontWeight:700, color:'#f0f0f0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:3 }}>{post.title}</div>
                       <div style={{ fontSize:12, color:'#555' }}>
-                        {post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : ''}
+                        {(post.published_at || post.created_at) ? toKSTDateStr(post.published_at || post.created_at).replace(/-/g, '. ') + '.' : ''}
                         {post.slug && <span style={{ marginLeft:8, opacity:0.5 }}>/blog/{post.slug}</span>}
                       </div>
                     </div>

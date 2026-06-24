@@ -359,7 +359,7 @@ export default function ContentLogPanel({ adminToken }) {
                     {log.published_at && <span style={{ marginLeft: 8, color: '#888' }}>· 발행일 {log.published_at}</span>}
                     {log.memo && <span style={{ marginLeft: 8, opacity: 0.7 }}>· {log.memo}</span>}
                     <span style={{ marginLeft: 8, opacity: 0.5 }}>
-                      (기록 {log.created_at ? new Date(log.created_at).toLocaleDateString('ko-KR') : ''})
+                      (기록 {log.created_at ? new Date(new Date(log.created_at).getTime() + 9*60*60*1000).toISOString().slice(0,10).replace(/-/g, '. ') + '.' : ''})
                     </span>
                   </div>
                   {log.target_keyword && (
