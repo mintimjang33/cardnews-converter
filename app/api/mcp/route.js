@@ -476,10 +476,12 @@ const baseHandler = createMcpHandler(
           search_mobile: z.number().optional().describe('네이버 모바일 월간 검색수'),
           search_total: z.number().optional().describe('PC+모바일 합계 검색수'),
           competition: z.string().optional().describe('경쟁도 (높음/중간/낮음)'),
+          google_indexing: z.string().optional().describe('Google 색인 요청 결과 (success / error: ...)'),
+          index_now: z.string().optional().describe('IndexNow 핑 전송 결과 (success:200 / error: ...)'),
         },
         annotations: { destructiveHint: false, idempotentHint: false },
       },
-      async ({ tool, angle, title, slug, memo, target_keyword, search_pc, search_mobile, search_total, competition }) => {
+      async ({ tool, angle, title, slug, memo, target_keyword, search_pc, search_mobile, search_total, competition, google_indexing, index_now }) => {
         const row = {
           id: Date.now().toString(36) + Math.random().toString(36).slice(2),
           tool, angle, title, slug,
@@ -489,6 +491,8 @@ const baseHandler = createMcpHandler(
           search_mobile: search_mobile != null ? Number(search_mobile) : null,
           search_total: search_total != null ? Number(search_total) : null,
           competition: competition || null,
+          google_indexing: google_indexing || null,
+          index_now: index_now || null,
           published_at: null,
           created_at: nowKST(),
         }
