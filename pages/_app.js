@@ -12,7 +12,7 @@ export default function App({ Component, pageProps }) {
         {/* 검색엔진 인증 */}
         <meta name="google-site-verification" content="828Mf-hRlCpwvG4M6VOXjZidjk3eV0a5Pe4OVnXhq0Y" />
         <meta name="naver-site-verification" content="c684c5f62177e061e405ce1be7874e0c2b52650b" />
-        <meta name="yandex-verification" content="YOUR_YANDEX_VERIFICATION_CODE" />
+        <meta name="yandex-verification" content="a15ee1b0c254be2e" />
 
         {/* Google AdSense */}
         <script
