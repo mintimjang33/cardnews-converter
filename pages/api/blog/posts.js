@@ -101,8 +101,11 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ error: error.message })
     const { secret_password: _pw, ...safeData } = data
 
-    // Google Indexing API — 발행 즉시 색인 요청
+    // Google Indexing API + IndexNow — 발행 즉시 색인 요청
     if (status === 'published' && postType === 'blog') {
+      const pageUrl = `https://www.downtools.co.kr/blog/${slug}`
+
+      // 1) Google Indexing API
       try {
         const { GoogleAuth } = require('google-auth-library')
         const auth = new GoogleAuth({
@@ -113,14 +116,29 @@ export default async function handler(req, res) {
         await client.request({
           url: 'https://indexing.googleapis.com/v3/urlNotifications:publish',
           method: 'POST',
-          data: {
-            url: `https://www.downtools.co.kr/blog/${slug}`,
-            type: 'URL_UPDATED',
-          },
+          data: { url: pageUrl, type: 'URL_UPDATED' },
         })
         console.log('[Indexing API] 색인 요청 완료:', slug)
       } catch (e) {
         console.error('[Indexing API] 오류:', e.message)
+      }
+
+      // 2) IndexNow — Bing·Naver·Yandex 색인 요청
+      try {
+        const INDEXNOW_KEY = '72163cf9ea114eca865ba612f1aafe06'
+        await fetch('https://api.indexnow.org/indexnow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({
+            host: 'www.downtools.co.kr',
+            key: INDEXNOW_KEY,
+            keyLocation: `https://www.downtools.co.kr/${INDEXNOW_KEY}.txt`,
+            urlList: [pageUrl],
+          }),
+        })
+        console.log('[IndexNow] 핑 전송 완료:', slug)
+      } catch (e) {
+        console.error('[IndexNow] 오류:', e.message)
       }
     }
 
