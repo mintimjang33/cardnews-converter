@@ -29,6 +29,7 @@ function toKSTDateStr(dateVal) {
   return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
+function slugify(text) {
   let r = text.trim().toLowerCase()
   if (/[가-힣]/.test(r)) {
     const eng = r.match(/[a-z0-9]+/g)
