@@ -115,7 +115,7 @@ function CuriosityBlock({ post, allPosts, inlineUsedIds }) {
   )
 }
 
-// ── 도구 사용 유도 하단 박스 (출석부 식 "회원가입 유도"를 우리 결 = "도구 무료 사용"으로 변경)
+// ── 도구 사용 유도 하단 박스
 function ToolCTABlock({ post }) {
   const href = TOOL_HREF[post?.category] || '/'
   const label = categoryLabel(post?.category) || '도구'
@@ -141,10 +141,25 @@ function ToolCTABlock({ post }) {
   )
 }
 
-export default function BlogPost() {
-  const [post, setPost] = useState(null)
+// ── SSR: 크롤러가 OG태그를 읽을 수 있도록 서버에서 글 데이터 미리 로드
+export async function getServerSideProps(context) {
+  const { slug } = context.params
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.downtools.co.kr'
+    const res = await fetch(`${baseUrl}/api/blog/posts?slug=${slug}`)
+    if (!res.ok) return { props: { initialPost: null } }
+    const post = await res.json()
+    if (post.error) return { props: { initialPost: null } }
+    return { props: { initialPost: post } }
+  } catch {
+    return { props: { initialPost: null } }
+  }
+}
+
+export default function BlogPost({ initialPost }) {
+  const [post, setPost] = useState(initialPost)
   const [allPosts, setAllPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialPost)
   const [lang, setLang] = useState('ko')
   const [adsOn, setAdsOn] = useState(true)
   const [adSlots, setAdSlots] = useState([])
@@ -153,10 +168,13 @@ export default function BlogPost() {
   useEffect(() => {
     const slug = window.location.pathname.split('/blog/')[1]
     if (!slug) return
-    fetch(`/api/blog/posts?slug=${slug}`)
-      .then(r => r.json())
-      .then(data => { setPost(data); setLoading(false) })
-      .catch(() => setLoading(false))
+    // initialPost가 없을 때만 클라이언트에서 재요청
+    if (!initialPost) {
+      fetch(`/api/blog/posts?slug=${slug}`)
+        .then(r => r.json())
+        .then(data => { setPost(data); setLoading(false) })
+        .catch(() => setLoading(false))
+    }
     // 내부링크 추천용 전체 글 목록 (최대 100개)
     fetch('/api/blog/posts?limit=100')
       .then(r => r.json())
@@ -195,6 +213,8 @@ export default function BlogPost() {
     </div>
   )
 
+  const ogImage = post.cover_image || 'https://www.downtools.co.kr/og-image.png'
+
   return (
     <div className="light-theme">
       <Head>
@@ -203,7 +223,7 @@ export default function BlogPost() {
 
         <meta property="og:title" content={`${post.title} — DownTools`} />
         <meta property="og:description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
-        <meta property="og:image" content={post.cover_image || 'https://www.downtools.co.kr/og-image.png'} />
+        <meta property="og:image" content={ogImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:url" content={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
@@ -213,7 +233,7 @@ export default function BlogPost() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={post.title || 'DownTools'} />
         <meta name="twitter:description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
-        <meta name="twitter:image" content={post.cover_image || 'https://www.downtools.co.kr/og-image.png'} />
+        <meta name="twitter:image" content={ogImage} />
 
         <link rel="canonical" href={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -281,10 +301,7 @@ export default function BlogPost() {
                 </div>
               )}
 
-              {/* 🤔 이런 것도 궁금하지 않으세요? — 본문 중간 카드에 안 쓰인 글 최대 4개 */}
               <CuriosityBlock post={post} allPosts={allPosts} inlineUsedIds={inlineUsedIds} />
-
-              {/* 이 글의 도구 바로 써보기 + 전체 도구 둘러보기 */}
               <ToolCTABlock post={post} />
             </>
           )
