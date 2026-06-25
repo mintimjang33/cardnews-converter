@@ -148,6 +148,20 @@ export default async function handler(req, res) {
       }
     }
 
+    // 색인 결과를 content_log에 저장 (slug 기준으로 나중에 업데이트)
+    if (status === 'published' && postType === 'blog') {
+      try {
+        await supabase.from('content_log')
+          .update({
+            google_indexing: indexingResult.googleIndexing || null,
+            index_now: indexingResult.indexNow || null,
+          })
+          .eq('slug', slug)
+      } catch (e) {
+        console.error('[content_log 색인 기록] 오류:', e.message)
+      }
+    }
+
     return res.status(200).json({ ...safeData, _indexing: indexingResult })
   }
 
