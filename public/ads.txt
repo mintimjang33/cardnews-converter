@@ -1,3 +1,1 @@
-# Google AdSense
-# 애드센스 승인 후 아래 YOUR_PUBLISHER_ID를 실제 ID(pub-XXXXXXXXXXXXXXXX)로 교체하세요
 google.com, pub-2161169464776476, DIRECT, f08c47fec0942fa0
