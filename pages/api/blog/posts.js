@@ -102,6 +102,8 @@ export default async function handler(req, res) {
     const { secret_password: _pw, ...safeData } = data
 
     // Google Indexing API + IndexNow — 발행 즉시 색인 요청
+    const indexingResult = { googleIndexing: null, indexNow: null }
+
     if (status === 'published' && postType === 'blog') {
       const pageUrl = `https://www.downtools.co.kr/blog/${slug}`
 
@@ -119,14 +121,16 @@ export default async function handler(req, res) {
           data: { url: pageUrl, type: 'URL_UPDATED' },
         })
         console.log('[Indexing API] 색인 요청 완료:', slug)
+        indexingResult.googleIndexing = 'success'
       } catch (e) {
         console.error('[Indexing API] 오류:', e.message)
+        indexingResult.googleIndexing = 'error: ' + e.message
       }
 
       // 2) IndexNow — Bing·Naver·Yandex 색인 요청
       try {
         const INDEXNOW_KEY = '72163cf9ea114eca865ba612f1aafe06'
-        await fetch('https://api.indexnow.org/indexnow', {
+        const inRes = await fetch('https://api.indexnow.org/indexnow', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({
@@ -136,13 +140,15 @@ export default async function handler(req, res) {
             urlList: [pageUrl],
           }),
         })
-        console.log('[IndexNow] 핑 전송 완료:', slug)
+        console.log('[IndexNow] 핑 전송 완료:', slug, '상태:', inRes.status)
+        indexingResult.indexNow = 'success: ' + inRes.status
       } catch (e) {
         console.error('[IndexNow] 오류:', e.message)
+        indexingResult.indexNow = 'error: ' + e.message
       }
     }
 
-    return res.status(200).json(safeData)
+    return res.status(200).json({ ...safeData, _indexing: indexingResult })
   }
 
   // PUT - 수정 (admin only)
