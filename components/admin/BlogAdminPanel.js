@@ -6,7 +6,17 @@ import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
 function nowKST() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
 }
-/** KST 기준 현재 Date 객체 반환 */
+/** KST 기준 현재 날짜 정보 반환 (타임존 혼동 없이 ISO 문자열로 파싱) */
+function nowKSTDateParts() {
+  // Date.now() + 9h → UTC Z 형식의 ISO 문자열 → slice로 KST 날짜 직접 추출
+  const iso = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString()
+  // iso = 'YYYY-MM-DDTHH:MM:SS.mssZ' 형태, 여기서 날짜 부분이 KST 날짜
+  const year  = parseInt(iso.slice(0, 4), 10)
+  const month = parseInt(iso.slice(5, 7), 10) - 1  // 0-indexed
+  const date  = parseInt(iso.slice(8, 10), 10)
+  return { year, month, date }
+}
+/** KST 기준 현재 Date 객체 반환 (하위 호환용 — getTime()만 사용할 것) */
 function nowKSTDate() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000)
 }
@@ -15,8 +25,8 @@ function nowKSTDate() {
 function toKSTDateStr(dateVal) {
   if (!dateVal) return ''
   const d = new Date(dateVal)
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().slice(0, 10)
+  // d.getTime()은 항상 UTC ms → +9h → KST 시각을 UTC Z 형식으로 표현 → slice
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
   let r = text.trim().toLowerCase()
@@ -355,8 +365,8 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   }
 
   // ── 루틴 달력
-  const getWeekKey = () => { const n=nowKSTDate(); const s=new Date(n.getFullYear(),0,1); return `${n.getFullYear()}-W${Math.ceil(((n-s)/86400000+s.getDay()+1)/7)}` }
-  const getMonthKey = () => { const n=nowKSTDate(); return `${n.getFullYear()}-M${n.getMonth()+1}` }
+  const getWeekKey = () => { const { year: y, month: mo, date: d } = nowKSTDateParts(); const s=new Date(y,0,1); const n=new Date(y,mo,d); return `${y}-W${Math.ceil(((n-s)/86400000+s.getDay()+1)/7)}` }
+  const getMonthKey = () => { const { year: y, month: mo } = nowKSTDateParts(); return `${y}-M${mo+1}` }
 
   const toggleRoutine = (periodKey, ii) => {
     const k = `${periodKey}__${ii}`
@@ -365,9 +375,8 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
     saveChecklist(checklistChecks, next)
   }
 
-  // ── 달력 계산
-  const now = nowKSTDate()
-  const year = now.getFullYear(), month = now.getMonth(), today = now.getDate()
+  // ── 달력 계산 (KST 기준: ISO 문자열에서 직접 추출 → 브라우저 타임존 무관)
+  const { year, month, date: today } = nowKSTDateParts()
   const firstDay = new Date(year,month,1).getDay()
   const daysInMonth = new Date(year,month+1,0).getDate()
   const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
@@ -611,7 +620,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                             <div style={{ fontSize:12, fontWeight:isToday?700:400, color:isToday?'#fff':'#aaa' }}>{d}</div>
                             {isMonthly&&!isToday&&<div style={{ fontSize:8, color:'#d97706', lineHeight:1 }}>월간</div>}
                             {isWeekly&&!isToday&&<div style={{ fontSize:8, color:'#0891b2', lineHeight:1 }}>주간</div>}
-                            {cnt>0&&<div style={{ fontSize:9, fontWeight:700, color:isToday?'#e63946':'#e63946', background:isToday?'#fff':'#2a0a0a', borderRadius:3, padding:'0 3px', lineHeight:'14px' }}>{cnt}</div>}
+                            {cnt>0&&<div style={{ fontSize:9, fontWeight:700, color:'#fff', background:'#e63946', borderRadius:3, padding:'0 4px', lineHeight:'15px', minWidth:14, textAlign:'center' }}>{cnt}</div>}
                           </div>
                         )
                       })}
