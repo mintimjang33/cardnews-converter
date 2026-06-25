@@ -385,6 +385,27 @@ export default function ContentLogPanel({ adminToken }) {
                       )}
                     </div>
                   )}
+                  {(log.google_indexing || log.index_now) && (
+                    <div style={{ marginTop: 5, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#888' }}>색인:</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: log.google_indexing === 'success' ? '#052e16' : '#2a0a0a',
+                        color: log.google_indexing === 'success' ? '#4ade80' : '#f87171',
+                        border: `1px solid ${log.google_indexing === 'success' ? '#166534' : '#7f1d1d'}`,
+                      }}>
+                        {log.google_indexing === 'success' ? '✅ Google' : log.google_indexing ? '❌ Google' : '⏳ Google'}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: log.index_now && log.index_now.startsWith('success') ? '#052e16' : '#2a0a0a',
+                        color: log.index_now && log.index_now.startsWith('success') ? '#4ade80' : '#f87171',
+                        border: `1px solid ${log.index_now && log.index_now.startsWith('success') ? '#166534' : '#7f1d1d'}`,
+                      }}>
+                        {log.index_now && log.index_now.startsWith('success') ? '✅ IndexNow' : log.index_now ? '❌ IndexNow' : '⏳ IndexNow'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => deleteLog(log.id)}
                   style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #7f1d1d', background: '#2a0a0a', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}>
