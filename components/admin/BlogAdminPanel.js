@@ -351,8 +351,17 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
       if (editId) body.id = editId
       const res = await fetch('/api/blog/posts', { method, headers:{'Content-Type':'application/json','x-admin-token':token()}, body:JSON.stringify(body) })
       if (!res.ok) throw new Error()
-      setMsg(status==='published'?'🚀 발행 완료!':status==='scheduled'?'⏰ 예약발행 설정!':'💾 임시저장 완료')
-      setTimeout(()=>setMsg(''),3000)
+      const resData = await res.json()
+      if (status === 'published' && resData._indexing) {
+        const g = resData._indexing.googleIndexing
+        const n = resData._indexing.indexNow
+        const gMsg = g === 'success' ? '✅ Google 색인' : '❌ Google 색인 실패'
+        const nMsg = n && n.startsWith('success') ? '✅ IndexNow' : '❌ IndexNow 실패'
+        setMsg('🚀 발행 완료! ' + gMsg + ' / ' + nMsg)
+      } else {
+        setMsg(status==='published'?'🚀 발행 완료!':status==='scheduled'?'⏰ 예약발행 설정!':'💾 임시저장 완료')
+      }
+      setTimeout(()=>setMsg(''),8000)
       setView('list'); setEditId(null); setForm(emptyForm); loadPosts()
     } catch { setMsg('❌ 저장 실패'); setTimeout(()=>setMsg(''),3000) }
     setLoading(false)
