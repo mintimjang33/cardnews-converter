@@ -17,7 +17,7 @@ export default function App({ Component, pageProps }) {
         {/* Google AdSense */}
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=YOUR_ADSENSE_CLIENT_ID"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2161169464776476"
           crossOrigin="anonymous"
         />
 
