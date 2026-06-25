@@ -620,7 +620,7 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
                             <div style={{ fontSize:12, fontWeight:isToday?700:400, color:isToday?'#fff':'#aaa' }}>{d}</div>
                             {isMonthly&&!isToday&&<div style={{ fontSize:8, color:'#d97706', lineHeight:1 }}>월간</div>}
                             {isWeekly&&!isToday&&<div style={{ fontSize:8, color:'#0891b2', lineHeight:1 }}>주간</div>}
-                            {cnt>0&&<div style={{ fontSize:9, fontWeight:700, color:'#fff', background:'#e63946', borderRadius:3, padding:'0 4px', lineHeight:'15px', minWidth:14, textAlign:'center' }}>{cnt}</div>}
+                            {cnt>0&&<div style={{ fontSize:9, fontWeight:700, color:isToday?'#e63946':'#fff', background:isToday?'#fff':'#e63946', borderRadius:3, padding:'0 4px', lineHeight:'15px', minWidth:14, textAlign:'center' }}>{cnt}</div>}
                           </div>
                         )
                       })}
