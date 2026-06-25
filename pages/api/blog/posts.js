@@ -100,6 +100,30 @@ export default async function handler(req, res) {
     const { data, error } = await supabase.from('blog_posts').insert([row]).select().single()
     if (error) return res.status(500).json({ error: error.message })
     const { secret_password: _pw, ...safeData } = data
+
+    // Google Indexing API — 발행 즉시 색인 요청
+    if (status === 'published' && postType === 'blog') {
+      try {
+        const { GoogleAuth } = require('google-auth-library')
+        const auth = new GoogleAuth({
+          credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+          scopes: ['https://www.googleapis.com/auth/indexing'],
+        })
+        const client = await auth.getClient()
+        await client.request({
+          url: 'https://indexing.googleapis.com/v3/urlNotifications:publish',
+          method: 'POST',
+          data: {
+            url: `https://www.downtools.co.kr/blog/${slug}`,
+            type: 'URL_UPDATED',
+          },
+        })
+        console.log('[Indexing API] 색인 요청 완료:', slug)
+      } catch (e) {
+        console.error('[Indexing API] 오류:', e.message)
+      }
+    }
+
     return res.status(200).json(safeData)
   }
 
