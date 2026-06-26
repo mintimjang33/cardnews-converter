@@ -6,6 +6,7 @@ import AdsensePanel from '../components/admin/AdsensePanel'
 import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
 import ContentLogPanel from '../components/admin/ContentLogPanel'
+import ContentIdeaPanel from '../components/admin/ContentIdeaPanel'
 import KeywordPanel from '../components/admin/KeywordPanel'
 import BoardAdminPanel from '../components/admin/BoardAdminPanel'
 import SystemPromptPanel from '../components/admin/SystemPromptPanel'
@@ -20,6 +21,7 @@ const TAB_LABELS = {
   blog_admin: '📝 게시판 관리',
   blog_menu: '📋 게시판 메뉴관리',
   content_log: '🗂️ 발행 기록',
+  content_ideas: '💡 글감 관리',
   keyword: '🔍 키워드 관리',
   system_prompt: '🤖 Claude 지침',
   free_board: '💬 자유게시판',
@@ -318,6 +320,10 @@ export default function Admin() {
 
             {activeTab === 'content_log' && (
               <ContentLogPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'content_ideas' && (
+              <ContentIdeaPanel adminToken={adminToken} />
             )}
 
             {/* ── 키워드 관리 */}

@@ -758,6 +758,54 @@ const baseHandler = createMcpHandler(
     )
 
     server.registerTool(
+      'get_content_ideas',
+      {
+        title: '글감 아이디어 조회',
+        description:
+          'admin 글감 관리에 저장된 아이디어·키워드·각도·메모를 가져온다. ' +
+          'STEP 1에서 get_publish_log·get_tool_info와 함께 호출해서, ' +
+          '사람이 미리 메모해둔 글감 후보 중 오늘 쓸 만한 것이 있는지 확인한다. ' +
+          'tool_id를 주면 해당 도구 관련 아이디어만 반환하고, 비우면 전체를 반환한다. ' +
+          'status를 주면 그 상태만 필터링한다 (pending=미사용, used=사용됨). ' +
+          '기본은 미사용(pending)만 반환한다.',
+        inputSchema: {
+          tool_id: z.enum([...TOOL_CODES, '']).optional().describe('도구 코드로 필터링. 비우면 전체'),
+          tab_id: z.string().optional().describe('특정 탭 ID로 필터링. 비우면 전체 탭'),
+          type: z.enum(['keyword', 'idea', 'angle', 'memo']).optional().describe('종류로 필터링'),
+          status: z.enum(['pending', 'used']).optional().describe('기본 pending(미사용만)'),
+          limit: z.number().int().min(1).max(200).optional().describe('최대 개수 (기본 50)'),
+        },
+      },
+      async ({ tool_id, tab_id, type, status, limit }) => {
+        let q = supabase
+          .from('content_ideas')
+          .select('*')
+          .eq('status', status || 'pending')
+          .order('created_at', { ascending: false })
+          .limit(limit || 50)
+
+        if (tool_id) q = q.eq('tool_id', tool_id)
+        if (tab_id)  q = q.eq('tab_id', tab_id)
+        if (type)    q = q.eq('type', type)
+
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data || !data.length) {
+          return { content: [{ type: 'text', text: '글감 아이디어 없음 (admin 글감 관리에서 추가 가능)' }] }
+        }
+
+        const TYPE_KR = { keyword: '키워드', idea: '아이디어', angle: '각도', memo: '메모' }
+        const lines = [`📋 글감 아이디어 (${data.length}건, ${status || 'pending'}):`]
+        data.forEach(i => {
+          const toolLabel = i.tool_id ? ` [${TOOL_HINTS[i.tool_id] || i.tool_id}]` : ' [공통]'
+          const typeLabel = TYPE_KR[i.type] || i.type
+          lines.push(`- (${typeLabel})${toolLabel} ${i.content}${i.keyword ? ' / 키워드: ' + i.keyword : ''}${i.memo ? ' / 메모: ' + i.memo : ''}`)
+        })
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
       'update_system_prompt',
       {
         title: 'Claude 시스템 프롬프트(지침) 저장/수정',
