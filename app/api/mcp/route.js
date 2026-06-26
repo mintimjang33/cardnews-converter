@@ -639,7 +639,7 @@ const baseHandler = createMcpHandler(
         return {
           content: [{
             type: 'text',
-            text: `✅ 수정 완료\n제목: ${data.title}\nslug: ${data.slug}\n변경 필드: ${changedFields}\n라이브 URL: https://cardnews-converter.vercel.app/blog/${data.slug}`,
+            text: `✅ 수정 완료\n제목: ${data.title}\nslug: ${data.slug}\n변경 필드: ${changedFields}\n라이브 URL: https://www.downtools.co.kr/blog/${data.slug}`,
           }],
         }
       }
@@ -754,7 +754,7 @@ const baseHandler = createMcpHandler(
           'status를 주면 그 상태만 필터링한다 (pending=미사용, used=사용됨). ' +
           '기본은 미사용(pending)만 반환한다.',
         inputSchema: {
-          tool_id: z.enum([...TOOL_CODES, '']).optional().describe('도구 코드로 필터링. 비우면 전체'),
+          tool_id: z.enum(TOOL_CODES).optional().describe('도구 코드로 필터링. 비우면 전체'),
           tab_id: z.string().optional().describe('특정 탭 ID로 필터링. 비우면 전체 탭'),
           type: z.enum(['keyword', 'idea', 'angle', 'memo']).optional().describe('종류로 필터링'),
           status: z.enum(['pending', 'used']).optional().describe('기본 pending(미사용만)'),
