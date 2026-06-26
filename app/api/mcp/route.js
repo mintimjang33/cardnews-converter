@@ -5,99 +5,84 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 15개:
-//   - get_publish_log     : 발행 기록 조회 (메모 포함, 중복 방지 + 키워드 사용 추적용, STEP 1에서 가장 먼저 호출)
-//   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (Supabase, hint로 좁혀서 봄)
-//   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람, competition 필터로 황금키워드 탐색
-//   - naver_keyword_volume: 특정 키워드의 실시간 네이버 검색량 조회 (네이버 API 직접 호출, 저장 안 함)
-//   - save_keyword_data   : naver_keyword_volume 조회 결과를 TOP 키워드 캐시에 저장 (쓰기 작업)
-//   - pick_keyword        : 나중에 쓸 키워드를 찜(bookmark)해두기, 계획 메모 포함 (쓰기 작업)
-//   - search_keyword_picks: 찜해둔 키워드 검색/열람, 기본은 미사용만 (그룹 구분 없음)
-//   - suggest_feature     : 새 도구가 아니라 "기존 도구에 기능 추가" 제안을 검토 메모와 함께 기록 (쓰기 작업)
-//   - get_feature_ideas   : suggest_feature로 기록해둔 기능 추가 제안 목록 조회
-//   - add_publish_log     : 글 작성 후 발행 기록에 자동으로 남기기, 찜 키워드 사용 메모 포함 (쓰기 작업)
-//   - create_blog_post    : 블로그 글 본문을 실제로 사이트에 발행 (쓰기 작업, 기본 status=published)
-//   - update_blog_post    : 발행된 글의 특정 필드 수정 — slug로 대상 지정, 전달된 필드만 업데이트 (쓰기 작업)
-//   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께 호출)
-//   - update_tool_info    : 도구 기능 설명 갱신 (사용자가 대화 중 직접 정정해줬을 때만 호출, 쓰기 작업)
+// 노출 툴 14개:
+//   ── 조회(읽기) ──────────────────────────────────────────────────────────
+//   - get_system_prompt   : admin DB에서 Claude 지침 전문 로드 (대화 시작 시 가장 먼저 호출)
+//   - get_publish_log     : 발행 기록 조회 — 중복 방지 + 키워드 사용 추적 (STEP 1 맨 처음)
+//   - get_tool_info       : 도구별 최신 기능 설명 조회 (STEP 1에서 get_publish_log와 함께)
+//   - get_content_ideas   : admin 글감 관리에 저장된 아이디어·키워드·각도·메모 조회 (STEP 1)
+//   - get_keyword_data    : 도구별 찜한 키워드 + 캐시된 TOP 키워드 조회 (hint로 좁혀서 봄)
+//   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람 (황금키워드 탐색)
+//   - search_keyword_picks: 찜해둔 키워드 전체 검색/열람, 기본은 미사용만
+//   - naver_keyword_volume: 키워드 실시간 네이버 검색량 조회 + keyword_stats 자동 저장
+//   ── 쓰기 ────────────────────────────────────────────────────────────────
+//   - pick_keyword        : 나중에 쓸 키워드 찜(bookmark), 계획 메모 포함
+//   - create_blog_post    : 글 본문 전체를 실제로 사이트에 발행 (기본 status=published)
+//   - update_blog_post    : 발행된 글의 특정 필드 수정 — slug로 대상 지정
+//   - add_publish_log     : 글 1편 발행 기록 저장 — 키워드 데이터·색인 결과 포함
+//   - update_tool_info    : 도구 기능 설명 갱신 (사용자 직접 정정 시만)
+//   - update_system_prompt: Claude 지침 덮어쓰기 (사용자 요청 시만, 확인 후 호출)
 //
-// keyword_picks 테이블에 사용 처리 컬럼이 필요합니다 (최초 1회, Supabase SQL 에디터에서 실행):
+// ── Supabase 테이블 (최초 1회 생성 필요한 것만) ─────────────────────────
 //
+// -- keyword_picks: 사용 처리 컬럼 추가
 // alter table keyword_picks
 //   add column if not exists used_at timestamptz,
 //   add column if not exists used_in_title text,
 //   add column if not exists used_in_slug text;
 //
-// suggest_feature/get_feature_ideas가 쓰는 feature_ideas 테이블도 최초 1회 생성 필요:
-//
-// create table if not exists feature_ideas (
-//   id text primary key,
-//   tool_id text not null,            -- 기능을 추가할 기존 도구 코드 (예: text-down)
-//   feature_name text not null,       -- 추가할 기능 이름 (예: "맞춤법 검사")
-//   keyword text,                     -- 근거가 된 키워드
-//   pc integer, mobile integer, total integer, competition text,
-//   notes text not null,              -- 구현 가능성 검토 결과 (비용/약관/대안 등)
-//   status text not null default 'proposed',  -- proposed | building | done | rejected
-//   created_at timestamptz not null default now()
-// );
-//
-// "새 도구 만들기" vs "기존 도구에 기능 추가"는 의도적으로 분리했습니다 — 황금키워드가 발견됐다고
-// 무조건 새 카테고리(DEFAULT_CATEGORIES)를 늘리는 게 아니라, 기존 도구와 결이 비슷하면
-// suggest_feature로 "기능 추가" 후보로만 남겨둡니다. 정말 완전히 새로운 도구가 필요하다고
-// 판단되면 그건 사람이 직접 사이트 도구 목록(DEFAULT_CATEGORIES)에 추가하고 TOOL_HINTS도
-// 같이 갱신해야 합니다 (Claude가 임의로 새 카테고리를 만들지 않음).
-//
-// 황금키워드 운영 흐름 (검색량 높고 경쟁 낮은 키워드로 트래픽을 모으는 전략):
-//   1. search_keyword_data(competition: "낮음")로 경쟁 낮은 후보를 검색량 순으로 훑어본다.
-//      (admin 화면에서는 "🏆 황금키워드" 탭에서 같은 데이터를 사람이 직접 봄)
-//   2. 글감으로만 쓸 거면 pick_keyword로 찜, "이미 있는 도구에 기능으로 추가하면 좋겠다" 싶으면
-//      suggest_feature로 검토 메모와 함께 기록한다.
-//   3. 글감을 정할 때마다 search_keyword_picks(기본 미사용만)·get_feature_ideas로 먼저 훑어,
-//      오늘 쓸 만한 게 있는지 확인한다.
-//      구조화된 컬럼으로 남기 때문에, admin "✅ 사용 키워드" 탭과 search_keyword_picks(include_used: true)에서
-//      "그 키워드를 며칠에 어디에 썼는지"가 그대로 조회된다. (add_publish_log의 memo에도 같은 내용을 짧게
-//      남겨두면 발행 기록 쪽에서도 한 번 더 확인할 수 있다.)
-//
-// get_keyword_data는 hint(도구 그룹)로 좁혀서 보고, search_keyword_data는 hint 구분 없이
-// keyword_stats 전체를 본다 — 한 도구를 조사하다 다른 도구에도 쓸만한 키워드가 우연히
-// 걸리는 경우가 많아서, 그런 "예상 못 한 연결"을 놓치지 않으려고 별도로 분리했습니다.
-// (참고: admin 화면 KeywordPanel.js의 hint 표기 — voice-down은 "보이스", text-down은
-// "텍스트" — 가 TOOL_HINTS의 "음성타이핑"/"글자수세기"와 다릅니다. get_keyword_data만 쓰면
-// 이 불일치 때문에 데이터가 안 보일 수 있는데, search_keyword_data는 hint를 안 가리고
-// 전체를 보기 때문에 이 불일치의 영향을 받지 않습니다.)
-//
-// save_keyword_data가 쓰는 keyword_stats 테이블은 이미 존재합니다
-// (pages/api/tools/keyword-volume.js, keyword-top.js 등 admin API와 공유) —
-// 별도 테이블 생성이 필요 없고, onConflict 'hint,keyword'로 upsert해 기존
-// admin 수집 로직과 동일한 방식으로 동작합니다.
-//
-// tool_info 테이블 (Supabase에 최초 1회 생성 필요):
-//
-// create table tool_info (
-//   tool_id text primary key,        -- 예: thumb-down, clock-down ...
-//   name text,                       -- 도구명, 예: "카드뉴스 변환기"
-//   description text not null,       -- 도구 기능 설명 (도구당 최신 1개, 덮어쓰기 방식)
-//   path text,                       -- 경로, 예: /cardnews-down
+// -- tool_info: 도구별 최신 기능 설명 (도구당 1행, upsert 방식)
+// create table if not exists tool_info (
+//   tool_id    text primary key,
+//   name       text,
+//   description text not null,
+//   path       text,
 //   updated_at timestamptz not null default now()
 // );
 //
-// 이 테이블은 "도구가 정확히 무엇을 하는지"에 대한 살아있는 단일 정답을 보관합니다.
-// Claude가 추측하거나 다른 글에서 유추한 내용으로는 절대 update_tool_info를 호출하지 않고,
-// 사용자가 대화 중 직접 확인·정정해준 내용만 반영합니다.
+// -- content_ideas: admin 글감 관리 (ContentIdeaPanel이 읽고 씀)
+// create table if not exists content_ideas (
+//   id         text primary key,
+//   tab_id     text not null,
+//   tool_id    text,
+//   type       text not null default 'idea',  -- keyword | idea | angle | memo
+//   content    text not null,
+//   keyword    text,
+//   memo       text,
+//   status     text not null default 'pending',  -- pending | used
+//   created_at timestamptz not null default now()
+// );
 //
-// 필요한 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
-//   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY   - 기존 admin API들과 동일하게 사용
-//   NAVER_AD_API_KEY / NAVER_AD_SECRET_KEY / NAVER_AD_CUSTOMER_ID - 네이버 검색광고 API
-//   MCP_SHARED_SECRET                          - 이 MCP 서버 보호용 공유 비밀키 (직접 정해서 등록)
+// -- keyword_stats, keyword_picks, content_log, system_prompts 는 이미 존재
 //
-// claude.ai 커넥터 등록 주소 (Settings > Connectors > Add custom connector):
+// ── 황금키워드 운영 흐름 ──────────────────────────────────────────────────
+//   1. search_keyword_data(competition: "낮음")로 경쟁 낮은 후보를 검색량 순으로 훑는다.
+//      (admin "🏆 황금키워드" 탭에서 사람이 직접 볼 수도 있음)
+//   2. 나중에 글로 쓸 키워드면 pick_keyword로 찜해둔다 (group은 한글 hint 값 사용).
+//   3. 글감을 정할 때마다 search_keyword_picks(미사용만)·get_content_ideas로 먼저 확인,
+//      오늘 쓸 만한 게 있는지 체크한다.
+//   4. 찜 키워드를 실제 글에 썼으면 → admin 키워드 관리에서 사람이 직접 사용 처리한다
+//      (Claude가 MCP로 사용 처리하지 않음).
+//
+// ── get_keyword_data vs search_keyword_data ──────────────────────────────
+//   get_keyword_data는 hint(도구 그룹)로 좁혀서 보고,
+//   search_keyword_data는 hint 구분 없이 keyword_stats 전체를 본다.
+//   admin KeywordPanel의 hint 표기(보이스, 텍스트 등)가 TOOL_HINTS 값과 다를 수 있어
+//   get_keyword_data로 데이터가 안 보이면 search_keyword_data로 재시도한다.
+//
+// ── naver_keyword_volume — 조회 + 자동 저장 일체형 ───────────────────────
+//   호출하는 순간 keyword_stats에 자동 upsert 저장된다. 별도 저장 툴 없음.
+//   NAVER_CLIENT_ID/SECRET 환경변수가 있으면 블로그 문서수(docCount)도 함께 반환.
+//
+// ── 필요한 환경변수 ──────────────────────────────────────────────────────
+//   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+//   NAVER_AD_API_KEY / NAVER_AD_SECRET_KEY / NAVER_AD_CUSTOMER_ID
+//   NAVER_CLIENT_ID / NAVER_CLIENT_SECRET  (블로그 문서수 조회용, 선택)
+//   GOOGLE_SERVICE_ACCOUNT_JSON            (Google Indexing API용)
+//   MCP_SHARED_SECRET                      (이 MCP 서버 인증키)
+//
+// ── claude.ai 커넥터 등록 주소 ───────────────────────────────────────────
 //   https://cardnews-converter.vercel.app/api/mcp?key=여기에_MCP_SHARED_SECRET_값
-//
-// ⚠️ 이 파일은 원래 app/.well-known/oauth-authorization-server/route.js 에
-// 잘못된 경로로 들어가 있었습니다 (해당 경로는 실제로는 OAuth 메타데이터 전용
-// 표준 경로라 MCP 핸들러가 거기 있으면 안 됩니다). app/api/mcp/route.js 로
-// 옮기고, 기존 app/.well-known/oauth-authorization-server/route.js 파일은
-// 삭제하세요.
 
 import { createMcpHandler } from 'mcp-handler'
 import { createClient } from '@supabase/supabase-js'
