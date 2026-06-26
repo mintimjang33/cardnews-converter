@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     const { action } = req.body
     if (action === 'save_tabs') {
       await supabase.from('settings').upsert(
-        { key: TABS_KEY, value: req.body.tabs, updated_at: nowKST() },
+        { key: TABS_KEY, value: req.body.tabs },
         { onConflict: 'key' }
       )
       return res.json({ ok: true })
