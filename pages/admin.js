@@ -12,6 +12,7 @@ import BoardAdminPanel from '../components/admin/BoardAdminPanel'
 import SystemPromptPanel from '../components/admin/SystemPromptPanel'
 import BacklinkPanel from '../components/admin/BacklinkPanel'
 import CoupangPanel from '../components/admin/CoupangPanel'
+import CoupangProductsPanel from '../components/admin/CoupangProductsPanel'
 import PopupPanel from '../components/admin/PopupPanel'
 import McpPanel from '../components/admin/McpPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
@@ -32,6 +33,7 @@ const TAB_LABELS = {
   requests: '📬 부탁해요',
   backlink: '🔗 백링크 관리',
   coupang: '🛒 쿠팡 관리',
+  coupang_products: '📦 쿠팡상품',
   popup: '📢 팝업 관리',
   mcp: '🔌 MCP 관리',
   password: '🔑 비밀번호 변경',
@@ -353,6 +355,10 @@ export default function Admin() {
 
             {activeTab === 'coupang' && (
               <CoupangPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'coupang_products' && (
+              <CoupangProductsPanel adminToken={adminToken} />
             )}
 
             {activeTab === 'popup' && (
