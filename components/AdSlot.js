@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { SLOT_BANNER_SIZE } from '../lib/adSlotSizes'
 
 // 광고 번호 뱃지 컴포넌트
 function AdBadge({ number, label }) {
@@ -13,6 +14,26 @@ function AdBadge({ number, label }) {
       <span style={{ fontSize: 10, color: '#666', fontWeight: 600 }}>{label}</span>
     </div>
   )
+}
+
+// 슬롯 사이즈에 맞는 쿠팡 배너/위젯 HTML을 하나 골라온다 (여러 개 등록돼 있으면 무작위)
+// source가 'coupang' 또는 ('random'이면서 애드센스 코드가 없을 때) 사용된다
+function useCoupangBanner(slotId, enabled) {
+  const [html, setHtml] = useState(null)
+  useEffect(() => {
+    if (!enabled || !slotId) { setHtml(null); return }
+    const size = SLOT_BANNER_SIZE[slotId]
+    if (!size) { setHtml(null); return }
+    fetch('/api/admin/coupang-widgets')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const matches = (Array.isArray(data) ? data : []).filter(w => w.enabled && w.widget_html && w.size === size)
+        if (matches.length === 0) { setHtml(null); return }
+        setHtml(matches[Math.floor(Math.random() * matches.length)].widget_html)
+      })
+      .catch(() => setHtml(null))
+  }, [slotId, enabled])
+  return html
 }
 
 // 관리자가 저장한 <script>/<ins> 코드를 안전하게 DOM에 주입 (innerHTML은 <script>를 실행하지 않으므로 직접 삽입)
@@ -45,11 +66,24 @@ export function AdSlot({ slot, format = 'auto', tall = false, label = '광고', 
   const codeRef = useRef(null)
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
 
-  // 관리자 코드 사용 모드 (active && code 둘 다 있을 때만 실제 광고 표시)
-  const hasManagedCode = !!(slotData && slotData.active && slotData.code)
-  // 대기 상태: active는 켜져 있지만 코드가 아직 없음 → 빈 자리(placeholder)만 표시
-  const isWaiting = !!(slotData && slotData.active && !slotData.code)
-  useInjectAdCode(codeRef, hasManagedCode ? slotData.code : null, [hasManagedCode, slotData?.code])
+  const source = slotData?.source || 'adsense'
+  const wantsCoupang = !!(slotData && slotData.active && (source === 'coupang' || source === 'random'))
+  const coupangHtml = useCoupangBanner(slotData?.id, wantsCoupang)
+
+  // 소스에 따라 실제로 보여줄 콘텐츠를 고른다 (random은 코드/쿠팡 중 있는 것을, 둘 다 있으면 무작위로)
+  const hasAdsenseCode = !!(slotData && slotData.active && slotData.code && source !== 'coupang')
+  const useCoupang = source === 'coupang'
+    ? !!coupangHtml
+    : source === 'random'
+      ? (coupangHtml && (!hasAdsenseCode || Math.random() < 0.5))
+      : false
+  const finalCode = useCoupang ? coupangHtml : (hasAdsenseCode ? slotData.code : null)
+
+  // 관리자 코드 사용 모드 (active && 표시할 콘텐츠가 있을 때만 실제 광고 표시)
+  const hasManagedCode = !!(slotData && slotData.active && finalCode)
+  // 대기 상태: active는 켜져 있지만 보여줄 콘텐츠가 아직 없음 → 빈 자리(placeholder)만 표시
+  const isWaiting = !!(slotData && slotData.active && !finalCode)
+  useInjectAdCode(codeRef, hasManagedCode ? finalCode : null, [hasManagedCode, finalCode])
 
   useEffect(() => {
     if (hasManagedCode) return // 관리자 코드 모드에서는 adsbygoogle 자동 push 불필요 (코드 자체에 포함됨)
@@ -109,9 +143,20 @@ export function SidebarAd({ slot, label = '광고', number, slotData = null }) {
   const codeRef = useRef(null)
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
 
-  const hasManagedCode = !!(slotData && slotData.active && slotData.code)
-  const isWaiting = !!(slotData && slotData.active && !slotData.code)
-  useInjectAdCode(codeRef, hasManagedCode ? slotData.code : null, [hasManagedCode, slotData?.code])
+  const source = slotData?.source || 'adsense'
+  const wantsCoupang = !!(slotData && slotData.active && (source === 'coupang' || source === 'random'))
+  const coupangHtml = useCoupangBanner(slotData?.id, wantsCoupang)
+  const hasAdsenseCode = !!(slotData && slotData.active && slotData.code && source !== 'coupang')
+  const useCoupang = source === 'coupang'
+    ? !!coupangHtml
+    : source === 'random'
+      ? (coupangHtml && (!hasAdsenseCode || Math.random() < 0.5))
+      : false
+  const finalCode = useCoupang ? coupangHtml : (hasAdsenseCode ? slotData.code : null)
+
+  const hasManagedCode = !!(slotData && slotData.active && finalCode)
+  const isWaiting = !!(slotData && slotData.active && !finalCode)
+  useInjectAdCode(codeRef, hasManagedCode ? finalCode : null, [hasManagedCode, finalCode])
 
   useEffect(() => {
     if (hasManagedCode) return

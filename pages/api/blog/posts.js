@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   // GET
   if (req.method === 'GET') {
-    const { slug, category, post_type, limit = 20, offset = 0 } = req.query
+    const { slug, category, post_type, q: keyword, limit = 20, offset = 0 } = req.query
     if (slug) {
       let q = supabase.from('blog_posts').select('*').eq('slug', slug)
       if (!isAdmin) q = q.eq('status', 'published')
@@ -41,11 +41,17 @@ export default async function handler(req, res) {
         const { content, secret_password, ...safeData } = data
         return res.status(200).json({ ...safeData, is_secret: true, content: null })
       }
+      // 관리자가 아니면 SEO 점수·네이버 요약·인스타 카드뉴스 같은 관리자 전용 필드는 감춘다
+      if (!isAdmin) {
+        const { title_score, title_score_detail, seo_score, seo_score_detail, naver_summary, instagram_cards, ...publicData } = data
+        return res.status(200).json(publicData)
+      }
       return res.status(200).json(data)
     }
     let q = supabase.from('blog_posts').select('*').order('published_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
     if (!isAdmin) q = q.eq('status', 'published')
     if (category) q = q.eq('category', category)
+    if (keyword) q = q.or(`title.ilike.%${keyword}%,content.ilike.%${keyword}%`)
     // post_type 필터: 기본은 blog만 (자유게시판/부탁해요는 별도)
     if (post_type) {
       q = q.eq('post_type', post_type)
@@ -91,6 +97,12 @@ export default async function handler(req, res) {
       author_name: body.author_name || null,
       is_secret: body.is_secret || false,
       secret_password: body.is_secret ? (body.secret_password || null) : null,
+      title_score: body.title_score != null ? body.title_score : null,
+      title_score_detail: body.title_score_detail || null,
+      seo_score: body.seo_score != null ? body.seo_score : null,
+      seo_score_detail: body.seo_score_detail || null,
+      naver_summary: body.naver_summary || null,
+      instagram_cards: body.instagram_cards || null,
       status,
       scheduled_at: status === 'scheduled' ? (body.scheduled_at || null) : null,
       published_at: status === 'published' ? nowIso : null,
@@ -183,6 +195,13 @@ export default async function handler(req, res) {
       status,
       scheduled_at: status === 'scheduled' ? (body.scheduled_at || null) : null,
       published_at: (body.published_at && body.published_at !== '') ? body.published_at : undefined,
+      // 관리자 전용 SEO 필드 — 값이 넘어올 때만 갱신 (안 넘기면 기존 값 그대로 유지)
+      title_score: body.title_score !== undefined ? body.title_score : undefined,
+      title_score_detail: body.title_score_detail !== undefined ? body.title_score_detail : undefined,
+      seo_score: body.seo_score !== undefined ? body.seo_score : undefined,
+      seo_score_detail: body.seo_score_detail !== undefined ? body.seo_score_detail : undefined,
+      naver_summary: body.naver_summary !== undefined ? body.naver_summary : undefined,
+      instagram_cards: body.instagram_cards !== undefined ? body.instagram_cards : undefined,
       updated_at: nowKST(),
     }
     const { data, error } = await supabase.from('blog_posts')

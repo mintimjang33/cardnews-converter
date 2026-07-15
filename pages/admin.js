@@ -10,6 +10,10 @@ import ContentIdeaPanel from '../components/admin/ContentIdeaPanel'
 import KeywordPanel from '../components/admin/KeywordPanel'
 import BoardAdminPanel from '../components/admin/BoardAdminPanel'
 import SystemPromptPanel from '../components/admin/SystemPromptPanel'
+import BacklinkPanel from '../components/admin/BacklinkPanel'
+import CoupangPanel from '../components/admin/CoupangPanel'
+import PopupPanel from '../components/admin/PopupPanel'
+import McpPanel from '../components/admin/McpPanel'
 import { S, Toggle, Toast } from '../components/admin/AdminUI'
 
 const TAB_LABELS = {
@@ -26,6 +30,10 @@ const TAB_LABELS = {
   system_prompt: '🤖 Claude 지침',
   free_board: '💬 자유게시판',
   requests: '📬 부탁해요',
+  backlink: '🔗 백링크 관리',
+  coupang: '🛒 쿠팡 관리',
+  popup: '📢 팝업 관리',
+  mcp: '🔌 MCP 관리',
   password: '🔑 비밀번호 변경',
 }
 
@@ -337,6 +345,22 @@ export default function Admin() {
 
             {(activeTab === 'free_board' || activeTab === 'requests') && (
               <BoardAdminPanel adminToken={adminToken} postType={activeTab === 'free_board' ? 'free' : 'request'} />
+            )}
+
+            {activeTab === 'backlink' && (
+              <BacklinkPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'coupang' && (
+              <CoupangPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'popup' && (
+              <PopupPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'mcp' && (
+              <McpPanel adminToken={adminToken} />
             )}
 
             {activeTab === 'password' && (

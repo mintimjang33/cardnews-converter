@@ -24,19 +24,21 @@ export default async function handler(req, res) {
       return res.status(200).json({
         checklist: map['checklist'] || {},
         routine:   map['routine']   || {},
+        backlink:  map['backlink']  || {},
       })
     } catch {
-      return res.status(200).json({ checklist: {}, routine: {} })
+      return res.status(200).json({ checklist: {}, routine: {}, backlink: {} })
     }
   }
 
   // POST — 체크리스트 저장
   if (req.method === 'POST') {
-    const { checklist, routine } = req.body
+    const { checklist, routine, backlink } = req.body
     try {
       const rows = []
       if (checklist !== undefined) rows.push({ key: 'checklist', value: checklist })
       if (routine   !== undefined) rows.push({ key: 'routine',   value: routine })
+      if (backlink  !== undefined) rows.push({ key: 'backlink',  value: backlink })
       if (rows.length > 0) {
         await supabase.from('admin_checklist').upsert(rows, { onConflict: 'key' })
       }

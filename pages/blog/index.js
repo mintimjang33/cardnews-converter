@@ -20,6 +20,8 @@ export default function BlogIndex() {
   const [adSlots, setAdSlots] = useState([])
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [customCategories, setCustomCategories] = useState([])
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
 
   // 기본 카테고리 + 글쓰기에서 추가한 커스텀 카테고리를 합쳐서 필터 칩 구성
   const categoryChips = [
@@ -28,11 +30,12 @@ export default function BlogIndex() {
       .map(id => ({ id, label: categoryLabel(id) })),
   ]
 
-  const fetchPosts = useCallback(async (category, offset, append) => {
+  const fetchPosts = useCallback(async (category, offset, append, keyword) => {
     if (append) setLoadingMore(true); else setLoading(true)
     try {
       const params = new URLSearchParams({ limit: PAGE_SIZE, offset })
       if (category && category !== 'all') params.set('category', category)
+      if (keyword) params.set('q', keyword)
       const res = await fetch(`/api/blog/posts?${params}`)
       const data = await res.json()
       const list = Array.isArray(data) ? data : []
@@ -45,9 +48,14 @@ export default function BlogIndex() {
     if (append) setLoadingMore(false); else setLoading(false)
   }, [])
 
-  useEffect(() => { fetchPosts(activeCategory, 0, false) }, [activeCategory, fetchPosts])
+  useEffect(() => { fetchPosts(activeCategory, 0, false, search) }, [activeCategory, search, fetchPosts])
 
-  const handleLoadMore = () => { fetchPosts(activeCategory, posts.length, true) }
+  const handleLoadMore = () => { fetchPosts(activeCategory, posts.length, true, search) }
+
+  const runSearch = (e) => {
+    e.preventDefault()
+    setSearch(searchInput.trim())
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem('dt_lang')
@@ -90,7 +98,7 @@ export default function BlogIndex() {
         <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 28 }}>유용한 팁, 사용법, 업데이트 소식</p>
 
         {/* 카테고리 필터 (기본 + 커스텀 카테고리 동적 로딩) */}
-        <div className="cat-chips" style={{ marginBottom: 28 }}>
+        <div className="cat-chips" style={{ marginBottom: 16 }}>
           {categoryChips.map(cat => (
             <button key={cat.id} className={`cat-chip${activeCategory === cat.id ? ' active' : ''}`}
               onClick={() => setActiveCategory(cat.id)}>
@@ -98,6 +106,22 @@ export default function BlogIndex() {
             </button>
           ))}
         </div>
+
+        <form onSubmit={runSearch} style={{ display: 'flex', gap: 8, marginBottom: 28, maxWidth: 360 }}>
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            placeholder="🔍 제목·본문 검색"
+            style={{
+              flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: 999,
+              border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13,
+            }}
+          />
+          <button type="submit" style={{
+            padding: '9px 18px', borderRadius: 999, border: 'none',
+            background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+          }}>검색</button>
+        </form>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
           {loading ? (

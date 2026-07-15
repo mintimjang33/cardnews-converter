@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import '../styles/globals.css'
+import PopupDisplay from '../components/PopupDisplay'
 
 export default function App({ Component, pageProps }) {
   return (
@@ -33,6 +34,7 @@ export default function App({ Component, pageProps }) {
         }} />
       </Head>
       <Component {...pageProps} />
+      <PopupDisplay />
     </>
   )
 }

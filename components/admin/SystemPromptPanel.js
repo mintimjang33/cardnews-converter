@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { S, Toast } from './AdminUI'
 
 export default function SystemPromptPanel({ adminToken }) {
@@ -9,6 +9,7 @@ export default function SystemPromptPanel({ adminToken }) {
   const [saving, setSaving]       = useState(false)
   const [msg, setMsg]             = useState('')
   const [copied, setCopied]       = useState(false)
+  const fileInputRef = useRef(null)
 
   const token = () => adminToken || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_token') : '')
 
@@ -55,6 +56,35 @@ export default function SystemPromptPanel({ adminToken }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  const downloadMd = () => {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'system-prompt.md'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const onFilePicked = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setContent(ev.target.result || '')
+      setMsg('📁 파일 불러왔어요 — 내용 확인 후 저장을 눌러주세요')
+      setTimeout(() => setMsg(''), 3000)
+    }
+    reader.onerror = () => {
+      setMsg('❌ 파일을 읽지 못했어요')
+      setTimeout(() => setMsg(''), 2500)
+    }
+    reader.readAsText(file, 'utf-8')
+    e.target.value = ''
   }
 
   const isDirty = content !== original
@@ -140,8 +170,21 @@ export default function SystemPromptPanel({ adminToken }) {
                 {saving ? '저장 중...' : '💾 저장'}
               </button>
 
+              <button onClick={() => fileInputRef.current?.click()} style={S.btnGhost}>
+                📁 파일 업로드
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".md,.txt,text/markdown,text/plain"
+                onChange={onFilePicked}
+                style={{ display: 'none' }}
+              />
               <button onClick={copyAll} style={S.btnGhost}>
                 {copied ? '✅ 복사됨!' : '📋 전체 복사'}
+              </button>
+              <button onClick={downloadMd} style={S.btnGhost}>
+                ⬇️ MD 다운로드
               </button>
 
               {isDirty && (

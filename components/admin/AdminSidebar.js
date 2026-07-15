@@ -14,6 +14,10 @@ const NAV = [
   { id: 'requests',      label: '부탁해요',       icon: '📬' },
   { id: 'keyword',       label: '키워드 관리',     icon: '🔍' },
   { id: 'system_prompt', label: 'Claude 지침',    icon: '🤖' },
+  { id: 'backlink',      label: '백링크 관리',     icon: '🔗' },
+  { id: 'coupang',       label: '쿠팡 관리',       icon: '🛒' },
+  { id: 'popup',         label: '팝업 관리',       icon: '📢' },
+  { id: 'mcp',           label: 'MCP 관리',        icon: '🔌' },
   { id: 'password',      label: '비밀번호 변경',   icon: '🔑' },
 ]
 

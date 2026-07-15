@@ -7,6 +7,7 @@ import { AdSlot } from '../../components/AdSlot'
 import { findAdSlot } from '../../lib/adSlots'
 import { categoryLabel } from '../../lib/blogCategories'
 import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
+import { resolveCoupangDisplay } from '../../lib/coupang'
 
 // 도구 경로 매핑 (블로그 카테고리 코드 → 실제 도구 페이지)
 const TOOL_HREF = {
@@ -141,23 +142,151 @@ function ToolCTABlock({ post }) {
   )
 }
 
-// ── SSR: 크롤러가 OG태그를 읽을 수 있도록 서버에서 글 데이터 미리 로드
+// ── 쿠팡 파트너스 위젯 (사이즈 미지정 위젯만 — 관리자 > 쿠팡 관리에서 등록)
+function CoupangWidgetsBlock() {
+  const [widgets, setWidgets] = useState([])
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/admin/coupang-links').then(r => r.json()).catch(() => []),
+      fetch('/api/admin/coupang-widgets').then(r => r.json()).catch(() => []),
+    ]).then(([links, rawWidgets]) => {
+      const { widgets: w } = resolveCoupangDisplay(links, rawWidgets)
+      setWidgets(w)
+    }).catch(() => {})
+  }, [])
+
+  if (widgets.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {widgets.map((html, i) => (
+        <div key={i} dangerouslySetInnerHTML={{ __html: html }} />
+      ))}
+    </div>
+  )
+}
+
+// ── 관리자 전용 — 로그인 상태(sessionStorage에 admin_token 존재)에서만 이 글의
+// 제목 점수·SEO 점수·네이버 요약글·인스타 카드뉴스를 가져와 보여준다.
+// 일반 방문자에게는 절대 노출되지 않는다 (비관리자 응답에는 애초에 이 필드들이 빠져 있음).
+function AdminExtraPanel({ slug }) {
+  const [extra, setExtra] = useState(null)
+  const [copiedField, setCopiedField] = useState('')
+
+  useEffect(() => {
+    if (!slug) return
+    let adminToken = ''
+    try { adminToken = sessionStorage.getItem('admin_token') || '' } catch {}
+    if (!adminToken) return
+    fetch(`/api/blog/posts?slug=${slug}`, { headers: { 'x-admin-token': adminToken } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        const { title_score, seo_score, title_score_detail, seo_score_detail, naver_summary, instagram_cards } = data
+        setExtra({ title_score, seo_score, title_score_detail, seo_score_detail, naver_summary, instagram_cards })
+      })
+      .catch(() => {})
+  }, [slug])
+
+  const copyToClipboard = (field, text) => {
+    if (!text) return
+    try {
+      navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(''), 1500)
+    } catch {}
+  }
+
+  if (!extra) return null
+
+  return (
+    <div style={{ marginBottom: 24, padding: '12px 16px', background: '#fef3c7', border: '1px dashed #f59e0b', borderRadius: 10, fontSize: 12.5, color: '#92400e' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', fontWeight: 700, marginBottom: 10 }}>
+        <span>🔒 관리자 전용</span>
+        <span>제목 점수: {extra.title_score != null ? `${extra.title_score}/10` : '내용 없음'}</span>
+        <span>SEO 점수: {extra.seo_score != null ? `${extra.seo_score}/100` : '내용 없음'}</span>
+      </div>
+
+      {(Array.isArray(extra.title_score_detail) && extra.title_score_detail.length > 0) && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 제목 점수 세부 근거</div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {extra.title_score_detail.map((row, i) => (
+              <li key={i} style={{ marginBottom: 4 }}>
+                <strong>{row.label}</strong> {row.points}/{row.max} — {row.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(Array.isArray(extra.seo_score_detail) && extra.seo_score_detail.length > 0) && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 SEO 체크리스트 세부 근거</div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {extra.seo_score_detail.map((row, i) => (
+              <li key={i} style={{ marginBottom: 4 }}>
+                {row.pass ? '✅' : '❌'} <strong>{row.label}</strong> {row.points}/{row.max} — {row.desc}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontWeight: 700 }}>📋 네이버 블로그용 요약글</span>
+          {extra.naver_summary && (
+            <button onClick={() => copyToClipboard('naver', extra.naver_summary)}
+              style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, border: '1px solid #f59e0b', background: copiedField === 'naver' ? '#f59e0b' : '#fff', color: copiedField === 'naver' ? '#fff' : '#92400e', cursor: 'pointer' }}>
+              {copiedField === 'naver' ? '복사됨!' : '복사'}
+            </button>
+          )}
+        </div>
+        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: 12.5, marginTop: 6, padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #fde68a', color: extra.naver_summary ? '#92400e' : '#b45309aa' }}>
+          {extra.naver_summary || '내용 없음'}
+        </pre>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontWeight: 700 }}>📱 인스타그램 카드뉴스 스크립트</span>
+          {extra.instagram_cards && (
+            <button onClick={() => copyToClipboard('instagram', extra.instagram_cards)}
+              style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, border: '1px solid #f59e0b', background: copiedField === 'instagram' ? '#f59e0b' : '#fff', color: copiedField === 'instagram' ? '#fff' : '#92400e', cursor: 'pointer' }}>
+              {copiedField === 'instagram' ? '복사됨!' : '복사'}
+            </button>
+          )}
+        </div>
+        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: 12.5, marginTop: 6, padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #fde68a', color: extra.instagram_cards ? '#92400e' : '#b45309aa' }}>
+          {extra.instagram_cards || '내용 없음'}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
+// ── SSR: 크롤러가 OG태그·본문을 바로 읽을 수 있도록 서버에서 글 데이터 + 마크다운 HTML을 미리 렌더링
 export async function getServerSideProps(context) {
   const { slug } = context.params
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.downtools.co.kr'
     const res = await fetch(`${baseUrl}/api/blog/posts?slug=${slug}`)
-    if (!res.ok) return { props: { initialPost: null } }
+    if (!res.ok) return { props: { initialPost: null, initialHtml: '' } }
     const post = await res.json()
-    if (post.error) return { props: { initialPost: null } }
-    return { props: { initialPost: post } }
+    if (post.error) return { props: { initialPost: null, initialHtml: '' } }
+    const { parseMarkdown } = await import('../../lib/parseMarkdown')
+    const initialHtml = parseMarkdown(post.content || '')
+    return { props: { initialPost: post, initialHtml } }
   } catch {
-    return { props: { initialPost: null } }
+    return { props: { initialPost: null, initialHtml: '' } }
   }
 }
 
-export default function BlogPost({ initialPost }) {
+export default function BlogPost({ initialPost, initialHtml }) {
   const [post, setPost] = useState(initialPost)
+  const [bodyHtml, setBodyHtml] = useState(initialHtml || '')
   const [allPosts, setAllPosts] = useState([])
   const [loading, setLoading] = useState(!initialPost)
   const [lang, setLang] = useState('ko')
@@ -172,7 +301,7 @@ export default function BlogPost({ initialPost }) {
     if (!initialPost) {
       fetch(`/api/blog/posts?slug=${slug}`)
         .then(r => r.json())
-        .then(data => { setPost(data); setLoading(false) })
+        .then(data => { setPost(data); setBodyHtml(parseMd(data?.content)); setLoading(false) })
         .catch(() => setLoading(false))
     }
     // 내부링크 추천용 전체 글 목록 (최대 100개)
@@ -214,6 +343,7 @@ export default function BlogPost({ initialPost }) {
   )
 
   const ogImage = post.cover_image || 'https://www.downtools.co.kr/og-image.png'
+  const pageUrl = `https://www.downtools.co.kr/blog/${post.slug || ''}`
 
   return (
     <div className="light-theme">
@@ -226,7 +356,7 @@ export default function BlogPost({ initialPost }) {
         <meta property="og:image" content={ogImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:url" content={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
+        <meta property="og:url" content={pageUrl} />
         <meta property="og:type" content="article" />
         <meta property="og:site_name" content="DownTools" />
 
@@ -235,8 +365,44 @@ export default function BlogPost({ initialPost }) {
         <meta name="twitter:description" content={post.summary || 'DownTools 블로그 — 카드뉴스, 썸네일, 효과음 등 무료 온라인 도구 활용 팁을 전해드립니다.'} />
         <meta name="twitter:image" content={ogImage} />
 
-        <link rel="canonical" href={`https://www.downtools.co.kr/blog/${post.slug || ''}`} />
+        <link rel="canonical" href={pageUrl} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'BlogPosting',
+              headline: post.title,
+              description: post.summary || '',
+              image: ogImage,
+              datePublished: post.published_at || post.created_at || undefined,
+              dateModified: post.updated_at || post.published_at || post.created_at || undefined,
+              author: { '@type': 'Organization', name: post.author_name || 'DownTools 편집팀', url: 'https://www.downtools.co.kr/' },
+              publisher: {
+                '@type': 'Organization',
+                name: 'DownTools',
+                logo: { '@type': 'ImageObject', url: 'https://www.downtools.co.kr/og-image.png' },
+              },
+              mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'DownTools', item: 'https://www.downtools.co.kr/' },
+                { '@type': 'ListItem', position: 2, name: '블로그', item: 'https://www.downtools.co.kr/blog' },
+                { '@type': 'ListItem', position: 3, name: post.title, item: pageUrl },
+              ],
+            }),
+          }}
+        />
       </Head>
 
       <Header lang={lang} onToggleLang={toggleLang} siteName="Blog" siteHref="/blog" />
@@ -251,6 +417,12 @@ export default function BlogPost({ initialPost }) {
         <Link href="/blog" style={{ color: 'var(--text3)', fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 24 }}>
           ← 목록으로
         </Link>
+
+        <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20 }}>
+          이 블로그는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받을 수 있습니다.
+        </p>
+
+        <AdminExtraPanel slug={post.slug} />
 
         {post.cover_image && (
           <img src={post.cover_image} alt={post.title}
@@ -284,7 +456,6 @@ export default function BlogPost({ initialPost }) {
         )}
 
         {(() => {
-          const bodyHtml = parseMd(post.content)
           const relatedPool = scoreRelated(post, allPosts).slice(0, 3)
           const inlineUsedIds = new Set(relatedPool.map(p => p.id))
           return (
@@ -303,6 +474,7 @@ export default function BlogPost({ initialPost }) {
 
               <CuriosityBlock post={post} allPosts={allPosts} inlineUsedIds={inlineUsedIds} />
               <ToolCTABlock post={post} />
+              <CoupangWidgetsBlock />
             </>
           )
         })()}

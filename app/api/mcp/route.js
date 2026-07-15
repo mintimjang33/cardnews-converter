@@ -507,10 +507,27 @@ const baseHandler = createMcpHandler(
           status: z.enum(['published', 'draft', 'scheduled']).optional()
             .describe('기본값 published(즉시 공개). draft면 admin에만 저장되고 비공개.'),
           scheduled_at: z.string().optional().describe('status가 scheduled일 때만 사용, ISO 날짜'),
+          title_score: z.number().optional().describe('제목 점수표(10점 만점) 채점 결과. 사이트 방문자에게는 노출되지 않고 관리자만 조회 가능.'),
+          title_score_detail: z.array(z.object({
+            label: z.string().describe('채점 항목명 (예: 키워드 포함·위치)'),
+            points: z.number().describe('이 항목에서 받은 점수'),
+            max: z.number().describe('이 항목의 배점'),
+            reason: z.string().describe('이 점수를 준 구체적 이유'),
+          })).optional().describe('제목 점수표(10점)의 항목별 배점·이유 breakdown. title_score를 줄 때 항상 함께 채운다.'),
+          seo_score: z.number().optional().describe('SEO 체크리스트(100점 만점) 채점 결과. 사이트 방문자에게는 노출되지 않고 관리자만 조회 가능.'),
+          seo_score_detail: z.array(z.object({
+            label: z.string().describe('체크리스트 항목명 (예: 키워드 밀도)'),
+            points: z.number().describe('이 항목에서 받은 점수'),
+            max: z.number().describe('이 항목의 배점'),
+            pass: z.boolean().describe('이 항목 통과 여부'),
+            desc: z.string().describe('이 점수를 준 구체적 이유'),
+          })).optional().describe('SEO 체크리스트(100점)의 항목별 배점·통과여부·이유 breakdown. seo_score를 줄 때 항상 함께 채운다.'),
+          naver_summary: z.string().optional().describe('네이버 블로그에 붙여넣을 요약글(300~500자 + 원문 링크). 사이트 방문자에게는 노출되지 않고 관리자만 조회 가능.'),
+          instagram_cards: z.string().optional().describe('인스타그램 카드뉴스 슬라이드 스크립트(4~6장). 사이트 방문자에게는 노출되지 않고 관리자만 조회 가능.'),
         },
         annotations: { destructiveHint: false, idempotentHint: false },
       },
-      async ({ title, slug, summary, content, category, tags, cover_image, status, scheduled_at }) => {
+      async ({ title, slug, summary, content, category, tags, cover_image, status, scheduled_at, title_score, title_score_detail, seo_score, seo_score_detail, naver_summary, instagram_cards }) => {
         const finalStatus = status || 'published'
         const nowIso = nowKST()
         const row = {
@@ -527,6 +544,12 @@ const baseHandler = createMcpHandler(
           status: finalStatus,
           scheduled_at: finalStatus === 'scheduled' ? (scheduled_at || null) : null,
           published_at: finalStatus === 'published' ? nowIso : null,
+          title_score: title_score != null ? title_score : null,
+          title_score_detail: title_score_detail || null,
+          seo_score: seo_score != null ? seo_score : null,
+          seo_score_detail: seo_score_detail || null,
+          naver_summary: naver_summary || null,
+          instagram_cards: instagram_cards || null,
           created_at: nowIso,
           updated_at: nowIso,
         }
@@ -610,10 +633,27 @@ const baseHandler = createMcpHandler(
           cover_image: z.string().optional().describe('새 커버 이미지 URL'),
           tags: z.array(z.string()).optional().describe('새 태그 배열'),
           status: z.enum(['published', 'draft']).optional().describe('글 상태 변경'),
+          title_score: z.number().optional().describe('제목 점수표(10점 만점) 재채점 결과. 사이트 방문자에게는 노출되지 않는다.'),
+          title_score_detail: z.array(z.object({
+            label: z.string().describe('채점 항목명'),
+            points: z.number().describe('이 항목에서 받은 점수'),
+            max: z.number().describe('이 항목의 배점'),
+            reason: z.string().describe('이 점수를 준 구체적 이유'),
+          })).optional().describe('제목 점수표(10점)의 항목별 배점·이유 breakdown. title_score를 줄 때 항상 함께 채운다.'),
+          seo_score: z.number().optional().describe('SEO 체크리스트(100점 만점) 재채점 결과. 사이트 방문자에게는 노출되지 않는다.'),
+          seo_score_detail: z.array(z.object({
+            label: z.string().describe('체크리스트 항목명'),
+            points: z.number().describe('이 항목에서 받은 점수'),
+            max: z.number().describe('이 항목의 배점'),
+            pass: z.boolean().describe('이 항목 통과 여부'),
+            desc: z.string().describe('이 점수를 준 구체적 이유'),
+          })).optional().describe('SEO 체크리스트(100점)의 항목별 배점·통과여부·이유 breakdown. seo_score를 줄 때 항상 함께 채운다.'),
+          naver_summary: z.string().optional().describe('네이버 블로그에 붙여넣을 요약글(300~500자 + 원문 링크). 사이트 방문자에게는 노출되지 않는다.'),
+          instagram_cards: z.string().optional().describe('인스타그램 카드뉴스 슬라이드 스크립트(4~6장). 사이트 방문자에게는 노출되지 않는다.'),
         },
         annotations: { destructiveHint: false, idempotentHint: true },
       },
-      async ({ slug, title, summary, content, cover_image, tags, status }) => {
+      async ({ slug, title, summary, content, cover_image, tags, status, title_score, title_score_detail, seo_score, seo_score_detail, naver_summary, instagram_cards }) => {
         const patch = {}
         if (title !== undefined)       patch.title = title
         if (summary !== undefined)     patch.summary = summary
@@ -621,8 +661,14 @@ const baseHandler = createMcpHandler(
         if (cover_image !== undefined) patch.cover_image = cover_image
         if (tags !== undefined)        patch.tags = tags
         if (status !== undefined)      patch.status = status
+        if (title_score !== undefined)        patch.title_score = title_score
+        if (title_score_detail !== undefined) patch.title_score_detail = title_score_detail
+        if (seo_score !== undefined)          patch.seo_score = seo_score
+        if (seo_score_detail !== undefined)   patch.seo_score_detail = seo_score_detail
+        if (naver_summary !== undefined)      patch.naver_summary = naver_summary
+        if (instagram_cards !== undefined)    patch.instagram_cards = instagram_cards
         if (Object.keys(patch).length === 0) {
-          return { content: [{ type: 'text', text: '오류: 수정할 필드가 없습니다. title/summary/content/cover_image/tags/status 중 하나 이상을 전달해주세요.' }], isError: true }
+          return { content: [{ type: 'text', text: '오류: 수정할 필드가 없습니다. title/summary/content/cover_image/tags/status/title_score/seo_score/naver_summary/instagram_cards 중 하나 이상을 전달해주세요.' }], isError: true }
         }
         patch.updated_at = nowKST()
 
@@ -787,6 +833,68 @@ const baseHandler = createMcpHandler(
           lines.push(`- (${typeLabel})${toolLabel} ${i.content}${i.keyword ? ' / 키워드: ' + i.keyword : ''}${i.memo ? ' / 메모: ' + i.memo : ''}`)
         })
         return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
+      'add_content_idea',
+      {
+        title: '글감 아이디어 추가',
+        description:
+          '글 작성 중 떠오른 아이디어·키워드·각도·메모를 admin 글감 관리에 저장한다. ' +
+          '지금 당장 쓰지 않지만 나중에 쓸 만한 소재를 남겨둘 때 호출한다. ' +
+          'tab_id를 모르면 get_content_ideas를 먼저 호출해 tabs 목록을 확인하거나, ' +
+          '비워서 기본 탭(general=공통 아이디어)에 저장한다.',
+        inputSchema: {
+          content: z.string().describe('글감 내용'),
+          tab_id: z.string().optional().describe('저장할 탭 ID. 비우면 general(공통 아이디어) 탭에 저장'),
+          tool_id: z.enum(TOOL_CODES).optional().describe('특정 도구와 관련된 아이디어면 도구 코드, 공통이면 비움'),
+          type: z.enum(['keyword', 'idea', 'angle', 'memo']).optional().describe('종류. 기본: idea'),
+          keyword: z.string().optional().describe('타겟 키워드 (type=keyword일 때)'),
+          memo: z.string().optional().describe('추가 메모'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ content, tab_id, tool_id, type, keyword, memo }) => {
+        const row = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+          tab_id: tab_id || 'general',
+          tool_id: tool_id || null,
+          type: type || 'idea',
+          content,
+          keyword: keyword || null,
+          memo: memo || null,
+          status: 'pending',
+          created_at: nowKST(),
+        }
+        const { error } = await supabase.from('content_ideas').insert([row])
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ 글감 추가됨: ${content}` }] }
+      }
+    )
+
+    server.registerTool(
+      'mark_idea_used',
+      {
+        title: '글감 아이디어 사용 처리',
+        description:
+          '이 글감을 방금 쓴 글에 실제로 사용했다면, add_publish_log 호출 직후 이 툴로 status를 used로 바꾼다. ' +
+          '글감 id는 get_content_ideas 결과에서 확인한다.',
+        inputSchema: {
+          id: z.string().describe('글감 ID (get_content_ideas 결과에서 확인)'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: true },
+      },
+      async ({ id }) => {
+        const { data, error } = await supabase
+          .from('content_ideas')
+          .update({ status: 'used', updated_at: nowKST() })
+          .eq('id', id)
+          .select('content')
+          .single()
+        if (error) return { content: [{ type: 'text', text: `오류: ${error.message}` }], isError: true }
+        if (!data) return { content: [{ type: 'text', text: `id '${id}'에 해당하는 글감을 찾을 수 없습니다.` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ 사용 처리됨: ${data.content}` }] }
       }
     )
 

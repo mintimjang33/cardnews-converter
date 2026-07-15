@@ -22,11 +22,12 @@ export default async function handler(req, res) {
   if (!isAdmin) return res.status(401).json({ error: '인증 필요' })
 
   if (req.method === 'POST') {
-    const { label } = req.body
+    const { label, icon } = req.body
     if (!label) return res.status(400).json({ error: '카테고리명 필요' })
     const { data, error } = await supabase.from('blog_categories').insert([{
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       label,
+      icon: icon || null,
       created_at: nowKST(),
     }]).select().single()
     if (error) return res.status(500).json({ error: error.message })

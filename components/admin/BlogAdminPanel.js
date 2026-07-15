@@ -235,7 +235,7 @@ function Toggle({ value, onChange }) {
   )
 }
 
-export default function BlogAdminPanel({ adminToken, initialView }) {
+export default function BlogAdminPanel({ adminToken, initialView, openPostId, initialCategory }) {
   const [view, setView] = useState(initialView === 'write' ? 'write' : 'list') // list | write
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(false)
@@ -254,12 +254,20 @@ export default function BlogAdminPanel({ adminToken, initialView }) {
   const [routineChecks, setRoutineChecks] = useState({})
   const [collapsedRoutines, setCollapsedRoutines] = useState({})
 
-  const emptyForm = { title:'', slug:'', summary:'', content:'', category:'thumb-down', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
+  const emptyForm = { title:'', slug:'', summary:'', content:'', category: initialCategory || 'thumb-down', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
   const [form, setForm] = useState(emptyForm)
 
   const token = () => adminToken
 
   useEffect(() => { loadPosts(); loadCategories(); loadChecklist() }, [])
+
+  // 글감 관리 등 다른 패널에서 "이 글 열기"로 넘어온 경우, 목록 로드 후 자동으로 수정 화면을 연다
+  useEffect(() => {
+    if (!openPostId || !posts.length) return
+    const target = posts.find(p => p.id === openPostId)
+    if (target) handleEdit(target)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPostId, posts])
 
   const loadChecklist = async () => {
     try {
