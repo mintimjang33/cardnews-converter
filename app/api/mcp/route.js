@@ -5,11 +5,16 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 20개 (기존 14개 + DB 직접 조회·수정 5개 + 스크린샷 캡처 1개):
-//   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정 (trader/fresh-season과 동일 패턴)
+// 노출 툴 29개 (기존 16개 + trader 이식분 13개):
+//   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정
 //   - capture_screenshot  : 뉴스·공식 홈페이지의 그래프·차트를 헤드리스 브라우저로 캡처해서 Storage에 저장
-//   run_sql이 쓰는 run_sql_query RPC 함수는 최초 1회 Supabase SQL Editor에서 생성해야 한다(파일 하단 안내 참고).
+//   - list_blog_posts/list_blog_categories : 블로그 글 목록/카테고리 조회
+//   - mark_keyword_used   : 찜 키워드 사용 처리 (평소엔 admin에서 사람이 수동 처리, 명시적 요청 시만 호출)
+//   - suggest_feature/get_feature_ideas : 기존 도구에 기능 추가 제안 기록·조회 (feature_ideas 테이블 필요)
+//   - list_github_files/get_github_file : GitHub 저장소(mintimjang33/cardnews-converter) 파일 확인
+//   run_sql이 쓰는 run_sql_query RPC 함수와 feature_ideas 테이블은 최초 1회 Supabase SQL Editor에서 생성해야 한다(파일 하단 안내 참고).
 //   get_system_prompt/update_system_prompt는 id 파라미터로 main(본 지침)/main2(보조 지침) 탭을 구분한다.
+//   trader에만 있고 여기 없는 건 라이선스 발급·결제 관리 7개 툴뿐 — 유료 상품 판매가 없는 사이트라 해당 없음.
 //   ── 조회(읽기) ──────────────────────────────────────────────────────────
 //   - get_system_prompt   : admin DB에서 Claude 지침 전문 로드 (대화 시작 시 가장 먼저 호출)
 //   - get_publish_log     : 발행 기록 조회 — 중복 방지 + 키워드 사용 추적 (STEP 1 맨 처음)
@@ -105,6 +110,19 @@
 //   $$;
 //
 // capture_screenshot 툴은 package.json에 "@sparticuz/chromium-min"과 "puppeteer-core" 의존성이 필요하다.
+//
+// suggest_feature/get_feature_ideas가 쓰는 feature_ideas 테이블도 최초 1회 생성 필요:
+//
+// create table if not exists feature_ideas (
+//   id text primary key,
+//   tool_id text not null,
+//   feature_name text not null,
+//   keyword text,
+//   pc integer, mobile integer, total integer, competition text,
+//   notes text not null,
+//   status text not null default 'proposed',
+//   created_at timestamptz not null default now()
+// );
 
 import { createMcpHandler } from 'mcp-handler'
 import { createClient } from '@supabase/supabase-js'
@@ -1134,6 +1152,172 @@ const baseHandler = createMcpHandler(
           if (browser) { try { await browser.close() } catch {} }
           return { content: [{ type: 'text', text: `❌ 캡처 실패: ${e.message}` }], isError: true }
         }
+      }
+    )
+
+    server.registerTool(
+      'list_blog_posts',
+      {
+        title: '블로그 글 목록 조회',
+        description: '블로그 글 목록을 조회한다. status(published/draft/scheduled)나 category로 필터링 가능.',
+        inputSchema: {
+          status: z.enum(['published', 'draft', 'scheduled']).optional().describe('상태로 필터링. 비우면 전체'),
+          category: z.enum(TOOL_CODES).optional().describe('카테고리(=도구 코드)로 필터링'),
+          limit: z.number().int().min(1).max(200).optional().describe('가져올 행 수. 기본 50'),
+        },
+      },
+      async ({ status, category, limit = 50 }) => {
+        let q = supabase.from('blog_posts').select('id, title, slug, status, category, created_at').order('created_at', { ascending: false }).limit(limit)
+        if (status) q = q.eq('status', status)
+        if (category) q = q.eq('category', category)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        if (!data?.length) return { content: [{ type: 'text', text: '조회된 글 없음' }] }
+        const STATUS_LABEL = { published: '✅발행', draft: '📝임시', scheduled: '⏰예약' }
+        const lines = data.map(p => `ID:${p.id} | ${STATUS_LABEL[p.status] || p.status} | ${p.title} | 카테고리:${p.category || '-'} | slug:${p.slug}`)
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
+      'list_blog_categories',
+      {
+        title: '블로그 카테고리 목록 조회',
+        description: 'create_blog_post 호출 전 category 값으로 쓸 수 있는 도구 코드·표시명 목록을 조회한다. 다운툴즈는 카테고리가 사이트 도구 코드(TOOL_CODES)로 고정돼 있어 별도 관리 테이블이 없다.',
+        inputSchema: {},
+      },
+      async () => {
+        const lines = TOOL_CODES.map(code => `${code} → ${TOOL_HINTS[code]}`)
+        return { content: [{ type: 'text', text: `사용 가능한 카테고리(=도구 코드):\n${lines.join('\n')}` }] }
+      }
+    )
+
+    server.registerTool(
+      'mark_keyword_used',
+      {
+        title: '찜 키워드 사용 처리',
+        description: '찜해둔 키워드를 실제로 글에 썼을 때 사용 처리한다 — used_at(날짜)·used_in_title/slug(어느 글)을 기록. 평소엔 admin에서 사람이 수동 처리하는 방침이지만, 사용자가 이 툴로 직접 처리해달라고 명시적으로 요청했을 때만 호출한다.',
+        inputSchema: {
+          group: z.string().describe('찜할 때 썼던 그룹 이름 (tool_id)'),
+          keyword: z.string(),
+          used_in_title: z.string().optional(),
+          used_in_slug: z.string().optional(),
+        },
+      },
+      async ({ group, keyword, used_in_title, used_in_slug }) => {
+        const { data, error } = await supabase.from('keyword_picks')
+          .update({ used_at: nowKST(), used_in_title: used_in_title || null, used_in_slug: used_in_slug || null })
+          .eq('tool_id', group).eq('keyword', keyword).select().single()
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        if (!data) return { content: [{ type: 'text', text: `❌ [${group}] ${keyword} 찜 기록을 찾을 수 없음` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ 사용 처리 완료: [${group}] ${keyword}` }] }
+      }
+    )
+
+    server.registerTool(
+      'suggest_feature',
+      {
+        title: '기존 도구에 기능 추가 제안 (검토 메모 기록)',
+        description:
+          '새 도구를 만드는 게 아니라 "기존 도구/카테고리에 기능을 추가하면 좋겠다"는 제안을 검토 메모와 함께 ' +
+          '기록한다(feature_ideas에 insert). 황금키워드를 발견했을 때 완전히 새로운 카테고리를 만들 정도는 ' +
+          '아니지만 기존 결과와 결이 비슷하면 여기에 기록해두고, 사람이 검토한다. feature_ideas 테이블은 ' +
+          '최초 1회 Supabase SQL Editor에서 생성해야 한다(파일 상단 안내 참고).',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).describe('기능을 추가할 기존 도구 코드'),
+          feature_name: z.string().describe('추가할 기능 이름'),
+          keyword: z.string().optional().describe('근거가 된 키워드'),
+          pc: z.number().optional(), mobile: z.number().optional(), total: z.number().optional(),
+          competition: z.string().optional(),
+          notes: z.string().describe('구현 가능성 검토 결과 (비용/약관/대안 등)'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ tool_id, feature_name, keyword, pc, mobile, total, competition, notes }) => {
+        const row = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+          tool_id, feature_name, keyword: keyword || null,
+          pc: pc ?? null, mobile: mobile ?? null, total: total ?? null,
+          competition: competition || null, notes, status: 'proposed',
+        }
+        const { error } = await supabase.from('feature_ideas').insert([row])
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        return { content: [{ type: 'text', text: `💡 기능 제안 기록됨: [${tool_id}] ${feature_name}` }] }
+      }
+    )
+
+    server.registerTool(
+      'get_feature_ideas',
+      {
+        title: '기능 추가 제안 목록 조회',
+        description: 'suggest_feature로 기록해둔 기능 추가 제안 목록을 조회한다.',
+        inputSchema: {
+          tool_id: z.enum(TOOL_CODES).optional(),
+          status: z.string().optional().describe('proposed|building|done|rejected'),
+        },
+      },
+      async ({ tool_id, status }) => {
+        let q = supabase.from('feature_ideas').select('*').order('created_at', { ascending: false })
+        if (tool_id) q = q.eq('tool_id', tool_id)
+        if (status) q = q.eq('status', status)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        if (!data || !data.length) return { content: [{ type: 'text', text: '기록된 기능 제안 없음' }] }
+        const lines = data.map(i => `- [${i.tool_id}] ${i.feature_name} (${i.status})${i.keyword ? ' · 키워드: ' + i.keyword : ''} — ${i.notes}`)
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    // ── GitHub 저장소 확인 툴 ────────────────────────────────────────────
+    server.registerTool(
+      'list_github_files',
+      {
+        title: 'GitHub 저장소 파일 목록 조회',
+        description: 'mintimjang33/cardnews-converter 저장소의 특정 경로에 어떤 파일·폴더가 있는지 조회한다. path를 비우면 저장소 루트를 본다.',
+        inputSchema: {
+          path: z.string().optional().describe('조회할 경로. 예: "pages" 또는 "app/api/mcp". 비우면 루트'),
+          ref: z.string().optional().describe('브랜치/커밋. 기본: main'),
+        },
+      },
+      async ({ path = '', ref = 'main' }) => {
+        const url = `https://api.github.com/repos/mintimjang33/cardnews-converter/contents/${path}?ref=${encodeURIComponent(ref)}`
+        const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'cardnews-converter-mcp' }
+        if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+        const res = await fetch(url, { headers })
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          return { content: [{ type: 'text', text: `❌ GitHub API 오류 (${res.status}): ${text}` }], isError: true }
+        }
+        const data = await res.json()
+        const list = Array.isArray(data) ? data : [data]
+        const lines = list.map(f => `${f.type === 'dir' ? '📁' : '📄'} ${f.path}${f.type === 'file' ? ` (${f.size} bytes)` : ''}`)
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      }
+    )
+
+    server.registerTool(
+      'get_github_file',
+      {
+        title: 'GitHub 저장소 파일 내용 조회',
+        description: 'mintimjang33/cardnews-converter 저장소의 특정 파일 내용을 텍스트로 가져온다. list_github_files로 경로 확인 후 사용. 100KB 넘는 파일은 GitHub API 제약으로 못 가져올 수 있다.',
+        inputSchema: {
+          path: z.string().describe('파일 경로. 예: "app/api/mcp/route.js"'),
+          ref: z.string().optional().describe('브랜치/커밋. 기본: main'),
+        },
+      },
+      async ({ path, ref = 'main' }) => {
+        const url = `https://api.github.com/repos/mintimjang33/cardnews-converter/contents/${path}?ref=${encodeURIComponent(ref)}`
+        const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'cardnews-converter-mcp' }
+        if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+        const res = await fetch(url, { headers })
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          return { content: [{ type: 'text', text: `❌ GitHub API 오류 (${res.status}): ${text}` }], isError: true }
+        }
+        const data = await res.json()
+        if (data.type !== 'file') return { content: [{ type: 'text', text: `❌ "${path}"는 파일이 아니라 ${data.type}입니다` }], isError: true }
+        const content = Buffer.from(data.content, data.encoding || 'base64').toString('utf-8')
+        return { content: [{ type: 'text', text: `[${path}] (${data.size} bytes)\n\n${content}` }] }
       }
     )
   },
