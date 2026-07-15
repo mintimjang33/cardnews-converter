@@ -5,7 +5,11 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 14개:
+// 노출 툴 20개 (기존 14개 + DB 직접 조회·수정 5개 + 스크린샷 캡처 1개):
+//   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정 (trader/fresh-season과 동일 패턴)
+//   - capture_screenshot  : 뉴스·공식 홈페이지의 그래프·차트를 헤드리스 브라우저로 캡처해서 Storage에 저장
+//   run_sql이 쓰는 run_sql_query RPC 함수는 최초 1회 Supabase SQL Editor에서 생성해야 한다(파일 하단 안내 참고).
+//   get_system_prompt/update_system_prompt는 id 파라미터로 main(본 지침)/main2(보조 지침) 탭을 구분한다.
 //   ── 조회(읽기) ──────────────────────────────────────────────────────────
 //   - get_system_prompt   : admin DB에서 Claude 지침 전문 로드 (대화 시작 시 가장 먼저 호출)
 //   - get_publish_log     : 발행 기록 조회 — 중복 방지 + 키워드 사용 추적 (STEP 1 맨 처음)
@@ -83,6 +87,24 @@
 //
 // ── claude.ai 커넥터 등록 주소 ───────────────────────────────────────────
 //   https://cardnews-converter.vercel.app/api/mcp?key=여기에_MCP_SHARED_SECRET_값
+//
+// ── run_sql/list_tables 툴이 쓰는 run_sql_query RPC 함수 (Supabase SQL Editor에서 최초 1회 실행) ──
+//
+//   create or replace function run_sql_query(sql text)
+//   returns jsonb
+//   language plpgsql
+//   security definer
+//   set search_path = public
+//   as $$
+//   declare
+//     result jsonb;
+//   begin
+//     execute format('select coalesce(jsonb_agg(t), ''[]''::jsonb) from (%s) t', sql) into result;
+//     return result;
+//   end;
+//   $$;
+//
+// capture_screenshot 툴은 package.json에 "@sparticuz/chromium-min"과 "puppeteer-core" 의존성이 필요하다.
 
 import { createMcpHandler } from 'mcp-handler'
 import { createClient } from '@supabase/supabase-js'
@@ -760,6 +782,8 @@ const baseHandler = createMcpHandler(
       }
     )
 
+    const SYSTEM_PROMPT_IDS = ['main', 'main2']
+
     server.registerTool(
       'get_system_prompt',
       {
@@ -768,16 +792,19 @@ const baseHandler = createMcpHandler(
           'admin에 저장된 Claude 프로젝트 지침 전문을 가져온다. ' +
           '대화를 시작할 때 가장 먼저 호출해서 지침을 로드하고, 그 내용대로 행동한다. ' +
           '지침은 admin → 🤖 Claude 지침 메뉴에서 수정할 수 있다.',
-        inputSchema: {},
+        inputSchema: {
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
+        },
       },
-      async () => {
+      async ({ id }) => {
+        const resolvedId = SYSTEM_PROMPT_IDS.includes(id) ? id : 'main'
         const { data, error } = await supabase
           .from('system_prompts')
           .select('content, updated_at')
-          .eq('id', 'main')
+          .eq('id', resolvedId)
           .single()
         if (error || !data) {
-          return { content: [{ type: 'text', text: '❌ 시스템 프롬프트를 불러오지 못했습니다. admin에서 저장했는지 확인해주세요.' }], isError: true }
+          return { content: [{ type: 'text', text: `❌ "${resolvedId}" 시스템 프롬프트를 불러오지 못했습니다. admin에서 저장했는지 확인해주세요.` }], isError: true }
         }
         return {
           content: [{
@@ -908,22 +935,204 @@ const baseHandler = createMcpHandler(
           '호출 전 반드시 변경 내용을 사용자에게 확인받는다. ' +
           '저장 즉시 다음 대화부터 새 지침이 적용된다.',
         inputSchema: {
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
           content: z.string().describe('저장할 지침 전문'),
         },
         annotations: { destructiveHint: true, idempotentHint: true },
       },
-      async ({ content }) => {
+      async ({ id, content }) => {
+        const resolvedId = SYSTEM_PROMPT_IDS.includes(id) ? id : 'main'
         const { error } = await supabase
           .from('system_prompts')
-          .upsert({ id: 'main', content, updated_at: nowKST() }, { onConflict: 'id' })
+          .upsert({ id: resolvedId, content, updated_at: nowKST() }, { onConflict: 'id' })
         if (error) {
           return { content: [{ type: 'text', text: `❌ 저장 실패: ${error.message}` }], isError: true }
         }
         return {
           content: [{
             type: 'text',
-            text: '✅ 시스템 프롬프트 저장 완료 (' + nowKST() + ')\n저장된 내용:\n\n' + content,
+            text: `✅ "${resolvedId}" 시스템 프롬프트 저장 완료 (` + nowKST() + ')\n저장된 내용:\n\n' + content,
           }],
+        }
+      }
+    )
+
+    // ── Supabase 직접 조회·수정 툴 (trader/fresh-season과 동일 패턴) ────────
+    server.registerTool(
+      'list_tables',
+      {
+        title: 'DB 테이블 목록 조회',
+        description: 'list_tables — DB 테이블 목록 조회. 다운툴즈 Supabase DB에 있는 테이블 목록을 반환한다.',
+        inputSchema: {
+          schema: z.string().optional().describe('스키마 이름. 기본값: public'),
+        },
+      },
+      async ({ schema = 'public' }) => {
+        const { data, error } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', schema)
+          .eq('table_type', 'BASE TABLE')
+          .order('table_name')
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        const names = (data || []).map(r => r.table_name).join('\n')
+        return { content: [{ type: 'text', text: `테이블 목록 (${schema} 스키마):\n${names}` }] }
+      }
+    )
+
+    server.registerTool(
+      'get_rows',
+      {
+        title: 'DB 테이블 데이터 조회',
+        description: 'get_rows — DB 테이블 데이터 조회. 특정 테이블의 행을 조회한다. 필터·텍스트검색·정렬·페이징 지원, 최대 500행.',
+        inputSchema: {
+          table: z.string().describe('테이블 이름. 예: blog_posts, content_log, tool_info'),
+          select: z.string().optional().describe('가져올 컬럼 (쉼표 구분). 비우면 전체(*)'),
+          filter: z.record(z.string()).optional().describe('eq 필터. 예: {"status":"published"}'),
+          search_column: z.string().optional().describe('텍스트 검색할 컬럼. search_value와 함께 사용'),
+          search_value: z.string().optional().describe('텍스트 검색어 (ilike, 부분일치)'),
+          order_by: z.string().optional().describe('정렬 기준 컬럼. 기본: created_at'),
+          ascending: z.boolean().optional().describe('오름차순 여부. 기본: false (최신순)'),
+          limit: z.number().int().min(1).max(500).optional().describe('가져올 행 수. 기본 50, 최대 500'),
+          offset: z.number().int().min(0).optional().describe('건너뛸 행 수 (페이징). 기본 0'),
+        },
+      },
+      async ({ table, select = '*', filter, search_column, search_value, order_by = 'created_at', ascending = false, limit = 50, offset = 0 }) => {
+        let q = supabase.from(table).select(select)
+        if (filter) { for (const [col, val] of Object.entries(filter)) q = q.eq(col, val) }
+        if (search_column && search_value) q = q.ilike(search_column, `%${search_value}%`)
+        q = q.order(order_by, { ascending }).range(offset, offset + limit - 1)
+        const { data, error } = await q
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        if (!data?.length) return { content: [{ type: 'text', text: `(결과 없음) 테이블: ${table}` }] }
+        return { content: [{ type: 'text', text: `[${table}] ${data.length}행 반환 (offset:${offset})\n${JSON.stringify(data, null, 2)}` }] }
+      }
+    )
+
+    server.registerTool(
+      'upsert_row',
+      {
+        title: 'DB 행 추가·수정',
+        description: 'upsert_row — DB 행 추가·수정. 테이블에 행을 추가하거나 수정한다. id를 포함하면 수정(upsert), 없으면 새 행 추가.',
+        inputSchema: {
+          table: z.string().describe('테이블 이름'),
+          row: z.record(z.any()).describe('추가·수정할 데이터 객체'),
+        },
+        annotations: { destructiveHint: true },
+      },
+      async ({ table, row }) => {
+        const { data, error } = await supabase.from(table).upsert([row], { onConflict: 'id' }).select().single()
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ [${table}] upsert 완료\n${JSON.stringify(data, null, 2)}` }] }
+      }
+    )
+
+    server.registerTool(
+      'delete_row',
+      {
+        title: 'DB 행 삭제',
+        description: 'delete_row — DB 행 삭제. 테이블에서 특정 id의 행을 삭제한다. 삭제 전 존재 자동 확인, 되돌릴 수 없음.',
+        inputSchema: {
+          table: z.string().describe('테이블 이름'),
+          id: z.string().describe('삭제할 행의 id'),
+        },
+        annotations: { destructiveHint: true },
+      },
+      async ({ table, id }) => {
+        const { data: existing } = await supabase.from(table).select('id').eq('id', id).maybeSingle()
+        if (!existing) return { content: [{ type: 'text', text: `❌ [${table}] id="${id}" 행을 찾을 수 없음` }], isError: true }
+        const { error } = await supabase.from(table).delete().eq('id', id)
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ [${table}] id="${id}" 삭제 완료` }] }
+      }
+    )
+
+    server.registerTool(
+      'run_sql',
+      {
+        title: 'SQL 직접 실행',
+        description: 'run_sql — SQL 직접 실행. 복잡한 조회나 수정이 필요할 때 SQL 쿼리를 직접 실행한다. DROP·TRUNCATE·ALTER 등 위험 DDL은 자동 차단. Supabase SQL Editor에서 run_sql_query RPC 함수를 최초 1회 생성해야 동작한다.',
+        inputSchema: {
+          sql: z.string().describe('실행할 SQL 쿼리. 예: SELECT * FROM blog_posts ORDER BY created_at DESC LIMIT 20'),
+        },
+        annotations: { destructiveHint: true },
+      },
+      async ({ sql }) => {
+        const upper = sql.trim().toUpperCase()
+        const dangerous = ['DROP ', 'TRUNCATE ', 'ALTER TABLE', 'CREATE TABLE', 'GRANT ', 'REVOKE ']
+        if (dangerous.some(kw => upper.startsWith(kw) || upper.includes('\n' + kw))) {
+          return { content: [{ type: 'text', text: `⛔ 위험한 DDL/권한 쿼리는 차단됩니다: ${sql.slice(0, 80)}` }], isError: true }
+        }
+        const { data, error } = await supabase.rpc('run_sql_query', { sql })
+        if (error) return { content: [{ type: 'text', text: `❌ ${error.message}\n\nSQL: ${sql}` }], isError: true }
+        return { content: [{ type: 'text', text: `✅ SQL 실행 완료\n${JSON.stringify(data, null, 2)}` }] }
+      }
+    )
+
+    // ── 그래프·차트 스크린샷 캡처 ────────────────────────────────────────
+    async function ensureScreenshotBucket() {
+      const { data: buckets } = await supabase.storage.listBuckets()
+      if (buckets?.some(b => b.name === 'blog-images')) return
+      await supabase.storage.createBucket('blog-images', { public: true, fileSizeLimit: '5MB' })
+    }
+
+    server.registerTool(
+      'capture_screenshot',
+      {
+        title: '웹페이지 그래프·차트 스크린샷 캡처 및 저장',
+        description:
+          '뉴스·공식 홈페이지에 있는 그래프·차트를 헤드리스 브라우저로 실제로 캡처해서 ' +
+          'Supabase Storage(blog-images 버킷)에 저장하고 공개 URL을 반환한다. selector를 주면 그 요소만 잘라서 캡처하고, ' +
+          '안 주면 뷰포트 전체를 캡처한다. 반환된 URL을 블로그 본문 <img> 태그에 쓰고, 바로 아래에 반드시 출처(사이트명 + 원본 링크)를 ' +
+          '캡션으로 명시할 것 — 저작권 있는 자료를 그대로 재게시하는 것이므로 출처 표기 없이 쓰지 않는다.',
+        inputSchema: {
+          url: z.string().describe('캡처할 페이지 URL'),
+          selector: z.string().optional().describe('캡처할 특정 요소의 CSS selector (예: "#chart-container", ".graph-wrap"). 안 주면 뷰포트 전체를 캡처'),
+          waitMs: z.number().int().min(0).max(8000).optional().describe('페이지 로드 후 추가로 기다릴 시간(ms). 자바스크립트로 그려지는 차트가 렌더링될 시간을 줄 때 사용. 기본 1500'),
+          width: z.number().int().min(320).max(1920).optional().describe('뷰포트 너비. 기본 1200'),
+        },
+        annotations: { destructiveHint: false },
+      },
+      async ({ url, selector, waitMs = 1500, width = 1200 }) => {
+        let browser
+        try {
+          const { default: chromium } = await import('@sparticuz/chromium-min')
+          const puppeteer = await import('puppeteer-core')
+          // ⚠️ 이 URL의 버전은 package.json의 @sparticuz/chromium-min 버전과 반드시 일치해야 한다.
+          const executablePath = await chromium.executablePath(
+            'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+          )
+          browser = await puppeteer.default.launch({
+            args: chromium.args,
+            executablePath,
+            headless: true,
+            defaultViewport: { width, height: 900 },
+          })
+          const page = await browser.newPage()
+          await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 })
+          if (waitMs) await new Promise(r => setTimeout(r, waitMs))
+
+          let buffer
+          if (selector) {
+            const el = await page.$(selector)
+            if (!el) throw new Error(`selector "${selector}"에 해당하는 요소를 찾을 수 없음`)
+            buffer = await el.screenshot({ type: 'png' })
+          } else {
+            buffer = await page.screenshot({ type: 'png' })
+          }
+          await browser.close()
+          browser = null
+
+          await ensureScreenshotBucket()
+          const path = `captures/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.png`
+          const { error: upErr } = await supabase.storage.from('blog-images').upload(path, buffer, { contentType: 'image/png', upsert: false })
+          if (upErr) return { content: [{ type: 'text', text: `❌ 업로드 실패: ${upErr.message}` }], isError: true }
+          const { data: pub } = supabase.storage.from('blog-images').getPublicUrl(path)
+
+          return { content: [{ type: 'text', text: `✅ 캡처 완료\nURL: ${pub.publicUrl}\n원본 페이지: ${url}\n⚠️ 본문에 쓸 때 반드시 출처(사이트명+원본 링크)를 캡션으로 함께 표기할 것.` }] }
+        } catch (e) {
+          if (browser) { try { await browser.close() } catch {} }
+          return { content: [{ type: 'text', text: `❌ 캡처 실패: ${e.message}` }], isError: true }
         }
       }
     )

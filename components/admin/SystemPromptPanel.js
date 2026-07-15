@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { S, Toast } from './AdminUI'
 
+const TABS = [
+  { id: 'main', label: '📘 본 지침' },
+  { id: 'main2', label: '📗 보조 지침' },
+]
+
 export default function SystemPromptPanel({ adminToken }) {
+  const [tab, setTab]             = useState('main')
   const [content, setContent]     = useState('')
   const [original, setOriginal]   = useState('')
   const [updatedAt, setUpdatedAt] = useState('')
@@ -13,10 +19,10 @@ export default function SystemPromptPanel({ adminToken }) {
 
   const token = () => adminToken || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_token') : '')
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (targetTab) => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/system-prompt', {
+      const res = await fetch(`/api/admin/system-prompt?id=${targetTab}`, {
         headers: { 'x-admin-token': token() },
       })
       if (res.ok) {
@@ -29,7 +35,13 @@ export default function SystemPromptPanel({ adminToken }) {
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(tab) }, [load, tab])
+
+  const switchTab = (nextTab) => {
+    if (nextTab === tab) return
+    if (content !== original && !confirm('저장하지 않은 변경사항이 있어요. 탭을 바꾸면 사라져요. 계속할까요?')) return
+    setTab(nextTab)
+  }
 
   const save = async () => {
     setSaving(true)
@@ -37,7 +49,7 @@ export default function SystemPromptPanel({ adminToken }) {
       const res = await fetch('/api/admin/system-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ id: tab, content }),
       })
       if (!res.ok) throw new Error()
       setOriginal(content)
@@ -100,6 +112,25 @@ export default function SystemPromptPanel({ adminToken }) {
 
   return (
     <div style={{ fontFamily: "'Outfit', sans-serif" }}>
+      {/* 탭 전환 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => switchTab(t.id)}
+            style={{
+              padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+              border: tab === t.id ? '1px solid #e63946' : '1px solid #2a2a2a',
+              background: tab === t.id ? '#e6394622' : '#1f1f1f',
+              color: tab === t.id ? '#e63946' : '#888',
+              cursor: 'pointer',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* 헤더 카드 */}
       <div style={S.card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
