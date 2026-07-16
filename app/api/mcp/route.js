@@ -5,7 +5,7 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 30개 (기존 16개 + trader 이식분 13개 + naver_news_search 1개):
+// 노출 툴 31개 (기존 16개 + trader 이식분 13개 + naver_news_search + append_system_prompt):
 //   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정
 //   - capture_screenshot  : 뉴스·공식 홈페이지의 그래프·차트를 헤드리스 브라우저로 캡처해서 Storage에 저장
 //   - list_blog_posts/list_blog_categories : 블로그 글 목록/카테고리 조회
@@ -1020,6 +1020,49 @@ const baseHandler = createMcpHandler(
           content: [{
             type: 'text',
             text: `✅ "${resolvedId}" 시스템 프롬프트 저장 완료 (` + nowKST() + ')\n저장된 내용:\n\n' + content,
+          }],
+        }
+      }
+    )
+
+    server.registerTool(
+      'append_system_prompt',
+      {
+        title: 'Claude 시스템 프롬프트(지침) 맨 아래에 추가',
+        description:
+          'admin에 저장된 Claude 프로젝트 지침의 특정 탭 맨 아래에 새 내용을 이어붙인다. ' +
+          'update_system_prompt처럼 전체 내용을 다시 불러와서 통째로 다시 보낼 필요 없이, ' +
+          '추가할 내용만 전달하면 서버가 기존 내용 뒤에 이어붙여 저장한다. ' +
+          'main2(작업 메모장)처럼 계속 누적되는 로그 성격 문서에 새 기록 한 건을 추가할 때 update_system_prompt 대신 우선 사용한다. ' +
+          '문서 중간에 있는 특정 섹션에 끼워 넣어야 하거나 기존 내용을 수정·삭제해야 할 때는 이 툴로는 안 되니 ' +
+          'get_system_prompt로 전체를 불러온 뒤 update_system_prompt를 쓴다.',
+        inputSchema: {
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('추가할 탭. main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
+          content: z.string().describe('맨 아래에 추가할 내용 (마크다운). 앞뒤 구분용 빈 줄은 자동으로 들어가므로 따로 넣지 않아도 됨'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ id, content }) => {
+        const resolvedId = SYSTEM_PROMPT_IDS.includes(id) ? id : 'main'
+        const { data: existing, error: readErr } = await supabase
+          .from('system_prompts')
+          .select('content')
+          .eq('id', resolvedId)
+          .single()
+        if (readErr || !existing) {
+          return { content: [{ type: 'text', text: `❌ "${resolvedId}" 기존 지침을 불러오지 못했습니다: ${readErr?.message || '문서 없음'}` }], isError: true }
+        }
+        const newContent = (existing.content || '').replace(/\n+$/, '') + '\n\n' + content.trim() + '\n'
+        const { error: writeErr } = await supabase
+          .from('system_prompts')
+          .upsert({ id: resolvedId, content: newContent, updated_at: nowKST() }, { onConflict: 'id' })
+        if (writeErr) {
+          return { content: [{ type: 'text', text: `❌ 저장 실패: ${writeErr.message}` }], isError: true }
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: `✅ "${resolvedId}" 맨 아래에 추가 완료 (` + nowKST() + `)\n\n추가된 글자수: ${content.trim().length.toLocaleString()}자 / 총 글자수: ${newContent.length.toLocaleString()}자`,
           }],
         }
       }
