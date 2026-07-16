@@ -209,34 +209,34 @@ function AdminExtraPanel({ slug }) {
       </div>
 
       {(Array.isArray(extra.title_score_detail) && extra.title_score_detail.length > 0) && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 제목 점수 세부 근거</div>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <details style={{ marginBottom: 10 }}>
+          <summary style={{ fontWeight: 700, cursor: 'pointer' }}>📐 제목 점수 세부 근거</summary>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
             {extra.title_score_detail.map((row, i) => (
               <li key={i} style={{ marginBottom: 4 }}>
                 <strong>{row.label}</strong> {row.points}/{row.max} — {row.reason}
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {(Array.isArray(extra.seo_score_detail) && extra.seo_score_detail.length > 0) && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 SEO 체크리스트 세부 근거</div>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <details style={{ marginBottom: 10 }}>
+          <summary style={{ fontWeight: 700, cursor: 'pointer' }}>📐 SEO 체크리스트 세부 근거</summary>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
             {extra.seo_score_detail.map((row, i) => (
               <li key={i} style={{ marginBottom: 4 }}>
                 {row.pass ? '✅' : '❌'} <strong>{row.label}</strong> {row.points}/{row.max} — {row.desc}
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontWeight: 700 }}>📋 네이버 블로그용 요약글</span>
+      <details style={{ marginBottom: 8 }}>
+        <summary style={{ fontWeight: 700, cursor: 'pointer' }}>📋 네이버 블로그용 요약글</summary>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
           {extra.naver_summary && (
             <button onClick={() => copyToClipboard('naver', extra.naver_summary)}
               style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, border: '1px solid #f59e0b', background: copiedField === 'naver' ? '#f59e0b' : '#fff', color: copiedField === 'naver' ? '#fff' : '#92400e', cursor: 'pointer' }}>
@@ -247,11 +247,11 @@ function AdminExtraPanel({ slug }) {
         <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: 12.5, marginTop: 6, padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #fde68a', color: extra.naver_summary ? '#92400e' : '#b45309aa' }}>
           {extra.naver_summary || '내용 없음'}
         </pre>
-      </div>
+      </details>
 
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontWeight: 700 }}>📱 인스타그램 카드뉴스 스크립트</span>
+      <details>
+        <summary style={{ fontWeight: 700, cursor: 'pointer' }}>📱 인스타그램 카드뉴스 스크립트</summary>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
           {extra.instagram_cards && (
             <button onClick={() => copyToClipboard('instagram', extra.instagram_cards)}
               style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, border: '1px solid #f59e0b', background: copiedField === 'instagram' ? '#f59e0b' : '#fff', color: copiedField === 'instagram' ? '#fff' : '#92400e', cursor: 'pointer' }}>
@@ -262,7 +262,7 @@ function AdminExtraPanel({ slug }) {
         <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: 12.5, marginTop: 6, padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #fde68a', color: extra.instagram_cards ? '#92400e' : '#b45309aa' }}>
           {extra.instagram_cards || '내용 없음'}
         </pre>
-      </div>
+      </details>
     </div>
   )
 }
