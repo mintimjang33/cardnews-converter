@@ -2,6 +2,30 @@ import { useState, useEffect, useCallback } from 'react'
 import { DEFAULT_CATEGORIES } from '../../lib/blogCategories'
 import { parseMarkdown as parseMd } from '../../lib/parseMarkdown.js'
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '')
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function uploadBlogImage(file, adminToken) {
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  if (!ALLOWED.includes(file.type)) throw new Error('이미지 파일(jpg/png/gif/webp)만 업로드할 수 있습니다.')
+  if (file.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드할 수 있습니다.')
+  const base64 = await fileToBase64(file)
+  const res = await fetch('/api/admin/upload-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+    body: JSON.stringify({ base64, contentType: file.type, filename: file.name }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || '업로드 실패')
+  return data.url
+}
+
 /** 현재 시각을 KST(UTC+9) 기준 ISO 문자열로 반환 */
 function nowKST() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00')
@@ -256,6 +280,32 @@ export default function BlogAdminPanel({ adminToken, initialView, openPostId, in
 
   const emptyForm = { title:'', slug:'', summary:'', content:'', category: initialCategory || 'thumb-down', tags:'', thumbnail:'', scheduledAt:'', publishedAt:'' }
   const [form, setForm] = useState(emptyForm)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingContent, setUploadingContent] = useState(false)
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingCover(true)
+    try {
+      const url = await uploadBlogImage(file, adminToken)
+      setForm(v => ({ ...v, thumbnail: url }))
+    } catch (err) { alert('업로드 실패: ' + err.message) }
+    setUploadingCover(false)
+  }
+
+  const handleContentImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingContent(true)
+    try {
+      const url = await uploadBlogImage(file, adminToken)
+      setForm(v => ({ ...v, content: v.content ? `${v.content}\n\n![](${url})\n` : `![](${url})\n` }))
+    } catch (err) { alert('업로드 실패: ' + err.message) }
+    setUploadingContent(false)
+  }
 
   const token = () => adminToken
 
@@ -520,11 +570,24 @@ export default function BlogAdminPanel({ adminToken, initialView, openPostId, in
 
               <div>
                 <label style={S.label}>커버 이미지 URL</label>
-                <input value={form.thumbnail} onChange={e=>setForm(v=>({...v,thumbnail:e.target.value}))} placeholder="https://..." style={S.input} />
+                <div style={{ display:'flex', gap:'8px' }}>
+                  <input value={form.thumbnail} onChange={e=>setForm(v=>({...v,thumbnail:e.target.value}))} placeholder="https://... 또는 업로드" style={{...S.input, flex:1}} />
+                  <label style={{ padding:'9px 14px', borderRadius:'8px', border:'1.5px solid #e5e7eb', background: uploadingCover ? '#f3f4f6' : '#fff', color:'#6b7280', fontSize:'13px', fontWeight:600, cursor: uploadingCover ? 'default' : 'pointer', whiteSpace:'nowrap' }}>
+                    {uploadingCover ? '업로드 중...' : '📤 업로드'}
+                    <input type="file" accept="image/*" onChange={handleCoverUpload} disabled={uploadingCover} style={{ display:'none' }} />
+                  </label>
+                </div>
+                {form.thumbnail && <img src={form.thumbnail} alt="" style={{ marginTop:'8px', maxHeight:'120px', borderRadius:'8px', border:'1px solid #e5e7eb', display:'block' }} />}
               </div>
 
               <div>
-                <label style={S.label}>본문 (마크다운)</label>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <label style={S.label}>본문 (마크다운)</label>
+                  <label style={{ padding:'5px 10px', borderRadius:'6px', border:'1.5px solid #e5e7eb', background: uploadingContent ? '#f3f4f6' : '#fff', color:'#6b7280', fontSize:'12px', fontWeight:600, cursor: uploadingContent ? 'default' : 'pointer' }}>
+                    {uploadingContent ? '업로드 중...' : '🖼 이미지 삽입'}
+                    <input type="file" accept="image/*" onChange={handleContentImageUpload} disabled={uploadingContent} style={{ display:'none' }} />
+                  </label>
+                </div>
                 <textarea value={form.content} onChange={e=>{setForm(v=>({...v,content:e.target.value}))}}
                   rows={22} placeholder={'# 제목\n\n본문을 마크다운으로 작성하세요.\n\n## 소제목\n\n- 항목 1\n- 항목 2\n\n**굵게** *기울임* `코드`'}
                   style={S.textarea} />
