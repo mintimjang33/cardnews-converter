@@ -5,7 +5,7 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 29개 (기존 16개 + trader 이식분 13개):
+// 노출 툴 30개 (기존 16개 + trader 이식분 13개 + naver_news_search 1개):
 //   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정
 //   - capture_screenshot  : 뉴스·공식 홈페이지의 그래프·차트를 헤드리스 브라우저로 캡처해서 Storage에 저장
 //   - list_blog_posts/list_blog_categories : 블로그 글 목록/카테고리 조회
@@ -24,6 +24,7 @@
 //   - search_keyword_data : keyword_stats 전체를 hint 구분 없이 검색/열람 (황금키워드 탐색)
 //   - search_keyword_picks: 찜해둔 키워드 전체 검색/열람, 기본은 미사용만
 //   - naver_keyword_volume: 키워드 실시간 네이버 검색량 조회 + keyword_stats 자동 저장
+//   - naver_news_search   : 네이버 뉴스 검색 오픈API로 기사 제목/링크/발행일/요약 조회 (web_search 대체, 토큰 절약)
 //   ── 쓰기 ────────────────────────────────────────────────────────────────
 //   - pick_keyword        : 나중에 쓸 키워드 찜(bookmark), 계획 메모 포함
 //   - create_blog_post    : 글 본문 전체를 실제로 사이트에 발행 (기본 status=published)
@@ -86,7 +87,7 @@
 // ── 필요한 환경변수 ──────────────────────────────────────────────────────
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
 //   NAVER_AD_API_KEY / NAVER_AD_SECRET_KEY / NAVER_AD_CUSTOMER_ID
-//   NAVER_CLIENT_ID / NAVER_CLIENT_SECRET  (블로그 문서수 조회용, 선택)
+//   NAVER_CLIENT_ID / NAVER_CLIENT_SECRET  (블로그 문서수 조회 + naver_news_search용, 선택)
 //   GOOGLE_SERVICE_ACCOUNT_JSON            (Google Indexing API용)
 //   MCP_SHARED_SECRET                      (이 MCP 서버 인증키)
 //
@@ -347,6 +348,55 @@ const baseHandler = createMcpHandler(
           return { content: [{ type: 'text', text: JSON.stringify({ query: keywords, saved: results.length, results }, null, 2) }] }
         } catch (err) {
           return { content: [{ type: 'text', text: `오류: ${err.message || '키워드 조회 중 오류가 발생했습니다.'}` }], isError: true }
+        }
+      }
+    )
+
+    server.registerTool(
+      'naver_news_search',
+      {
+        title: '네이버 뉴스 검색',
+        description:
+          '네이버 뉴스 검색 오픈API로 기사 제목·링크·발행일·요약을 가져온다. 블로그 글의 통계·근거 ' +
+          '인용이나 최신 이슈 벤치마킹 단계에서 web_search 대신 우선 사용한다(더 빠르고 토큰도 절약됨). ' +
+          'NAVER_CLIENT_ID/SECRET 환경변수가 필요하며, naver_keyword_volume과 같은 자격증명을 쓴다.',
+        inputSchema: {
+          query: z.string().describe('검색어. 예: "카드뉴스 만들기"'),
+          display: z.number().int().min(1).max(100).optional().describe('가져올 기사 개수 (기본 10, 최대 100)'),
+          sort: z.enum(['sim', 'date']).optional().describe('정렬 방식: sim=정확도순(기본), date=최신순'),
+        },
+      },
+      async ({ query, display, sort }) => {
+        const clientId = process.env.NAVER_CLIENT_ID
+        const clientSecret = process.env.NAVER_CLIENT_SECRET
+        if (!clientId || !clientSecret) {
+          return { content: [{ type: 'text', text: 'NAVER_CLIENT_ID/SECRET 환경변수가 설정되어 있지 않습니다.' }], isError: true }
+        }
+        try {
+          const params = new URLSearchParams({
+            query,
+            display: String(display || 10),
+            sort: sort || 'sim',
+          })
+          const res = await fetch(`https://openapi.naver.com/v1/search/news.json?${params.toString()}`, {
+            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+            signal: AbortSignal.timeout(5000),
+          })
+          if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            return { content: [{ type: 'text', text: `네이버 뉴스 API 오류 (${res.status}): ${text}` }], isError: true }
+          }
+          const data = await res.json()
+          const items = (data.items || []).map(it => ({
+            title: it.title.replace(/<\/?b>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
+            link: it.originallink || it.link,
+            pubDate: it.pubDate,
+            description: it.description.replace(/<\/?b>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
+          }))
+          if (!items.length) return { content: [{ type: 'text', text: `"${query}" 검색 결과 없음` }] }
+          return { content: [{ type: 'text', text: JSON.stringify({ query, total: data.total, items }, null, 2) }] }
+        } catch (err) {
+          return { content: [{ type: 'text', text: `오류: ${err.message || '뉴스 검색 중 오류가 발생했습니다.'}` }], isError: true }
         }
       }
     )
