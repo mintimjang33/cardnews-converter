@@ -5,9 +5,10 @@
 // Claude(연결된 커넥터)가 이 툴들을 직접 호출해서 "오늘 블로그 글" 글감을
 // 사람 개입 없이 스스로 판단할 수 있게 하는 것이 목적입니다.
 //
-// 노출 툴 31개 (기존 16개 + trader 이식분 13개 + naver_news_search + append_system_prompt):
+// 노출 툴 32개 (기존 16개 + trader 이식분 13개 + naver_news_search + append_system_prompt + upload_image):
 //   - list_tables/get_rows/upsert_row/delete_row/run_sql : DB 테이블 직접 조회·수정
 //   - capture_screenshot  : 뉴스·공식 홈페이지의 그래프·차트를 헤드리스 브라우저로 캡처해서 Storage에 저장
+//   - upload_image        : 로컬 이미지 파일(base64)을 Storage(blog-images 버킷)에 업로드 — 관리자 토큰 불필요
 //   - list_blog_posts/list_blog_categories : 블로그 글 목록/카테고리 조회
 //   - mark_keyword_used   : 찜 키워드 사용 처리 (평소엔 admin에서 사람이 수동 처리, 명시적 요청 시만 호출)
 //   - suggest_feature/get_feature_ideas : 기존 도구에 기능 추가 제안 기록·조회 (feature_ideas 테이블 필요)
@@ -1244,6 +1245,48 @@ const baseHandler = createMcpHandler(
         } catch (e) {
           if (browser) { try { await browser.close() } catch {} }
           return { content: [{ type: 'text', text: `❌ 캡처 실패: ${e.message}` }], isError: true }
+        }
+      }
+    )
+
+    server.registerTool(
+      'upload_image',
+      {
+        title: '로컬 이미지 파일 업로드 (Supabase Storage)',
+        description:
+          '로컬 이미지 파일 내용(base64)을 Supabase Storage(blog-images 버킷, capture_screenshot과 ' +
+          '동일 버킷)에 업로드하고 공개 URL을 반환한다. 사용자가 로컬 파일(실제 스크린샷, ' +
+          '자료 사진 등)을 블로그 본문·커버 이미지로 쓰고 싶을 때, admin 화면을 거치지 않고 ' +
+          '이 툴로 바로 업로드해서 URL을 얻는다. 별도 관리자 토큰이 필요 없다 — 이 서버가 이미 ' +
+          '갖고 있는 Supabase 서비스롤 키로 처리한다. jpg/png/gif/webp만 허용, 10MB 이하.',
+        inputSchema: {
+          base64: z.string().describe('이미지 파일의 base64 인코딩 내용 (data URI 접두사 "data:image/...;base64," 없이 순수 base64만)'),
+          contentType: z.string().describe('MIME 타입. 예: image/jpeg, image/png, image/webp, image/gif'),
+          filename: z.string().optional().describe('원본 파일명 (응답 메시지 표시용, 저장 경로에는 안 쓰임)'),
+        },
+        annotations: { destructiveHint: false, idempotentHint: false },
+      },
+      async ({ base64, contentType, filename }) => {
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if (!ALLOWED_TYPES.includes(contentType)) {
+          return { content: [{ type: 'text', text: '❌ 이미지 파일(jpg/png/gif/webp)만 업로드할 수 있습니다.' }], isError: true }
+        }
+        const buffer = Buffer.from(base64, 'base64')
+        const MAX_MB = 10
+        if (buffer.length > MAX_MB * 1024 * 1024) {
+          return { content: [{ type: 'text', text: `❌ ${MAX_MB}MB 이하 파일만 업로드할 수 있습니다.` }], isError: true }
+        }
+        try {
+          await ensureScreenshotBucket()
+          const ext = (contentType.split('/')[1] || 'jpg').replace(/[^a-z0-9]/g, '') || 'jpg'
+          const path = `uploads/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}.${ext}`
+          const { error: upErr } = await supabase.storage.from('blog-images').upload(path, buffer, { contentType, upsert: false })
+          if (upErr) return { content: [{ type: 'text', text: `❌ 업로드 실패: ${upErr.message}` }], isError: true }
+          const { data: pub } = supabase.storage.from('blog-images').getPublicUrl(path)
+          return { content: [{ type: 'text', text: `✅ 업로드 완료${filename ? ` (${filename})` : ''}
+URL: ${pub.publicUrl}` }] }
+        } catch (e) {
+          return { content: [{ type: 'text', text: `❌ 업로드 실패: ${e.message}` }], isError: true }
         }
       }
     )
