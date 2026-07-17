@@ -22,6 +22,19 @@ function daysSince(iso) {
 
 function fmt(n) { return (n || 0).toLocaleString() }
 
+// 찜(별) 아이콘 — 유니코드 ☆/⭐ 글자 대신 SVG로.
+function StarIcon({ filled, size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      fill={filled ? '#facc15' : 'none'}
+      stroke={filled ? '#eab308' : '#9ca3af'}
+      strokeWidth="1.6" strokeLinejoin="round"
+      style={{ display: 'block' }}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  )
+}
+
 
 function FeatureIdeasTab({ token, showToast }) {
   const [ideas, setIdeas] = useState([])
@@ -1027,7 +1040,7 @@ export default function KeywordPanel({ token }) {
                                 <button onClick={e => { e.stopPropagation(); handlePick(row.hint, item) }} style={{
                                   background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
                                 }}>
-                                  {item.picked ? '⭐' : '☆'}
+                                  <StarIcon filled={item.picked} />
                                 </button>
                               </td>
                             </tr>
@@ -1092,7 +1105,7 @@ export default function KeywordPanel({ token }) {
                         <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
                           background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
                         }}>
-                          {isPicked ? '⭐' : '☆'}
+                          <StarIcon filled={isPicked} />
                         </button>
                       </td>
                     </tr>
@@ -1161,7 +1174,7 @@ export default function KeywordPanel({ token }) {
                         <button onClick={() => handlePick(item.hint, { ...item, picked: isPicked })} style={{
                           background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
                         }}>
-                          {isPicked ? '⭐' : '☆'}
+                          <StarIcon filled={isPicked} />
                         </button>
                       </td>
                     </tr>
