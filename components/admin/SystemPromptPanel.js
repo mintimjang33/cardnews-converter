@@ -4,6 +4,8 @@ import { S, Toast } from './AdminUI'
 const TABS = [
   { id: 'main', label: '📘 본 지침' },
   { id: 'main2', label: '📗 보조 지침' },
+  { id: 'reference', label: '📎 글쓰기 참고자료' },
+  { id: 'rss_sources', label: '📡 정보 소스(RSS)' },
 ]
 
 export default function SystemPromptPanel({ adminToken }) {
@@ -139,6 +141,7 @@ export default function SystemPromptPanel({ adminToken }) {
             <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6 }}>
               Claude 프로젝트 Instructions에 붙여넣을 지침을 여기서 관리해요.<br />
               MCP <code style={{ background: '#2a2a2a', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>get_system_prompt</code> 툴로 Claude가 직접 불러갈 수 있어요.
+              {tab === 'reference' && <><br /><b style={{ color: '#f0f0f0' }}>이 탭은 규칙이 아니라 참고용 예시 모음이에요</b> — Claude가 매 대화 자동으로 불러오진 않고, 명시적으로 요청했을 때만 봐요.</>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -251,7 +254,7 @@ export default function SystemPromptPanel({ adminToken }) {
           }}>
             대화를 시작하면 즉시 get_system_prompt 툴을 호출해서 전체 지침을 로드하고, 그 지침대로만 행동하세요.
           </code>
-          <span>③ MCP 커넥터가 연결된 Claude는 대화 시작 시 자동으로 지침을 불러와요.</span>
+          <span>③ MCP 커넥터가 연결된 Claude는 대화 시작 시 자동으로 지침(본 지침/보조 지침)을 불러와요. <b style={{ color: '#f0f0f0' }}>글쓰기 참고자료</b> 탭은 규칙이 아니라 예시 모음이라 자동으로는 안 불러오고, 필요할 때만 명시적으로 불러와요.</span>
           <span>④ <b style={{ color: '#f0f0f0' }}>📋 전체 복사</b>로 복사해서 Claude 프로젝트 Instructions에 직접 붙여넣는 것도 가능해요.</span>
         </div>
       </div>

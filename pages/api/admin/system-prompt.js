@@ -2,10 +2,10 @@
  * /api/admin/system-prompt
  * Claude 프로젝트 지침(시스템 프롬프트) 조회 / 저장
  *
- * GET  /api/admin/system-prompt?id=main|main2  → 현재 저장된 지침 반환 (인증 불필요 — MCP에서 호출)
- * POST /api/admin/system-prompt                → 지침 덮어쓰기 저장 (admin 인증 필요)
+ * GET  /api/admin/system-prompt?id=main|main2|reference  → 현재 저장된 지침 반환 (인증 불필요 — MCP에서 호출)
+ * POST /api/admin/system-prompt                          → 지침 덮어쓰기 저장 (admin 인증 필요)
  *
- * id 파라미터로 탭(2종) 구분: main(본 지침) / main2(보조 지침·학습 메모). 없거나 둘 중 하나가 아니면 'main'.
+ * id 파라미터로 탭(3종) 구분: main(본 지침) / main2(보조 지침·학습 메모) / reference(글쓰기 참고자료). 없거나 셋 중 하나가 아니면 'main'.
  *
  * Supabase 테이블:
  *   create table if not exists system_prompts (
@@ -20,7 +20,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const VALID_IDS = ['main', 'main2']
+const VALID_IDS = ['main', 'main2', 'reference', 'rss_sources']
 
 function resolveId(raw) {
   return VALID_IDS.includes(raw) ? raw : 'main'

@@ -850,7 +850,7 @@ const baseHandler = createMcpHandler(
       }
     )
 
-    const SYSTEM_PROMPT_IDS = ['main', 'main2']
+    const SYSTEM_PROMPT_IDS = ['main', 'main2', 'reference', 'rss_sources']
 
     server.registerTool(
       'get_system_prompt',
