@@ -5,6 +5,7 @@ import LegalPanel from '../components/admin/LegalPanel'
 import AdsensePanel from '../components/admin/AdsensePanel'
 import BlogAdminPanel from '../components/admin/BlogAdminPanel'
 import BlogMenuPanel from '../components/admin/BlogMenuPanel'
+import BlogImagePanel from '../components/admin/BlogImagePanel'
 import ContentLogPanel from '../components/admin/ContentLogPanel'
 import ContentIdeaPanel from '../components/admin/ContentIdeaPanel'
 import KeywordPanel from '../components/admin/KeywordPanel'
@@ -25,6 +26,7 @@ const TAB_LABELS = {
   blog_write: '✍️ 게시판 글쓰기',
   blog_admin: '📝 게시판 관리',
   blog_menu: '📋 게시판 메뉴관리',
+  blog_images: '🖼️ 블로그 사진',
   content_log: '🗂️ 발행 기록',
   content_ideas: '💡 글감 관리',
   keyword: '🔍 키워드 관리',
@@ -326,6 +328,10 @@ export default function Admin() {
 
             {activeTab === 'blog_menu' && (
               <BlogMenuPanel adminToken={adminToken} />
+            )}
+
+            {activeTab === 'blog_images' && (
+              <BlogImagePanel adminToken={adminToken} showToast={showToast} />
             )}
 
             {activeTab === 'content_log' && (

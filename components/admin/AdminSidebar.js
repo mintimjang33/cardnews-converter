@@ -11,6 +11,7 @@ const NAV = [
   { id: 'blog_write',    label: '게시판 글쓰기',   icon: '✍️' },
   { id: 'blog_admin',    label: '게시판 관리',     icon: '📝' },
   { id: 'blog_menu',     label: '게시판 메뉴관리', icon: '📋' },
+  { id: 'blog_images',   label: '블로그 사진',     icon: '🖼️' },
   { id: 'content_log',   label: '발행 기록',       icon: '🗂️' },
   { id: 'content_ideas', label: '글감 관리',       icon: '💡' },
   { id: 'free_board',    label: '자유게시판',     icon: '💬' },
