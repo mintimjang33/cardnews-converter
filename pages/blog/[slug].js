@@ -304,8 +304,9 @@ export default function BlogPost({ initialPost, initialHtml }) {
         .then(data => { setPost(data); setBodyHtml(parseMd(data?.content)); setLoading(false) })
         .catch(() => setLoading(false))
     }
-    // 내부링크 추천용 전체 글 목록 (최대 100개)
-    fetch('/api/blog/posts?limit=100')
+    // 내부링크 추천용 전체 글 목록 (최대 50개) — skipPublishCheck=1로 위 SSR 본문 조회에서
+    // 이미 실행한 예약발행 자동전환 UPDATE를 이 호출에서 또 중복 실행하지 않게 한다.
+    fetch('/api/blog/posts?limit=50&skipPublishCheck=1')
       .then(r => r.json())
       .then(data => setAllPosts(Array.isArray(data) ? data : []))
       .catch(() => {})

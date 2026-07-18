@@ -19,14 +19,19 @@ export default async function handler(req, res) {
   const isAdmin = token === process.env.ADMIN_SECRET_TOKEN
 
   // 예약 발행 시간이 지난 글은 조회 시점에 자동으로 published 전환
-  try {
-    const nowIso = nowKST()
-    await supabase
-      .from('blog_posts')
-      .update({ status: 'published', published_at: nowIso })
-      .eq('status', 'scheduled')
-      .lte('scheduled_at', nowIso)
-  } catch {}
+  // 관련 글 추천용 목록 조회([slug].js가 마운트 후 부르는 두 번째 호출)는 같은 페이지
+  // 진입 시 SSR 본문 조회에서 이미 이 체크를 한 번 했으므로 ?skipPublishCheck=1로
+  // 중복 UPDATE 왕복을 건너뛴다.
+  if (req.query.skipPublishCheck !== '1') {
+    try {
+      const nowIso = nowKST()
+      await supabase
+        .from('blog_posts')
+        .update({ status: 'published', published_at: nowIso })
+        .eq('status', 'scheduled')
+        .lte('scheduled_at', nowIso)
+    } catch {}
+  }
 
   // GET
   if (req.method === 'GET') {
