@@ -862,7 +862,7 @@ const baseHandler = createMcpHandler(
           '대화를 시작할 때 가장 먼저 호출해서 지침을 로드하고, 그 내용대로 행동한다. ' +
           '지침은 admin → 🤖 Claude 지침 메뉴에서 수정할 수 있다.',
         inputSchema: {
-          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(본 지침)/main2(보조 지침·학습 메모)/reference(글쓰기 참고자료)/rss_sources(정보 소스)/todo(할일메모). 기본: main'),
         },
       },
       async ({ id }) => {
@@ -1004,7 +1004,7 @@ const baseHandler = createMcpHandler(
           '호출 전 반드시 변경 내용을 사용자에게 확인받는다. ' +
           '저장 즉시 다음 대화부터 새 지침이 적용된다.',
         inputSchema: {
-          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('main(본 지침)/main2(보조 지침·학습 메모)/reference(글쓰기 참고자료)/rss_sources(정보 소스)/todo(할일메모). 기본: main'),
           content: z.string().describe('저장할 지침 전문'),
         },
         annotations: { destructiveHint: true, idempotentHint: true },
@@ -1038,7 +1038,7 @@ const baseHandler = createMcpHandler(
           '문서 중간에 있는 특정 섹션에 끼워 넣어야 하거나 기존 내용을 수정·삭제해야 할 때는 이 툴로는 안 되니 ' +
           'get_system_prompt로 전체를 불러온 뒤 update_system_prompt를 쓴다.',
         inputSchema: {
-          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('추가할 탭. main(블로그 글작성 본 지침)/main2(보조 지침·학습 메모). 기본: main'),
+          id: z.enum(SYSTEM_PROMPT_IDS).optional().describe('추가할 탭. main(본 지침)/main2(보조 지침·학습 메모)/reference(글쓰기 참고자료)/rss_sources(정보 소스)/todo(할일메모). 기본: main'),
           content: z.string().describe('맨 아래에 추가할 내용 (마크다운). 앞뒤 구분용 빈 줄은 자동으로 들어가므로 따로 넣지 않아도 됨'),
         },
         annotations: { destructiveHint: false, idempotentHint: false },
