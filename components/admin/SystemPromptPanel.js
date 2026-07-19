@@ -6,6 +6,7 @@ const TABS = [
   { id: 'main2', label: '📗 보조 지침' },
   { id: 'reference', label: '📎 글쓰기 참고자료' },
   { id: 'rss_sources', label: '📡 정보 소스(RSS)' },
+  { id: 'todo', label: '✅ 할일메모' },
 ]
 
 export default function SystemPromptPanel({ adminToken }) {
@@ -115,7 +116,7 @@ export default function SystemPromptPanel({ adminToken }) {
   return (
     <div style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 탭 전환 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         {TABS.map(t => (
           <button
             key={t.id}
@@ -142,6 +143,7 @@ export default function SystemPromptPanel({ adminToken }) {
               Claude 프로젝트 Instructions에 붙여넣을 지침을 여기서 관리해요.<br />
               MCP <code style={{ background: '#2a2a2a', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>get_system_prompt</code> 툴로 Claude가 직접 불러갈 수 있어요.
               {tab === 'reference' && <><br /><b style={{ color: '#f0f0f0' }}>이 탭은 규칙이 아니라 참고용 예시 모음이에요</b> — Claude가 매 대화 자동으로 불러오진 않고, 명시적으로 요청했을 때만 봐요.</>}
+              {tab === 'todo' && <><br /><b style={{ color: '#f0f0f0' }}>할 일·체크할 일을 적어두는 메모예요</b> — main·main2와 똑같이 대화 시작 시 Claude가 항상 가장 먼저 확인해요(참고자료·RSS와 달리 opt-in 아님). 해결하면 그 줄만 지우고, 맨 위 사용법 안내 블록은 그대로 두세요.</>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -254,8 +256,9 @@ export default function SystemPromptPanel({ adminToken }) {
           }}>
             대화를 시작하면 즉시 get_system_prompt 툴을 호출해서 전체 지침을 로드하고, 그 지침대로만 행동하세요.
           </code>
-          <span>③ MCP 커넥터가 연결된 Claude는 대화 시작 시 자동으로 지침(본 지침/보조 지침)을 불러와요. <b style={{ color: '#f0f0f0' }}>글쓰기 참고자료</b> 탭은 규칙이 아니라 예시 모음이라 자동으로는 안 불러오고, 필요할 때만 명시적으로 불러와요.</span>
+          <span>③ MCP 커넥터가 연결된 Claude는 대화 시작 시 자동으로 지침(본 지침/보조 지침/<b style={{ color: '#f0f0f0' }}>할일메모</b>)을 불러와요. <b style={{ color: '#f0f0f0' }}>글쓰기 참고자료</b> 탭만 규칙이 아니라 예시라서 자동으로는 안 불러오고, 필요할 때만 명시적으로 불러와요.</span>
           <span>④ <b style={{ color: '#f0f0f0' }}>📋 전체 복사</b>로 복사해서 Claude 프로젝트 Instructions에 직접 붙여넣는 것도 가능해요.</span>
+          <span>⑤ <b style={{ color: '#f0f0f0' }}>✅ 할일메모</b>는 맨 위 사용법 안내 블록은 그대로 두고, 그 아래 "- [ ] 할 일 내용 (기한/날짜)" 줄만 추가하세요. 해결되면 그 줄만 지우세요.</span>
         </div>
       </div>
 
