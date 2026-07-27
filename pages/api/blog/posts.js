@@ -95,6 +95,8 @@ export default async function handler(req, res) {
       slug,
       summary: body.summary || null,
       content: body.content || '',
+      // 'markdown'(기본) | 'html' — html이면 렌더링 시 마크다운 변환 없이 원본 그대로 사용
+      content_format: body.content_format === 'html' ? 'html' : 'markdown',
       category: body.category || postType,
       tags: Array.isArray(body.tags) ? body.tags : [],
       cover_image: body.cover_image || null,
@@ -193,6 +195,8 @@ export default async function handler(req, res) {
       slug: body.slug,
       summary: body.summary || null,
       content: body.content,
+      // 값이 넘어올 때만 갱신 (안 넘기면 기존 값 그대로 유지)
+      content_format: body.content_format !== undefined ? (body.content_format === 'html' ? 'html' : 'markdown') : undefined,
       category: body.category || 'blog',
       tags: Array.isArray(body.tags) ? body.tags : [],
       cover_image: body.cover_image || null,

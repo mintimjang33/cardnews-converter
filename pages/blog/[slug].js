@@ -276,8 +276,14 @@ export async function getServerSideProps(context) {
     if (!res.ok) return { props: { initialPost: null, initialHtml: '' } }
     const post = await res.json()
     if (post.error) return { props: { initialPost: null, initialHtml: '' } }
-    const { parseMarkdown } = await import('../../lib/parseMarkdown')
-    const initialHtml = parseMarkdown(post.content || '')
+    // content_format이 'html'이면 마크다운 변환 없이 원본 그대로 사용
+    let initialHtml
+    if (post.content_format === 'html') {
+      initialHtml = post.content || ''
+    } else {
+      const { parseMarkdown } = await import('../../lib/parseMarkdown')
+      initialHtml = parseMarkdown(post.content || '')
+    }
     return { props: { initialPost: post, initialHtml } }
   } catch {
     return { props: { initialPost: null, initialHtml: '' } }
@@ -301,7 +307,12 @@ export default function BlogPost({ initialPost, initialHtml }) {
     if (!initialPost) {
       fetch(`/api/blog/posts?slug=${slug}`)
         .then(r => r.json())
-        .then(data => { setPost(data); setBodyHtml(parseMd(data?.content)); setLoading(false) })
+        .then(data => {
+          setPost(data)
+          // content_format이 'html'이면 마크다운 변환 없이 원본 그대로 사용
+          setBodyHtml(data?.content_format === 'html' ? (data?.content || '') : parseMd(data?.content))
+          setLoading(false)
+        })
         .catch(() => setLoading(false))
     }
     // 내부링크 추천용 전체 글 목록 (최대 50개) — skipPublishCheck=1로 위 SSR 본문 조회에서
